@@ -11,13 +11,15 @@ Compile individual SVG icons into a single `sprite.svg` (`<symbol>` + `<use>`), 
 - Update an existing sprite: load it, add icons, and resolve id conflicts (Replace / Skip / Keep both with a new id).
 - Download a ZIP containing `sprite.svg`, `sprite-grid.svg`, `demo.html` and `preview.png`.
 - Live demo with colour/gradient controls and copy-paste snippets for HTML, React, Vue, Angular, Svelte and Next.js.
-- Library (requires sign-in with Google or Microsoft): save bundles, create new versions, rename, delete, and mark bundles public or private.
+- Sign-in with Google or Microsoft is required to use the app. A signed-out visitor sees a landing page.
+- Library: save bundles, create new versions, rename, delete, and mark bundles public or private.
+- Colour theme: light, dark or follow the system (switch in the header; the choice is remembered). The pre-redesign compiler screens stay light until the new workspace replaces them.
 
 ## Prerequisites
 
 - Node.js 18+ and npm
 - A MongoDB connection string (local or Atlas)
-- OAuth client ids for Google and/or Microsoft if you want sign-in (the compiler itself works without signing in)
+- OAuth client ids for Google and/or Microsoft (signing in is required to use the app)
 
 ## Setup
 
@@ -140,4 +142,5 @@ Scripts live in `server/src/scripts/` (`backfill-sprite-owner.ts`, `sprite-versi
 | `npm test` | `server/` | Unit and smoke tests (server boots without a database, auth gates, sessions, admin rule, permissions, validation, error mapping). No database or network needed |
 | `npm run test:db` | `server/` | Model tests against a throwaway database on your cluster, dropped afterwards. Needs `MONGODB_URI` |
 | `npm run build` | `server/` and `client/` | Production build |
-| `npm run lint` | `client/` | ESLint. Currently reports 31 known problems; see CHANGELOG.md |
+| `npm test` | `client/` | Component, theme, contrast and API-client tests (Vitest and Testing Library). No server needed |
+| `npm run lint` | `client/` | ESLint. Currently reports 31 known problems, none in code added since Phase 0; see CHANGELOG.md |

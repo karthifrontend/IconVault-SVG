@@ -28,7 +28,7 @@ export default function ThemeToggle({ className }: { className?: string }) {
             className={cn(
               "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors",
               "hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
-              selected && "bg-background text-foreground shadow-sm",
+              selected && "bg-background text-foreground shadow-sm ring-1 ring-border",
             )}
           >
             <Icon aria-hidden="true" className="h-4 w-4" />
