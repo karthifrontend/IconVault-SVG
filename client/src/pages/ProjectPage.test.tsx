@@ -44,6 +44,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   getProject.mockResolvedValue(makeDetail({ id: "p1", name: "Feather", description: "Line icons", iconCount: 7, trashCount: 2, purpose: "font", visibility: "public", owner: { id: "u1", displayName: "Ada Lovelace" } }));
   listFolders.mockResolvedValue({ folders: [ui, arrows], uncategorizedCount: 4 });
+  vi.mocked(iconsApi.listIcons).mockResolvedValue({ icons: [], total: 0, page: 1, limit: 200 });
 });
 
 describe("loading and failure", () => {
@@ -111,7 +112,7 @@ describe("sections", () => {
   it("shows the folder tree with the Icons section, and hides it on Trash and Settings", async () => {
     renderPage();
     await screen.findByRole("heading", { level: 1 });
-    expect(screen.getByText("Icons will appear here.")).toBeInTheDocument();
+    expect(await screen.findByText("No icons yet.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^UI/ })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("link", { name: /Trash/ }));
@@ -127,7 +128,7 @@ describe("sections", () => {
     renderPage("/projects/p1/nonsense");
     await screen.findByRole("heading", { level: 1 });
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent(/^\/projects\/p1$/));
-    expect(screen.getByText("Icons will appear here.")).toBeInTheDocument();
+    expect(await screen.findByText("No icons yet.")).toBeInTheDocument();
   });
 });
 

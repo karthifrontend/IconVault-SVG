@@ -12,12 +12,14 @@ type DialogProps = {
   title: string;
   description?: string;
   size?: keyof typeof SIZES;
+  // "drawer" docks the panel to the right edge at full height instead of centering it.
+  placement?: "center" | "drawer";
   dismissOnBackdrop?: boolean;
   children: ReactNode;
   footer?: ReactNode;
 };
 
-export default function Dialog({ open, onClose, title, description, size = "md", dismissOnBackdrop = true, children, footer }: DialogProps) {
+export default function Dialog({ open, onClose, title, description, size = "md", placement = "center", dismissOnBackdrop = true, children, footer }: DialogProps) {
   const ref = useRef<HTMLDialogElement | null>(null);
   const titleId = useId();
   const descriptionId = useId();
@@ -44,12 +46,12 @@ export default function Dialog({ open, onClose, title, description, size = "md",
         if (dismissOnBackdrop && event.target === event.currentTarget) onClose();
       }}
       className={cn(
-        "m-auto w-[calc(100%-2rem)] rounded-2xl border border-border bg-card p-0 text-card-foreground shadow-xl backdrop:bg-black/50 backdrop:backdrop-blur-sm",
-        SIZES[size],
+        "border border-border bg-card p-0 text-card-foreground shadow-xl backdrop:bg-black/50 backdrop:backdrop-blur-sm",
+        placement === "drawer" ? "m-0 ml-auto h-dvh max-h-none w-full max-w-xl rounded-l-2xl" : cn("m-auto w-[calc(100%-2rem)] rounded-2xl", SIZES[size]),
       )}
     >
       {open && (
-        <div className="flex max-h-[calc(100dvh-2rem)] flex-col">
+        <div className={cn("flex flex-col", placement === "drawer" ? "h-dvh" : "max-h-[calc(100dvh-2rem)]")}>
           <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
             <div className="min-w-0">
               <h2 id={titleId} className="text-lg font-semibold">
