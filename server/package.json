@@ -9,7 +9,8 @@
     "start": "node dist/index.js",
     "backfill:owner": "cross-env tsx src/scripts/backfill-sprite-owner.ts",
     "backfill:version-updated-at": "cross-env tsx src/scripts/sprite-version-maintenance.ts",
-    "cleanup:orphans": "cross-env tsx src/scripts/sprite-version-maintenance.ts cleanup-orphans"
+    "cleanup:orphans": "cross-env tsx src/scripts/sprite-version-maintenance.ts cleanup-orphans",
+    "backup:db": "cross-env tsx src/scripts/backup-db.ts"
   },
   "keywords": [],
   "author": "",
