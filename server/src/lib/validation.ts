@@ -85,3 +85,16 @@ export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 export type CreateFolderInput = z.infer<typeof createFolderSchema>;
 export type UpdateIconInput = z.infer<typeof updateIconSchema>;
+
+// Query string of the project list. Values arrive as strings, so numbers are coerced.
+export const listProjectsQuerySchema = z.object({
+  scope: z.enum(["all", "mine", "public"]).default("all"),
+  status: z.enum(["active", "archived", "all"]).default("active"),
+  purpose: z.enum(["all", ...PURPOSES]).default("all"),
+  search: z.string().trim().max(100).optional(),
+  sort: z.enum(["updated", "created", "name", "icons"]).default("updated"),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+
+export type ListProjectsQuery = z.infer<typeof listProjectsQuerySchema>;
