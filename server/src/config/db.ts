@@ -3,6 +3,10 @@ import mongoose from "mongoose";
 import User from "../models/User.js";
 import Sprite from "../models/Sprite.js";
 import SpriteVersion from "../models/SpriteVersion.js";
+import Project from "../models/Project.js";
+import Folder from "../models/Folder.js";
+import Icon from "../models/Icon.js";
+import IconVersion from "../models/IconVersion.js";
 
 // Connect to MongoDB Atlas using MONGODB_URI from the environment. Caches the connection across module reloads in dev to avoid exhausting the connection pool.
 // The URI is read lazily inside connectDb() (not at import time) so a missing value surfaces as a normal rejected connection attempt. That lets the server boot, log the problem, and answer API calls with 503 instead of crashing during module load.
@@ -47,6 +51,10 @@ export async function connectDb(): Promise<typeof mongoose> {
         await User.syncIndexes();
         await Sprite.syncIndexes();
         await SpriteVersion.syncIndexes();
+        await Project.syncIndexes();
+        await Folder.syncIndexes();
+        await Icon.syncIndexes();
+        await IconVersion.syncIndexes();
       } catch (err) {
         // Don't fail the boot just because the index sync didn't land; surface the error in the logs so it can be diagnosed without taking the API down.
         console.error(
