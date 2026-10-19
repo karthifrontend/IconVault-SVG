@@ -35,6 +35,7 @@ cd ../client && npm install
 | `GOOGLE_CLIENT_ID` | For Google sign-in | Must match the client id used in the browser. |
 | `MS_CLIENT_ID` | For Microsoft sign-in | Azure app (client) id. |
 | `MS_TENANT_ID` | For Microsoft sign-in | Azure tenant id. |
+| `ADMIN_EMAILS` | For admin features | Comma-separated emails of admins (case-insensitive). Read on every request and never stored; edit and restart to change. An email counts only if the provider verified it (always true for Google); for Microsoft work accounts only when `MS_TENANT_ID` is your own tenant id, not `common`. |
 | `PORT` | No | Defaults to `5000`. |
 
 ### Client environment (`client/.env`)
@@ -88,6 +89,15 @@ All `/api/sprites` and `/api/auth/me` routes require `Authorization: Bearer <ses
 - `sprites`: the bundle (name, owner, `isPublic`, `currentVersion`, `symbolCount`); unique per (owner, bundleName).
 - `sprite_versions`: one document per (spriteId, version) holding the sprite XML and its symbol ids.
 
+Added for the Icon Vault integration (defined and indexed, but not used by any route yet; the project, folder and icon routes arrive in Phase 2):
+
+- `projects`: owner, name, description, prefix, colour, `purpose` (`sprite` or `font`, fixed at creation), `visibility` (`public` or `private`), `isArchived`.
+- `folders`: nested through `parentId` (null = project root), ordered by `orderIndex`.
+- `icons`: one SVG per document (markup stored in the database), `slug` unique per project among active icons, `codepoint` unique per project among active icons that have one, soft delete through `deletedAt`.
+- `icon_versions`: earlier states of an icon, each with its own markup.
+
+Admins are not stored: a user is an admin when their email is in `ADMIN_EMAILS`.
+
 ## Maintenance scripts
 
 Scripts live in `server/src/scripts/` (`backfill-sprite-owner.ts`, `sprite-version-maintenance.ts`, `backup-db.ts`). Run them with `npx tsx src/scripts/<file>.ts` from `server/`.
@@ -99,6 +109,7 @@ Scripts live in `server/src/scripts/` (`backfill-sprite-owner.ts`, `sprite-versi
 | Command | Where | What it does |
 |---|---|---|
 | `npm run typecheck` | `server/` and `client/` | TypeScript check without emitting files |
-| `npm test` | `server/` | Smoke tests (server boots without a database, auth gates, validation) and session-token unit tests. No database or network needed |
+| `npm test` | `server/` | Unit and smoke tests (server boots without a database, auth gates, sessions, admin rule, permissions, validation, error mapping). No database or network needed |
+| `npm run test:db` | `server/` | Model tests against a throwaway database on your cluster, dropped afterwards. Needs `MONGODB_URI` |
 | `npm run build` | `server/` and `client/` | Production build |
 | `npm run lint` | `client/` | ESLint. Currently reports 31 known problems; see CHANGELOG.md |
