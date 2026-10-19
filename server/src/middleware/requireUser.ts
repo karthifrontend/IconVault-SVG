@@ -2,6 +2,7 @@
 import type { NextFunction, Request, Response } from "express";
 import type { HydratedDocument } from "mongoose";
 import { verifySession } from "../lib/session.js";
+import { isAdminUser } from "../lib/admins.js";
 import User, { type UserDoc } from "../models/User.js";
 
 // User object attached to the request after successful authentication.
@@ -12,6 +13,8 @@ declare global {
   namespace Express {
     interface Request {
       user?: SessionUser;
+      // True when the signed-in user is listed in ADMIN_EMAILS (see lib/admins.ts).
+      isAdmin?: boolean;
     }
   }
 }
@@ -44,6 +47,7 @@ export async function requireUser(
       return;
     }
     req.user = user;
+    req.isAdmin = isAdminUser(user);
     next();
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid session.";

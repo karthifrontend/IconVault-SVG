@@ -6,6 +6,8 @@ import { connectDb } from "./config/db.js";
 import spritesRouter from "./routes/spriteRoutes.js";
 import authRouter from "./routes/authRoutes.js";
 import meRouter from "./routes/sessionUserRoutes.js";
+import { warnIfNoAdmins } from "./lib/admins.js";
+import { errorHandler } from "./lib/errors.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 5000);
@@ -26,7 +28,11 @@ app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
 });
 
+// Turns thrown errors (validation, permissions, bad ids) into JSON responses. Must stay after all routes.
+app.use(errorHandler);
+
 async function start() {
+    warnIfNoAdmins();
     try {
         await connectDb();
     } catch (err) {

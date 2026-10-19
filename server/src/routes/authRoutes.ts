@@ -3,6 +3,7 @@ import { Router, type Request, type Response } from "express";
 import type { HydratedDocument } from "mongoose";
 import { verifyGoogleIdToken } from "../lib/google.js";
 import { verifyMicrosoftIdToken } from "../lib/microsoft.js";
+import { roleFor } from "../lib/admins.js";
 import { signSession } from "../lib/session.js";
 import { ensureConnected } from "../config/db.js";
 import User, { type UserDoc } from "../models/User.js";
@@ -26,6 +27,7 @@ function publicUser(user: HydratedDocument<UserDoc>) {
     picture: user.picture ?? null,
     emailVerified: user.emailVerified,
     provider: user.provider,
+    role: roleFor(user),
     lastLoginAt: user.lastLoginAt,
   };
 }

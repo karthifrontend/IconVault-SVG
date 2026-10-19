@@ -1,5 +1,6 @@
 // Returns the currently authenticated user for client-side session checks.
 import { Router, type Request, type Response } from "express";
+import { roleFor } from "../lib/admins.js";
 import { requireUser } from "../middleware/requireUser.js";
 
 const router = Router();
@@ -12,6 +13,7 @@ function publicUser(user: NonNullable<Request["user"]>) {
     picture: user.picture ?? null,
     emailVerified: user.emailVerified,
     provider: user.provider,
+    role: roleFor(user),
     lastLoginAt: user.lastLoginAt,
   };
 }
