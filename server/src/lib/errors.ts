@@ -85,6 +85,13 @@ export function toHttpError(err: unknown): { status: number; body: ErrorBody } {
     if (e.code === 11000) {
       return { status: 409, body: { error: "That already exists." } };
     }
+    // Upload problems reported by multer.
+    if (e.name === "MulterError") {
+      const code = e.code;
+      if (code === "LIMIT_FILE_SIZE") return { status: 413, body: { error: "A file is larger than the 25 MB upload limit." } };
+      if (code === "LIMIT_FILE_COUNT") return { status: 413, body: { error: "Too many files in one upload (200 at most)." } };
+      return { status: 400, body: { error: "The upload was not understood." } };
+    }
     // Body parser problems.
     if (e.type === "entity.parse.failed") {
       return { status: 400, body: { error: "Request body is not valid JSON." } };

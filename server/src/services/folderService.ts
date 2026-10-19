@@ -69,7 +69,7 @@ export async function renameFolder(folder: FolderDocument, name: string): Promis
 }
 
 // Every folder id below `rootId` (not including it), found in memory because a project has few folders.
-async function descendantIds(projectId: Id, rootId: Id): Promise<Set<string>> {
+export async function descendantIds(projectId: Id, rootId: Id): Promise<Set<string>> {
   const all = await Folder.find({ projectId }).select({ _id: 1, parentId: 1 }).lean();
   const children = new Map<string, string[]>();
   for (const folder of all) {

@@ -6,6 +6,7 @@ import authRouter from "./routes/authRoutes.js";
 import meRouter from "./routes/sessionUserRoutes.js";
 import projectRouter from "./routes/projectRoutes.js";
 import folderRouter from "./routes/folderRoutes.js";
+import iconRouter from "./routes/iconRoutes.js";
 import { errorHandler } from "./lib/errors.js";
 
 export function createApp(): Express {
@@ -23,6 +24,7 @@ export function createApp(): Express {
   app.use("/api/sprites", spritesRouter);
   app.use("/api/projects", projectRouter);
   app.use("/api", folderRouter);
+  app.use("/api", iconRouter);
 
   // Keep the runtime quiet if someone hits a path we don't serve.
   app.use((_req, res) => {

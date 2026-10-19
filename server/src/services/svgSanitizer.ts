@@ -174,6 +174,9 @@ export function sanitizeSvg(raw: string | Buffer): SanitizedSvg {
 
   markup = inlineStyleBlocks(markup);
 
+  // The file must be well-formed XML. Without this check the HTML-style parser used for cleaning would quietly "repair" broken markup into an empty or partial icon.
+  parseSvgDocument(markup);
+
   const purified = DOMPurify.sanitize(markup, {
     ALLOWED_TAGS,
     ALLOWED_ATTR,

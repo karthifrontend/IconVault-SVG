@@ -73,6 +73,12 @@ describe("sanitizeSvg: removes dangerous content", () => {
     assert.throws(() => sanitizeSvg(""), /not an SVG/i);
   });
 
+  it("rejects markup that is not well-formed XML instead of repairing it", () => {
+    for (const broken of ["<svg><path", "<svg xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M0 0\"></svg>", "<svg>&nbsp;</svg>", "<html><body><svg xmlns=\"http://www.w3.org/2000/svg\"></svg></body></html>"]) {
+      assert.throws(() => sanitizeSvg(broken), /not an SVG|could not be parsed/i, broken);
+    }
+  });
+
   it("rejects markup that is too large", () => {
     const big = wrap(`<path d="${"M0 0h1v1z".repeat(MAX_SVG_BYTES / 8)}"/>`);
     assert.throws(() => sanitizeSvg(big), /larger than 1 MB/);
