@@ -1,0 +1,176 @@
+// A project's workspace: header with section links, then the Icons, Trash or Settings section. On the Icons section the folder tree sits beside the content (collapsible on small screens). Loads the project and its folders and shares them, with the selected folder and refresh functions, through the workspace context.
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";
+import { Link, Navigate, Route, Routes, useLocation, useParams, useSearchParams } from "react-router-dom";
+import { ApiError } from "../api/http";
+import { createFolder, deleteFolder, listFolders, moveFolder, renameFolder } from "../api/folders";
+import { batchMoveIcons } from "../api/icons";
+import { getProject } from "../api/projects";
+import type { FolderList } from "../api/types";
+import { Button } from "../components/ui/Button";
+import FolderTree from "../components/workspace/FolderTree";
+import IconsTab from "../components/workspace/IconsTab";
+import ProjectHeader from "../components/workspace/ProjectHeader";
+import SettingsTab from "../components/workspace/SettingsTab";
+import TrashTab from "../components/workspace/TrashTab";
+import { WorkspaceContext, type FolderSelection, type WorkspaceContextValue } from "../context/workspaceContext";
+import { useToast } from "../context/ToastContext";
+import { useResource } from "../hooks/useResource";
+import { folderPath } from "../lib/folderTree";
+import { pluralize } from "../lib/format";
+
+const NO_FOLDERS: FolderList = { folders: [], uncategorizedCount: 0 };
+
+export default function ProjectPage() {
+  const { projectId = "" } = useParams();
+  const [params, setParams] = useSearchParams();
+  const location = useLocation();
+  const { showToast } = useToast();
+
+  const project = useResource(`project:${projectId}`, () => getProject(projectId));
+  const folders = useResource(`folders:${projectId}`, () => listFolders(projectId));
+  const [iconsVersion, setIconsVersion] = useState(0);
+  const [foldersOpen, setFoldersOpen] = useState(false);
+
+  const folderList = folders.data ?? NO_FOLDERS;
+  const requested = params.get("folder");
+  const selectedFolder: FolderSelection = requested === "root" ? "root" : requested && folderList.folders.some((f) => f.id === requested) ? requested : "all";
+  const onIconsSection = /^\/projects\/[^/]+\/?$/.test(location.pathname);
+
+  function selectFolder(selection: FolderSelection) {
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        if (selection === "all") next.delete("folder");
+        else next.set("folder", selection);
+        return next;
+      },
+      { replace: false },
+    );
+    setFoldersOpen(false);
+  }
+
+  if (project.error && !project.data) {
+    const missing = project.error instanceof ApiError && project.error.status === 404;
+    return (
+      <main id="main" tabIndex={-1} className="mx-auto max-w-3xl px-4 pb-16 pt-[calc(57px+3rem)] text-center outline-none">
+        <div role="alert" className="rounded-2xl border border-border bg-card p-8">
+          <h1 className="text-xl font-semibold">{missing ? "Project not found" : "Could not load the project"}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{missing ? "It may have been deleted, or it is private and belongs to someone else." : project.error.message}</p>
+          <div className="mt-4 flex justify-center gap-2">
+            {!missing && <Button onClick={project.reload}>Try again</Button>}
+            <Link to="/" className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+              Back to projects
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!project.data) {
+    return (
+      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-4 pb-16 pt-[calc(57px+2rem)] outline-none">
+        <div role="status" aria-busy="true" aria-label="Loading project" className="space-y-4">
+          <div className="h-8 w-48 animate-pulse rounded-lg bg-muted" />
+          <div className="h-64 animate-pulse rounded-2xl bg-muted" />
+        </div>
+      </main>
+    );
+  }
+
+
+  const context: WorkspaceContextValue = {
+    project: project.data,
+    folderList,
+    selectedFolder,
+    selectFolder,
+    refreshProject: project.reload,
+    refreshFolders: folders.reload,
+    iconsVersion,
+    refreshIcons: () => setIconsVersion((value) => value + 1),
+  };
+
+  return (
+    <WorkspaceContext.Provider value={context}>
+      <main id="main" tabIndex={-1} className="mx-auto max-w-7xl px-4 pb-16 pt-[calc(57px+1.5rem)] outline-none">
+        <ProjectHeader project={project.data} />
+
+        <div className="mt-6">
+          {onIconsSection ? (
+            <div className="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
+              <aside aria-label="Folders">
+                <button
+                  type="button"
+                  aria-expanded={foldersOpen}
+                  aria-controls="folder-panel"
+                  onClick={() => setFoldersOpen((open) => !open)}
+                  className="flex w-full items-center justify-between rounded-lg border border-input bg-background px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring lg:hidden"
+                >
+                  <span>Folder: {selectedFolder === "all" ? "All icons" : selectedFolder === "root" ? "Uncategorized" : folderPath(folderList.folders, selectedFolder)}</span>
+                  {foldersOpen ? <ChevronUp aria-hidden="true" className="h-4 w-4" /> : <ChevronDown aria-hidden="true" className="h-4 w-4" />}
+                </button>
+                <div id="folder-panel" className={`${foldersOpen ? "mt-2 block" : "hidden"} lg:mt-0 lg:block`}>
+                  {folders.error && !folders.data && (
+                    <p role="alert" className="mb-2 text-sm text-destructive">
+                      Could not load folders. <button type="button" className="underline" onClick={folders.reload}>Try again</button>
+                    </p>
+                  )}
+                  <FolderTree
+                    folders={folderList.folders}
+                    uncategorizedCount={folderList.uncategorizedCount}
+                    totalCount={project.data.iconCount}
+                    selected={selectedFolder}
+                    onSelect={selectFolder}
+                    canEdit={project.data.access.canEdit}
+                    // A failure is thrown to the dialog, which shows it; only successes are announced here.
+                    onCreate={async (parentId, name) => {
+                      await createFolder(projectId, { name, parentId });
+                      folders.reload();
+                      showToast(`Created folder “${name}”.`, "success");
+                    }}
+                    onRename={async (folder, name) => {
+                      await renameFolder(folder.id, name);
+                      folders.reload();
+                    }}
+                    onMove={async (folder, parentId) => {
+                      await moveFolder(folder.id, { parentId });
+                      folders.reload();
+                    }}
+                    onDelete={async (folder) => {
+                      const result = await deleteFolder(folder.id);
+                      if (selectedFolder === folder.id) selectFolder("all");
+                      folders.reload();
+                      project.reload();
+                      setIconsVersion((value) => value + 1);
+                      showToast(result.movedIcons > 0 ? `Deleted “${folder.name}”. ${pluralize(result.movedIcons, "icon")} moved to Uncategorized.` : `Deleted “${folder.name}”.`, "success");
+                    }}
+                    onDropIcons={(folderId, iconIds) => {
+                      batchMoveIcons(projectId, iconIds, folderId).then(
+                        (result) => {
+                          folders.reload();
+                          setIconsVersion((value) => value + 1);
+                          showToast(`Moved ${pluralize(result.matched, "icon")}.`, "success");
+                        },
+                        (err: unknown) => showToast(err instanceof Error ? err.message : "Could not move the icons.", "error"),
+                      );
+                    }}
+                  />
+                </div>
+              </aside>
+              <div className="min-w-0">
+                <IconsTab />
+              </div>
+            </div>
+          ) : (
+            <Routes>
+              <Route path="trash" element={<TrashTab />} />
+              <Route path="settings" element={<SettingsTab />} />
+              <Route path="*" element={<Navigate to={`/projects/${projectId}`} replace />} />
+            </Routes>
+          )}
+        </div>
+      </main>
+    </WorkspaceContext.Provider>
+  );
+}
