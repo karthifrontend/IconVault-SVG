@@ -10,7 +10,9 @@
     "backfill:owner": "cross-env tsx src/scripts/backfill-sprite-owner.ts",
     "backfill:version-updated-at": "cross-env tsx src/scripts/sprite-version-maintenance.ts",
     "cleanup:orphans": "cross-env tsx src/scripts/sprite-version-maintenance.ts cleanup-orphans",
-    "backup:db": "cross-env tsx src/scripts/backup-db.ts"
+    "backup:db": "cross-env tsx src/scripts/backup-db.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts"
   },
   "keywords": [],
   "author": "",

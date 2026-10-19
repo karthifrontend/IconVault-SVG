@@ -90,4 +90,15 @@ All `/api/sprites` and `/api/auth/me` routes require `Authorization: Bearer <ses
 
 ## Maintenance scripts
 
-Scripts live in `server/src/scripts/` (`backfill-sprite-owner.ts`, `sprite-version-maintenance.ts`). Run them with `npx tsx src/scripts/<file>.ts` from `server/`.
+Scripts live in `server/src/scripts/` (`backfill-sprite-owner.ts`, `sprite-version-maintenance.ts`, `backup-db.ts`). Run them with `npx tsx src/scripts/<file>.ts` from `server/`.
+
+- `npm run backup:db` (in `server/`) dumps every collection to `backups/<timestamp>/` at the project root as MongoDB Extended JSON. The folder is git-ignored because it contains user emails and sprite data.
+
+## Checks
+
+| Command | Where | What it does |
+|---|---|---|
+| `npm run typecheck` | `server/` and `client/` | TypeScript check without emitting files |
+| `npm test` | `server/` | Smoke tests (server boots without a database, auth gates, validation) and session-token unit tests. No database or network needed |
+| `npm run build` | `server/` and `client/` | Production build |
+| `npm run lint` | `client/` | ESLint. Currently reports 31 known problems; see CHANGELOG.md |
