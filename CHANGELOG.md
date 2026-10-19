@@ -136,6 +136,64 @@ Logged separately from Phase 0. Server only: no route, client or old-data change
 
 ---
 
+## 2026-10-19: Phase 2, icon pipeline and project, folder and icon API (Icon Vault integration)
+
+Logged separately from Phases 0 and 1. Server only: no client file changed, and the old library routes (`/api/sprites`) are untouched and still work. Six commits on `main` (`b88b95f`, `9d24318`, `656317c`, `bad6a3e`, `e460ca3`, plus this entry), local only.
+
+### Changes
+| Commit | Change | Files | Reason |
+|---|---|---|---|
+| `b88b95f` | Added `jsdom`, `dompurify`, `svgo` 4, `multer` 2 and `fflate` (ZIP read/write); `@types` for multer and jsdom. Split `src/app.ts` (builds the Express app) from `src/index.ts` (connects and listens). No behaviour change. | `server/package.json`, `server/package-lock.json`, `server/src/app.ts`, `server/src/index.ts` | Tests can start the app without spawning a process |
+| `9d24318` | **SVG pipeline:** sanitizer, optimizer, a combined `prepareSvg`, and slug helpers. Removes scripts, event handlers, `foreignObject`, images, filters, `<style>` blocks (their rules are inlined first so colours survive), external links and external `url()` references (attributes and styles), and rejects XML entities. Size comes from width/height or the viewBox; a viewBox is added when missing. After optimizing, size and flags are re-read from the final markup. | `server/src/services/svgSanitizer.ts`, `svgOptimizer.ts`, `svgPipeline.ts`, `server/src/lib/slug.ts` | Icons are shown to other users, so everything stored must be clean |
+| `656317c` | **Project and folder routes and services.** Projects: list (scope, status, purpose, search, sort, paging, icon counts and five sample icons from one aggregation), create, detail, update, delete with cascade, duplicate. Folders: list with counts, create, rename, move, delete. Private projects of others answer 404, visible-but-read-only answer 403. `requireDb` middleware (503 when the database is down). | `server/src/routes/projectRoutes.ts`, `folderRoutes.ts`, `server/src/services/projectService.ts`, `folderService.ts`, `cascade.ts`, `server/src/lib/http.ts`, `server/src/middleware/requireDb.ts`, `server/src/lib/validation.ts` | Needed before icons can live in projects |
+| `bad6a3e` | **Icon routes and services:** paste, upload (SVG files and ZIPs), copy between projects, list, global search, download (one SVG or a ZIP), edit, optimize (one or many), versions (list, restore), trash (soft delete, restore, permanent delete, empty), batch move/tag/delete/restore/optimize. Also: private-use-only codepoints (`lib/codepoint.ts`), ZIP reading with limits (`zipService.ts`), multer error mapping. | `server/src/routes/iconRoutes.ts`, `server/src/services/iconService.ts`, `zipService.ts`, `server/src/lib/codepoint.ts`, `server/src/lib/validation.ts`, `server/src/lib/errors.ts`, `server/src/app.ts` | The core of the Icon Vault feature set, on MongoDB and the existing sign-in |
+| `e460ca3` | README documents the new API, limits and data model. | `README.md` | Keep docs current |
+
+### Icon Vault defects found and not carried over
+Confirmed by reading the Icon Vault code and, where noted, by a test here.
+- **Optimizing silently did nothing.** Its SVGO configuration (`overrides.removeViewBox`) throws under SVGO 4, and its `try/catch` fell back to the original file. Confirmed by running SVGO 4; a test now proves optimizing shrinks files.
+- **Version restore could not restore.** Every version pointed at the same file. Versions now store their own markup; a test restores real old content and undoes the restore.
+- **Batch actions reached other projects.** Ids were not checked against the project in the URL, so an editor of one project could move, tag, delete or optimize another project's icons. All batch queries now filter by project; tests assert other projects are untouched.
+- **ZIP uploads created duplicate folders** and did not skip `__MACOSX`. Existing folders are reused; metadata and hidden entries are skipped.
+- **Restoring from the trash could create a duplicate id.** The unique index now covers active icons only; a restore into a taken id gets a numbered one and the response says so.
+- **Size, viewBox and flags went stale after optimizing**, and percentage sizes were read as pixels. Both fixed.
+- **Colours from `<style>` blocks were lost** (the sanitizer removed the blocks). Rules are inlined first.
+- **A rename could pick a random suffix.** A clash is now refused with 409.
+- **Any codepoint was accepted** (even one that would replace a letter). Only Unicode private-use ranges are accepted.
+- **Folder ids from other projects were accepted**, and a folder could be moved into its own subfolder. Both refused.
+- **Validation errors returned 500**; they return 400 with details.
+
+### Changes in behaviour you may notice
+- **Codepoints are not assigned on upload.** They stay empty until set by hand (or by the first font build, which arrives with the font phase). Reason: avoids races and keeps codepoints stable.
+- **`removeDimensions` is on by default** when optimizing, so icons scale to their container; the viewBox is kept and size is read from it.
+- **Malformed SVG is rejected** (must be well-formed XML) instead of being repaired into an empty icon. Files with undefined entities such as `&nbsp;` are therefore refused.
+- **`<title>` is removed** by the sanitizer allowlist (SVGO 4 would keep it).
+- Sibling folder names are unique (case-insensitive); deleting a folder moves its icons to the project root.
+- Permanent deletion of a single icon requires it to be in the trash first.
+
+### Validation (verified)
+- `npm run typecheck`, `npm run build`: pass.
+- `npm test`: **91 of 91** pass (no database): sanitizer attacks and survivals, optimizer shrinks files, slug helpers, ZIP limits, codepoint rule, plus the earlier admin, permission, validation, error and session tests.
+- `npm run test:db`: **100 of 100** pass against a throwaway database that is dropped afterwards (9 model tests, 41 project and folder tests, 50 icon tests). They cover every kind of user (guest, owner, other, admin) over HTTP, the cross-project batch cases, ZIP uploads with folders, duplicate strategies, versions, trash, copy, search and downloads. No test database was left behind.
+- Real server and real database (test server on port 5070, stopped afterwards): created a project, a folder, pasted an icon (156 to 89 bytes), uploaded a ZIP (2 icons, 2 folders), edited and restored a version, trashed and restored, copied to another project, searched, downloaded 3 icons as a ZIP, duplicated and deleted a project (3 icons and 3 folders cascaded); the database ended at its original size (2 bundles, 2 versions, 1 user, no projects). The Phase 1 and Phase 0 checks were re-run and pass, so the old library is unchanged.
+- One of my check scripts first failed because Node's `fetch` refuses port 5060; it was rerun on 5070. Another read a ZIP as text; the script was fixed and the affected steps rerun. Neither was a server problem.
+
+### Not tested, or open
+- **Nothing was run in a browser**; the client does not use these routes yet (Phase 3 onward).
+- Large uploads are processed one file at a time on the server: 1000 icons per request is allowed but **not benchmarked**, and a proxy timeout is possible. The client should send big sets in chunks.
+- ZIP size limits trust the sizes in the ZIP header first and re-check after unpacking, so a hostile ZIP can still use memory briefly before it is rejected.
+- No rate limiting on any route.
+- `jsdom` is pinned to 26: version 30 needs Node 22.15 or newer and failed on Node 22.14.
+- Sprite import, font import, project export and import, the sprite and font builders, admin routes (user and project management), API tokens and the CLI are **not done**; they belong to later phases.
+- `ADMIN_EMAILS` is still not set in `server/.env`; admin behaviour was verified through test users only.
+- Deleting a user (and what happens to their projects) is not implemented yet.
+- The old test bundles are still in the database; clearing them waits for the cutover.
+
+### Next
+- Phase 3 (frontend platform): Tailwind 4 theme with light, dark and system modes, new dependencies, API client, signed-out landing page and app shell.
+
+---
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -153,3 +211,4 @@ Logged separately from Phase 0. Server only: no route, client or old-data change
 - Rotate the database password and `SESSION_SECRET` if the zip or `.env` was ever shared.
 - Add more test users or publish the Google app if others need access; configure Microsoft sign-in if wanted.
 - ~~Initialize Git~~ Done in Phase 0. Still open: add a remote and push if wanted.
+- Phase 3 onward: client work, sprite and font builders, import and export, admin routes, API tokens and the CLI (see the Phase 2 section, Not tested, or open).
