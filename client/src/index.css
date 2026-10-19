@@ -2,13 +2,84 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
+/* Dark mode is a class on <html>, set by the theme provider (and by a script in index.html before first paint). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Colour tokens as HSL triples. Light values on :root, dark values on .dark. Pairs used for text on a surface are checked for WCAG AA contrast in src/lib/contrast.test.ts. */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 3.9%;
+  --primary: 221 83% 48%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 240 5.9% 10%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 38%;
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 5.9% 10%;
+  --destructive: 0 72% 46%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 240 5.9% 88%;
+  --input: 240 4% 54%;
+  --ring: 221 83% 48%;
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 10% 7%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 10% 7%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 217 91% 60%;
+  --primary-foreground: 222 47% 8%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 66%;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 240 10% 4%;
+  --border: 240 3.7% 20%;
+  --input: 240 4% 44%;
+  --ring: 217 91% 60%;
+}
+
+/* Makes the tokens available as utilities: bg-background, text-foreground, border-border, ring-ring, bg-primary, text-muted-foreground, ... */
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+}
+
 :root {
   color-scheme: light;
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -39,11 +110,15 @@ label[aria-disabled="true"],
   cursor: not-allowed;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
-  background: #f8fafc;
-  color: #0f172a;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
@@ -54,6 +129,13 @@ pre {
 
 #root {
   min-height: 100vh;
+}
+
+/* The pre-redesign compiler screens are light-only. They keep their own light surface (also in dark mode) until the new workspace replaces them. */
+.legacy-light {
+  background-color: #f8fafc;
+  color: #0f172a;
+  color-scheme: light;
 }
 
 @layer utilities {
