@@ -194,6 +194,52 @@ Confirmed by reading the Icon Vault code and, where noted, by a test here.
 
 ---
 
+## 2026-10-19: Phase 3, frontend platform (Icon Vault integration)
+
+Logged separately from Phases 0 to 2. Client only; the server is untouched in this phase. The signed-in workspace is still the pre-redesign compiler screen (it is replaced in Phases 4 and 5). Six commits on `main` (`d2f8797`, `5a79813`, `76cd607`, `541aa4d`, `3e618f3`, plus this entry), local only.
+
+### Changes
+| Commit | Change | Files | Reason |
+|---|---|---|---|
+| `d2f8797` | Added `lucide-react`, `clsx`, `tailwind-merge`; test tooling `vitest` 5, `@testing-library/react`, `user-event`, `jest-dom`, `jsdom` (pinned to 26: version 30 needs Node 22.15+). `npm test` and `npm run test:watch` in `client/`. | `client/package.json`, `client/package-lock.json`, `client/vite.config.ts`, `client/src/test/setup.ts` | The client had no tests and the new interface needs icons and class helpers |
+| `5a79813` | **Colour theme system (light, dark, system).** HSL colour tokens for both themes, a class-based dark variant and Tailwind 4 utilities (`bg-background`, `text-foreground`, `border-border`, `bg-primary`, ...). A script in `index.html` applies the saved theme before first paint. `ThemeProvider`, `useTheme` and a three-button `ThemeToggle`; the choice is saved, follows the operating system while on System, syncs across tabs and survives blocked storage. The old light-only screens are wrapped in `.legacy-light` so they stay light. | `client/src/index.css`, `client/index.html`, `client/src/lib/theme.ts`, `client/src/lib/cn.ts`, `client/src/context/ThemeProvider.tsx`, `themeContext.ts`, `client/src/hooks/useTheme.ts`, `client/src/components/ui/ThemeToggle.tsx` | Decision: light, dark and system themes |
+| `76cd607` | **Typed API client** for the Phase 1 and 2 routes: a shared axios instance that sends the signed-in user's token and turns every failure into an `ApiError` with the server's message, status and validation details (also from inside downloaded Blobs; unreachable server gets a plain message); types mirroring the server; one function per route in `projects.ts`, `folders.ts`, `icons.ts`. | `client/src/api/http.ts`, `types.ts`, `projects.ts`, `folders.ts`, `icons.ts` | The new screens need a single, tested way to talk to the server |
+| `541aa4d` | **App shell and landing page.** `AppHeader` (replaces the old `Navbar`, which is deleted) with brand, theme switch, Sign in or the user menu; `UserMenu` (avatar or initials, name, email, provider, Admin badge, Sign out; Escape, outside click and Tab-away close it); `LandingPage` for signed-out visitors; `App` with loading state, skip link and landmarks; `LoginModal` restyled with tokens and reworded; `AuthContext` and `ServerUser` carry the server's `role`; `ThemeProvider` added in `main.tsx`; small `lib/navigation.ts` so tests can replace the page reload. | `client/src/App.tsx`, `main.tsx`, `client/src/components/shell/AppHeader.tsx`, `UserMenu.tsx`, `client/src/pages/LandingPage.tsx`, `client/src/components/LoginModal.tsx`, `client/src/context/AuthContext.tsx`, `client/src/api/auth.ts`, `client/src/lib/navigation.ts`, removed `client/src/components/Navbar.tsx` | Decisions: sign-in is required (no guest compile), Door 2 layout, replace the old UI |
+| `3e618f3` | Ring on the selected theme button; README updated (sign-in required, theme, client tests). | `client/src/components/ui/ThemeToggle.tsx`, `README.md` | The selected state should not rely on a subtle shade alone |
+
+### Changes in behaviour you will notice
+- **Signing in is now required.** A signed-out visitor sees the landing page; **compiling without an account no longer works** (decided earlier).
+- The login dialog says "Sign in" with a Cancel button (the "Continue as Guest" wording is gone).
+- The header is new: theme switch, and for signed-in users an account menu with Sign out. It is exactly 57px tall because the legacy compiler positions itself below a header of that height.
+- Dark mode applies to the header, landing page, sign-in dialog and menu. **The legacy compiler and library panel stay light in dark mode** until they are replaced.
+- Admins get an "Admin" badge in the account menu once `ADMIN_EMAILS` is set on the server.
+- Bundle size: JavaScript 463.6 kB to 506.8 kB (+43 kB), CSS 59.1 kB to 65.2 kB, because of the new libraries.
+
+### Found along the way
+- A contrast test that reads the real tokens caught two weak colour choices of my own: input borders at 1.65:1 (needs 3:1 for control edges) and the dark-mode red at 4.2:1 as text (needs 4.5:1). Both were fixed; the test now guards every text, border and focus-ring pair in both themes (WCAG AA 4.5:1 for text, 3:1 for control borders and the focus ring).
+- Vitest returns an empty string for `?raw` CSS imports, so the contrast test reads the stylesheet from disk (with Node types for that one file only).
+- Node's `fetch` refuses some ports (5060 earlier); not relevant to the client but noted for scripts.
+
+### Validation (verified)
+- `npm test` in `client/`: **93 of 93** pass (7 files): theme logic, provider and toggle (including keyboard and cross-tab), contrast of both themes, class helper, the API client (method, URL, query, body, headers and errors for every function), and the app shell (loading, landing, landmarks, skip link, sign-in dialog and its error and success messages, signed-in view, account menu keyboard behaviour, sign out, welcome message).
+- `npx tsc -b`: passes. `npm run build`: succeeds.
+- `npm run lint`: **31 problems, the same count as the Phase 0 baseline**; none are in code added since (the new files were linted separately and are clean).
+- Server unit tests still pass 91 of 91 (the server was not changed).
+- In the browser pane (client on 5173, server on 5000): landing page in light and dark; the sign-in dialog in dark; phone width 375px with no sideways scroll; the theme switch applies, saves and the selected button is marked (`aria-pressed`); the signed-in header, account menu and the legacy compiler with its library panel under the new header (layout intact; the library loaded through the existing `/api/sprites`); Sign out returns to the landing page, clears the session, keeps the theme and shows "Logged out successfully"; no console errors. The signed-in checks used a **throwaway test user** created in the development database for this purpose and deleted afterwards (the database is back to 1 real user and the 2 test bundles).
+
+### Not tested, or open
+- **A real Google or Microsoft sign-in was not re-run after the shell change.** The sign-in popup is blocked in the browser pane, and the signed-in checks above used a test session instead. The sign-in code path itself was not modified except for reading `role`, but please sign in once in your own browser to confirm.
+- System mode was verified by unit tests and by the default (operating system light); switching the operating system to dark while the page is open was not tried in a real browser.
+- Only the automated roles, labels and keyboard checks were done for accessibility; **no screen reader and no Firefox or Safari testing**. Theme buttons are 28px, which meets WCAG 2.2's 24px minimum but is smaller than the 44px often recommended on phones.
+- Tablet widths were not checked.
+- The API client is not used by any screen yet; the old `api/sprites.ts` is untouched and still drives the library.
+- The landing page describes sprites, projects, clean uploads and sharing; fonts are not mentioned because the font builder does not exist yet.
+
+### Next
+- Phase 4 (dashboard and workspace): project dashboard, folder tree, icon grid and list, icon drawer, bulk actions, trash, upload and paste dialogs.
+
+---
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
