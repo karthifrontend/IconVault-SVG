@@ -83,13 +83,41 @@ All `/api/sprites` and `/api/auth/me` routes require `Authorization: Bearer <ses
 | PATCH | `/api/sprites/:id/rename` | Rename a bundle |
 | DELETE | `/api/sprites/:id` | Delete one version (`:id` is a version id). Add `?scope=bundle` to delete the whole bundle and all its versions. Deleting the last version removes the bundle. |
 
+## Projects, folders and icons API
+
+Every route needs `Authorization: Bearer <session token>`. Errors are `{ "error": "message" }` (validation errors also carry `details`). A private project of another user answers `404`, as if it did not exist; a project you can see but not change answers `403`.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/projects` | List (query: `scope` all/mine/public, `status`, `purpose`, `search`, `sort`, `page`, `limit`) with icon counts, sample icons and your access flags |
+| POST | `/api/projects` | Create (`name`, `description`, `prefix`, `color`, `purpose` sprite/font, `visibility`) |
+| GET / PATCH / DELETE | `/api/projects/:projectId` | Detail with folder and trash counts; update; delete with everything in it (owner or admin) |
+| POST | `/api/projects/:projectId/duplicate` | Copy a project you can see into a new private one you own |
+| GET / POST | `/api/projects/:projectId/folders` | List folders with icon counts; create (`name`, `parentId`) |
+| PATCH / DELETE | `/api/folders/:folderId` | Rename; delete (icons move to the project root) |
+| POST | `/api/folders/:folderId/move` | Move (`parentId`, `orderIndex`); never into itself or a subfolder |
+| GET | `/api/projects/:projectId/icons` | List (query: `folderId` or `root`, `includeSubfolders`, `search`, `tag`, `trash`, `sort`, `page`, `limit`, `svg`) |
+| POST | `/api/projects/:projectId/icons/upload` | Multipart field `files` (SVG and ZIP) plus `folderId`, `strategy` rename/replace/skip, `optimize`, `tags` |
+| POST | `/api/projects/:projectId/icons/paste` | Add one icon from SVG code |
+| POST | `/api/projects/:projectId/icons/copy` | Copy icons from another project you can see |
+| POST | `/api/projects/:projectId/icons/download` | One SVG, or a ZIP for several (`iconIds`) |
+| POST | `/api/projects/:projectId/icons/batch/{move,tag,delete,restore,optimize}` | Batch actions; ids from other projects are ignored |
+| DELETE | `/api/projects/:projectId/icons/trash` | Empty the trash |
+| GET | `/api/icons/search?q=` | Search icons across the projects you can see |
+| GET / PATCH / DELETE | `/api/icons/:iconId` | Detail with versions; edit (`name`, `folderId`, `tags`, `codepoint`, `rawSvg`); trash (`?permanent=true` for one already in the trash) |
+| GET | `/api/icons/:iconId/download` | The SVG as an attachment |
+| POST | `/api/icons/:iconId/optimize`, `/restore` | Optimize; take out of the trash |
+| GET / POST | `/api/icons/:iconId/versions`, `/versions/:versionId/restore` | History (newest 20 kept); restore an earlier state |
+
+Limits: 1 MB per SVG, 200 files and 25 MB per file per upload request, 500 SVGs and 50 MB unpacked per ZIP, 1000 icons per upload, 500 ids per batch call. Uploaded SVGs are cleaned (scripts, event handlers, images, filters, external links and XML entities are removed; `<style>` rules are inlined first) and must be well-formed XML.
+
 ## Data model
 
 - `users`: one per (provider, providerId).
 - `sprites`: the bundle (name, owner, `isPublic`, `currentVersion`, `symbolCount`); unique per (owner, bundleName).
 - `sprite_versions`: one document per (spriteId, version) holding the sprite XML and its symbol ids.
 
-Added for the Icon Vault integration (defined and indexed, but not used by any route yet; the project, folder and icon routes arrive in Phase 2):
+Added for the Icon Vault integration (used by the project, folder and icon routes below):
 
 - `projects`: owner, name, description, prefix, colour, `purpose` (`sprite` or `font`, fixed at creation), `visibility` (`public` or `private`), `isArchived`.
 - `folders`: nested through `parentId` (null = project root), ordered by `orderIndex`.
