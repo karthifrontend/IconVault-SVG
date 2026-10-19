@@ -23,6 +23,7 @@ export type CurrentUser = {
   picture: string | null;
   emailVerified: boolean;
   provider: "google" | "microsoft";
+  role: "admin" | "user";
 };
 
 type AuthContextValue = {
@@ -130,8 +131,10 @@ function readStoredSession(): StoredSession | null {
     const rawUser = localStorage.getItem(STORAGE_KEY);
     const rawToken = localStorage.getItem(TOKEN_KEY);
     if (!rawUser || !rawToken) return null;
+    // A session saved before roles existed has no role until the server confirms it.
+    const user = JSON.parse(rawUser) as Omit<CurrentUser, "role"> & { role?: CurrentUser["role"] };
     return {
-      user: JSON.parse(rawUser) as CurrentUser,
+      user: { ...user, role: user.role ?? "user" },
       token: rawToken,
     };
   } catch {
@@ -160,6 +163,7 @@ function toCurrentUser(serverUser: ServerUser): CurrentUser {
     emailVerified: serverUser.emailVerified,
     // Trust the server's provider label so a stale `google` cached in localStorage can never be mislabelled on rehydrate.
     provider: serverUser.provider,
+    role: serverUser.role ?? "user",
   };
 }
 

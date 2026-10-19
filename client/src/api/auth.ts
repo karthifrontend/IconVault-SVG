@@ -10,6 +10,8 @@ export type ServerUser = {
   picture: string | null;
   emailVerified: boolean;
   provider: "google" | "microsoft";
+  // Admins are the emails listed in the server's ADMIN_EMAILS. Older servers do not send it.
+  role?: "admin" | "user";
   lastLoginAt?: string;
 };
 

@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeProvider';
 import { ToastProvider } from './context/ToastContext';
 
 declare global {
@@ -21,10 +22,12 @@ window.MS_CLIENT_ID = msClientId || undefined;
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ToastProvider>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </ToastProvider>
+    </ThemeProvider>
   </StrictMode>,
 );

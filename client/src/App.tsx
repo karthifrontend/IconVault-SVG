@@ -1,10 +1,12 @@
-// Root App component. Wires the auth context, navbar, login modal, and the main Compiler view together.
+// Root App component. Signing in is required: a signed-out visitor sees the landing page, a signed-in user gets the workspace. The workspace is still the pre-redesign compiler screen; the new project workspace replaces it in the next phases.
+import { Loader2, PanelLeftOpen } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import Navbar from "./components/Navbar";
-import LoginModal from "./components/LoginModal";
 import Compiler from "./components/Compiler";
+import LoginModal from "./components/LoginModal";
+import AppHeader from "./components/shell/AppHeader";
 import { useAuth } from "./context/AuthContext";
 import { useToast } from "./context/ToastContext";
+import LandingPage from "./pages/LandingPage";
 
 const PENDING_LOGIN_TOAST_KEY = "pendingLoginToast";
 const PENDING_LOGOUT_TOAST_KEY = "pendingLogoutToast";
@@ -58,41 +60,55 @@ function App() {
     }
   }, [initializing, showToast]);
 
+  const openLogin = () => setShowLoginModal(true);
+
   return (
-    <div className="min-h-screen bg-mesh bg-slate-50 font-sans text-slate-800 antialiased selection:bg-indigo-200 selection:text-indigo-900">
-      <Navbar
-        onOpenLogin={() => setShowLoginModal(true)}
-        libraryToggleSlot={
-          <button
-            type="button"
-            onClick={() => setLibraryOpen(true)}
-            className={`rounded-md p-1.5 text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 ${
-              libraryOpen ? "hidden" : ""
-            }`}
-            title="Expand Library"
-            aria-label="Expand Library"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M13 5l7 7-7 7M5 5l7 7-7 7"
-              />
-            </svg>
-          </button>
-        }
-      />
-      <Compiler
-        onRequireAuth={() => setShowLoginModal(true)}
-        libraryOpen={libraryOpen}
-        onLibraryToggle={setLibraryOpen}
-      />
+    <div className="min-h-screen bg-background font-sans text-foreground antialiased selection:bg-primary/20">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-foreground"
+      >
+        Skip to main content
+      </a>
+
+      {initializing ? (
+        <div role="status" aria-live="polite" className="flex min-h-screen items-center justify-center gap-2 text-muted-foreground">
+          <Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />
+          <span>Loading…</span>
+        </div>
+      ) : currentUser ? (
+        <>
+          <AppHeader
+            onSignIn={openLogin}
+            leading={
+              <button
+                type="button"
+                onClick={() => setLibraryOpen(true)}
+                className={`rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${
+                  libraryOpen ? "hidden" : ""
+                }`}
+                title="Expand Library"
+                aria-label="Expand Library"
+              >
+                <PanelLeftOpen aria-hidden="true" className="h-5 w-5" />
+              </button>
+            }
+          />
+          <div id="main" tabIndex={-1} className="legacy-light bg-mesh min-h-screen font-sans antialiased outline-none selection:bg-indigo-200 selection:text-indigo-900">
+            <Compiler
+              onRequireAuth={openLogin}
+              libraryOpen={libraryOpen}
+              onLibraryToggle={setLibraryOpen}
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          <AppHeader onSignIn={openLogin} />
+          <LandingPage onSignIn={openLogin} />
+        </>
+      )}
+
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}

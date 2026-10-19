@@ -1,4 +1,4 @@
-// Login modal. Triggers the Google sign-in flow and surfaces auth errors to the user.
+// Sign-in dialog. Offers Google and Microsoft sign-in and shows any error. Styled with the theme tokens so it works in light and dark.
 import { useState } from "react";
 import Modal from "./Modal";
 import { useAuth } from "../context/AuthContext";
@@ -135,21 +135,22 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       onClose={close}
       ariaLabel="Library Login"
       maxWidth="max-w-sm"
+      className="dark:border-border dark:bg-card"
     >
       <div className="p-8 w-full text-center">
-        <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
-          <LockIcon className="w-8 h-8 text-indigo-600" strokeWidth={1.5} />
+        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+          <LockIcon className="w-8 h-8 text-primary" strokeWidth={1.5} />
         </div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Library Login</h2>
-        <p className="text-sm text-slate-500 mb-6">
-          Sign in to save sprites to your personal library.
+        <h2 className="text-2xl font-bold text-card-foreground mb-2">Sign in</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Use your Google or Microsoft account to continue.
         </p>
         <div className="space-y-3">
           <button
             type="button"
             onClick={() => handleProvider("google")}
             disabled={isBusy}
-            className="w-full py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-semibold shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3 bg-background border border-input text-foreground rounded-xl font-semibold shadow-sm hover:bg-accent transition-colors flex items-center justify-center gap-2 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             <GoogleLogo className="w-5 h-5" />
             {isProvider("google")
@@ -161,7 +162,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             type="button"
             onClick={() => handleProvider("microsoft")}
             disabled={isBusy}
-            className="w-full py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-semibold shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3 bg-background border border-input text-foreground rounded-xl font-semibold shadow-sm hover:bg-accent transition-colors flex items-center justify-center gap-2 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             <MicrosoftLogo className="w-5 h-5" />
             {isProvider("microsoft")
@@ -173,16 +174,16 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             type="button"
             onClick={close}
             disabled={isBusy}
-            className="w-full py-2 mt-2 text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors disabled:opacity-50"
+            className="w-full py-2 mt-2 text-sm text-muted-foreground hover:text-foreground font-medium transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            Cancel / Continue as Guest
+            Cancel
           </button>
         </div>
         {message && (
-          <p className="mt-4 text-xs font-medium text-emerald-600">{message}</p>
+          <p role="status" className="mt-4 text-xs font-medium text-emerald-700 dark:text-emerald-400">{message}</p>
         )}
         {error && (
-          <p className="mt-4 text-xs font-medium text-rose-500">{error}</p>
+          <p role="alert" className="mt-4 text-xs font-medium text-destructive">{error}</p>
         )}
       </div>
     </Modal>
