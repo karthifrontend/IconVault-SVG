@@ -7,9 +7,9 @@
     "dev": "cross-env tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "backfill:owner": "cross-env tsx src/scripts/backfill-owner.ts",
-    "backfill:version-updated-at": "cross-env tsx src/scripts/backfill-version-updated-at.ts",
-    "cleanup:orphans": "cross-env tsx src/scripts/backfill-version-updated-at.ts cleanup-orphans"
+    "backfill:owner": "cross-env tsx src/scripts/backfill-sprite-owner.ts",
+    "backfill:version-updated-at": "cross-env tsx src/scripts/sprite-version-maintenance.ts",
+    "cleanup:orphans": "cross-env tsx src/scripts/sprite-version-maintenance.ts cleanup-orphans"
   },
   "keywords": [],
   "author": "",

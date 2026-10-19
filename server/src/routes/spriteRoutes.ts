@@ -8,6 +8,9 @@ import { requireUser } from "../middleware/requireUser.js";
 
 const router = Router();
 
+// How many times POST / retries when another save grabs the same version number first.
+const MAX_VERSION_ALLOC_ATTEMPTS = 5;
+
 type CreateSpriteBody = {
   name?: unknown;
   bundleName?: unknown;
@@ -230,7 +233,7 @@ router.post("/", requireUser, async (req: Request, res: Response) => {
     // The previous-current-version is the highest version currently stored for this bundle. We use a real count rather than the cached `bundle.currentVersion` to guard against the cache getting out of sync (e.g. after a manual DB edit or a prior bug). The unique index on (spriteId, version) is the real safety net that prevents duplicates if two requests race past this read at the same time — a duplicate would surface as an E11000 below and we retry once with the new max.
     let nextVersion = bundle.currentVersion + 1;
     let createdVersion;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt < MAX_VERSION_ALLOC_ATTEMPTS; attempt += 1) {
       try {
         createdVersion = await SpriteVersion.create({
           spriteId: bundle._id,
@@ -260,16 +263,27 @@ router.post("/", requireUser, async (req: Request, res: Response) => {
       }
     }
     if (!createdVersion) {
-      return res
-        .status(500)
-        .json({ error: "Failed to allocate a new sprite version." });
+      // Every attempt lost the race for a version number; the client can safely retry.
+      return res.status(409).json({
+        error: "Could not allocate a new sprite version. Please try again.",
+      });
     }
 
     // Refresh the bundle's cached metadata to reflect the newly inserted version. Doing this after the insert (rather than in the same `findOneAndUpdate` above) means the cache is only ever advanced forward, never overwritten with a stale value from a parallel request.
-    bundle.currentVersion = nextVersion;
-    bundle.symbolCount = symbolCount;
-    bundle.isPublic = isPublic;
-    await bundle.save();
+    // Use one atomic update with $max so currentVersion can only move forward, even if two saves finish out of order.
+    const updatedBundle = await Sprite.findByIdAndUpdate(
+      bundle._id,
+      {
+        $max: { currentVersion: createdVersion.version },
+        $set: { symbolCount, isPublic },
+      },
+      { returnDocument: "after" },
+    );
+    if (updatedBundle) {
+      bundle.currentVersion = updatedBundle.currentVersion;
+      bundle.symbolCount = updatedBundle.symbolCount;
+      bundle.isPublic = updatedBundle.isPublic;
+    }
 
     return res
       .status(201)

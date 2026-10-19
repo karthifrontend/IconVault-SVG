@@ -16,11 +16,15 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(raw);
 }
 
+// Providers a session may belong to. Mirrors the `provider` enum on the User model so every stored user can hold a valid session.
+const SESSION_PROVIDERS = ["google", "microsoft", "password", "system"] as const;
+export type SessionProvider = (typeof SESSION_PROVIDERS)[number];
+
 // Type definition for the claims returned in a session token.
 export type SessionClaims = {
   sub: string;
   email: string;
-  provider: "google" | "microsoft";
+  provider: SessionProvider;
   providerId: string;
 };
 
@@ -30,7 +34,8 @@ function isSessionClaims(payload: JWTPayload): payload is SessionClaims & JWTPay
   return (
     typeof payload.sub === "string" &&
     typeof (payload as { email?: unknown }).email === "string" &&
-    (provider === "google" || provider === "microsoft") &&
+    typeof provider === "string" &&
+    (SESSION_PROVIDERS as readonly string[]).includes(provider) &&
     typeof (payload as { providerId?: unknown }).providerId === "string"
   );
 }
