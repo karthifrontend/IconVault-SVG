@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
     "test:db": "node --import tsx --test tests/db/*.db.test.ts",
-    "cutover:drop-legacy": "cross-env tsx src/scripts/drop-legacy-sprites.ts"
+    "cutover:drop-legacy": "cross-env tsx src/scripts/drop-legacy-sprites.ts",
+    "seed:demo": "cross-env tsx src/scripts/seed-demo.ts"
   },
   "keywords": [],
   "author": "",

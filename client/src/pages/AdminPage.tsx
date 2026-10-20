@@ -1,9 +1,10 @@
 // The administration screen: every user with their projects, icons and active API tokens, a search, and deleting a user (their projects can move to another user first). Only admins can open it; anyone else is sent to the dashboard.
-import { Trash2 } from "lucide-react";
+import { FolderKanban, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { listUsers } from "../api/admin";
 import type { AdminUser } from "../api/types";
+import AdminStats from "../components/admin/AdminStats";
 import AdminTabs from "../components/admin/AdminTabs";
 import DeleteUserDialog from "../components/admin/DeleteUserDialog";
 import { Button } from "../components/ui/Button";
@@ -24,6 +25,7 @@ export default function AdminPage() {
   const [pageState, setPageState] = useState({ search: "", page: 1 });
   const page = pageState.search === search ? pageState.page : 1;
   const [deleting, setDeleting] = useState<AdminUser | null>(null);
+  const [statsVersion, setStatsVersion] = useState(0);
   const isAdmin = currentUser?.role === "admin";
   const users = useResource(isAdmin ? `admin-users:${search}:${page}` : null, () => listUsers({ ...(search ? { search } : {}), page, limit: PAGE_SIZE }));
 
@@ -39,6 +41,7 @@ export default function AdminPage() {
       <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Everyone who has signed in. Users are created by signing in with Google or Microsoft, and there are no passwords to manage. Admins are the emails in the server’s ADMIN_EMAILS setting.</p>
 
       <AdminTabs />
+      <AdminStats version={statsVersion} />
 
       <div className="mt-6">
         <label htmlFor="admin-search" className="sr-only">
@@ -95,11 +98,19 @@ export default function AdminPage() {
                     <td className="px-3 py-2 text-right tabular-nums">{user.activeTokens}</td>
                     <td className="px-3 py-2 text-muted-foreground">{user.lastLoginAt ? formatRelative(user.lastLoginAt) : "Never"}</td>
                     <td className="px-3 py-2 text-right">
+                      <div className="flex flex-wrap justify-end gap-1.5">
+                      {user.projectCount > 0 && (
+                        <Link to={`/admin/projects?owner=${user.id}`} aria-label={`Projects of ${user.displayName}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm font-semibold hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+                          <FolderKanban aria-hidden="true" className="h-3.5 w-3.5" />
+                          Projects
+                        </Link>
+                      )}
                       {!user.isSelf && (
                         <Button size="sm" variant="destructive" icon={<Trash2 aria-hidden="true" className="h-3.5 w-3.5" />} onClick={() => setDeleting(user)} aria-label={`Delete ${user.displayName}`}>
                           Delete
                         </Button>
                       )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -127,6 +138,7 @@ export default function AdminPage() {
         onClose={() => setDeleting(null)}
         onDeleted={(user, result) => {
           users.reload();
+          setStatsVersion((value) => value + 1);
           const moved = result.transferredProjects > 0 ? ` ${pluralize(result.transferredProjects, "project")} moved.` : result.deletedProjects > 0 ? ` ${pluralize(result.deletedProjects, "project")} deleted.` : "";
           showToast(`Deleted ${user.displayName}.${moved}`, "success");
         }}

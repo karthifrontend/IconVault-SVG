@@ -44,6 +44,8 @@ export type ListProjectsParams = {
   scope?: "all" | "mine" | "public";
   status?: "active" | "archived" | "all";
   purpose?: "all" | ProjectPurpose;
+  // Only this owner's projects (admin screens).
+  owner?: string;
   search?: string;
   sort?: "updated" | "created" | "name" | "icons";
   page?: number;
@@ -187,6 +189,9 @@ export type AdminUser = {
 };
 export type AdminUserList = { users: AdminUser[]; total: number; page: number; limit: number };
 export type ListUsersParams = { search?: string; page?: number; limit?: number };
+export type AdminStats = { users: number; admins: number; projects: number; publicProjects: number; privateProjects: number; draftProjects: number; icons: number; fontBuilds: number; activeTokens: number };
+// What a bulk transfer or delete reports: how many were done and which ones could not be.
+export type BulkProjectsResult = { requested: number; done: number; failed: { id: string; name: string; message: string }[]; deletedIcons?: number };
 export type DeleteUserResult = { deletedProjects: number; deletedIcons: number; transferredProjects: number; revokedTokens: number };
 
 export type ApiTokenItem = { id: string; name: string; prefix: string; createdAt: string; lastUsedAt: string | null; revokedAt: string | null };

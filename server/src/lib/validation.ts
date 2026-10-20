@@ -95,6 +95,8 @@ export const listProjectsQuerySchema = z.object({
   scope: z.enum(["all", "mine", "public"]).default("all"),
   status: z.enum(["active", "archived", "all"]).default("active"),
   purpose: z.enum(["all", ...PURPOSES]).default("all"),
+  // Only the projects of this owner (the admin screens use it to show one user's projects).
+  owner: objectId.optional(),
   search: z.string().trim().max(100).optional(),
   sort: z.enum(["updated", "created", "name", "icons"]).default("updated"),
   page: z.coerce.number().int().min(1).default(1),
@@ -193,6 +195,9 @@ export type ListUsersQuery = z.infer<typeof listUsersQuerySchema>;
 
 export const deleteUserSchema = z.object({ transferTo: objectId.optional() }).strict();
 export const transferProjectSchema = z.object({ userId: objectId }).strict();
+// Several projects at once (the Manage projects screen): at most 100 per request.
+export const bulkTransferSchema = z.object({ projectIds: z.array(objectId).min(1).max(100), userId: objectId }).strict();
+export const bulkDeleteProjectsSchema = z.object({ projectIds: z.array(objectId).min(1).max(100) }).strict();
 
 // ---- Icon fonts ----
 

@@ -106,6 +106,7 @@ export async function listProjects(actor: SignedInActor, query: ListProjectsQuer
   if (query.scope === "public") and.push({ visibility: "public" });
   if (query.status !== "all") and.push({ isArchived: query.status === "archived" });
   if (query.purpose !== "all") and.push({ purpose: query.purpose });
+  if (query.owner) and.push({ ownerId: new mongoose.Types.ObjectId(query.owner) });
   if (query.search) {
     const pattern = new RegExp(escapeRegExp(query.search), "i");
     const fields: Record<string, unknown>[] = [{ name: pattern }, { description: pattern }, { prefix: pattern }];

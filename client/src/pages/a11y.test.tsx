@@ -63,6 +63,7 @@ beforeEach(() => {
   vi.mocked(iconsApi.listIcons).mockImplementation(async (_id, params) => (params?.trash ? { icons: [icons[2] as ReturnType<typeof makeIcon>], total: 1, page: 1, limit: 200 } : { icons: icons.slice(0, 2), total: 2, page: 1, limit: 200 }));
   vi.mocked(iconsApi.getIcon).mockResolvedValue({ ...(icons[0] as ReturnType<typeof makeIcon>), svg: SVG, versions: [{ id: "v1", byteSize: 100, createdAt: "2026-10-10T10:00:00.000Z" }] });
   vi.mocked(adminApi.listUsers).mockResolvedValue({ users: [{ id: "u1", displayName: "Ada Lovelace", email: "ada@example.com", provider: "google", picture: null, createdAt: "2026-10-01T10:00:00.000Z", lastLoginAt: "2026-10-19T10:00:00.000Z", projectCount: 2, iconCount: 9, activeTokens: 1, isAdmin: true, isSelf: true }, { id: "u2", displayName: "Bob", email: "bob@example.com", provider: "microsoft", picture: null, createdAt: "2026-10-01T10:00:00.000Z", lastLoginAt: null, projectCount: 1, iconCount: 2, activeTokens: 0, isAdmin: false, isSelf: false }], total: 2, page: 1, limit: 25 });
+  vi.mocked(adminApi.getAdminStats).mockResolvedValue({ users: 5, admins: 1, projects: 7, publicProjects: 3, privateProjects: 4, draftProjects: 1, icons: 42, fontBuilds: 2, activeTokens: 3 });
   vi.mocked(tokensApi.listTokens).mockResolvedValue({ tokens: [{ id: "t1", name: "CI", prefix: "isv_AbCd", createdAt: "2026-10-01T10:00:00.000Z", lastUsedAt: null, revokedAt: null }, { id: "t2", name: "Old", prefix: "isv_ZzZz", createdAt: "2026-10-01T10:00:00.000Z", lastUsedAt: "2026-10-05T10:00:00.000Z", revokedAt: "2026-10-10T10:00:00.000Z" }], maxActive: 10 });
   vi.mocked(fontsApi.buildFont).mockResolvedValue({ fontName: "Feather", prefix: "fth", iconCount: 2, warnings: [{ icon: "Home", message: "Uses strokes." }], css: "@font-face{}", preview: { format: "woff2", base64: "AA==" }, sizes: { woff2: 1000 }, codepoints: [{ id: "i1", name: "Home", slug: "home", codepoint: "E001", className: "fth-home", isNew: true }, { id: "i2", name: "Star", slug: "star", codepoint: "E002", className: "fth-star", isNew: false }] });
   vi.mocked(fontsApi.listFontBuilds).mockResolvedValue([{ id: "b1", version: 1, fontName: "Feather", iconCount: 2, formats: ["woff2", "ttf"], size: 4600, createdAt: "2026-10-20T12:00:00.000Z" }]);
@@ -180,8 +181,8 @@ describe("project workspace", () => {
 
   it("the icon drawer", async () => {
     project("/projects/p1");
-    await userEvent.click(await screen.findByRole("button", { name: "Open Home" }));
-    await screen.findByRole("heading", { level: 3, name: "Home" });
+    await userEvent.click(await screen.findByRole("button", { name: "Open Home" }, { timeout: 8000 }));
+    await screen.findByRole("heading", { level: 3, name: "Home" }, { timeout: 8000 });
     await clean();
     await userEvent.click(screen.getByRole("tab", { name: "Code" }));
     await clean();

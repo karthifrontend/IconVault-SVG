@@ -1,5 +1,5 @@
 // The signed-in home screen: every project the user can see, with filters (kept in the address, so Back works and links can be shared), create, edit, duplicate, archive and delete, plus a search that also finds icons across projects and can copy them into one of the user's projects.
-import { Filter, Globe, Layers, Lock, Plus, Search, Shapes, Type, Upload } from "lucide-react";
+import { ChevronDown, Filter, Globe, Layers, Lock, Plus, Search, Shapes, Type, Upload } from "lucide-react";
 import { useContext, useRef, useState, type ChangeEvent } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -11,7 +11,6 @@ import ProjectCard from "../components/projects/ProjectCard";
 import ProjectFormDialog from "../components/projects/ProjectFormDialog";
 import { Button } from "../components/ui/Button";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
-import { SelectField } from "../components/ui/Fields";
 import SegmentedGroup from "../components/ui/SegmentedGroup";
 import SvgPreview from "../components/ui/SvgPreview";
 import { HeaderActionsContext } from "../context/headerActionsContext";
@@ -110,7 +109,7 @@ export default function DashboardPage() {
   const byType = loaded.filter((project) => purpose === "all" || project.purpose === purpose);
   const byVisibility = loaded.filter((project) => scope === "all" || project.visibility === scope);
   const renderCards = (items: ProjectSummary[]) => (
-    <ul className={cn("grid gap-4 sm:grid-cols-2 lg:grid-cols-3", projects.loading && "opacity-60")}>
+    <ul className={cn("grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5", projects.loading && "opacity-60")}>
       {items.map((project) => (
         <ProjectCard key={project.id} project={project} currentUserId={currentUser?.id ?? ""} onEdit={(p) => setForm({ mode: "edit", project: p })} onDuplicate={handleDuplicate} onToggleArchive={handleToggleArchive} onDelete={setDeleting} />
       ))}
@@ -135,11 +134,12 @@ export default function DashboardPage() {
   const showIcons = search.length >= 2;
 
   return (
-    <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-4 pb-16 pt-[calc(57px+2rem)] outline-none">
+    <main id="main" tabIndex={-1} className="pt-[57px] outline-none">
       <h1 className="sr-only">Projects</h1>
-      {actionsSlot ? createPortal(headerButtons, actionsSlot) : <div className="flex justify-end">{headerButtons}</div>}
+      {actionsSlot ? createPortal(headerButtons, actionsSlot) : <div className="flex justify-end px-4 pt-3 sm:px-6">{headerButtons}</div>}
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
+      {/* The second-level bar: full width, like the project bar. */}
+      <div className="flex flex-wrap items-center gap-3 border-b border-border bg-background px-4 py-3 sm:px-6">
         <div className="relative min-w-56 flex-1">
           <label htmlFor="dashboard-search" className="sr-only">
             Search projects and icons
@@ -176,11 +176,17 @@ export default function DashboardPage() {
             { value: "font", label: "Fonts", count: byVisibility.filter((project) => project.purpose === "font").length, icon: <Type aria-hidden="true" className="h-3.5 w-3.5" /> },
           ]}
         />
-        <SelectField label="Status" hideLabel value={status} onChange={(event) => setFilter("status", event.target.value, "active")} className="h-10 w-auto">
-          <option value="active">Active</option>
-          <option value="archived">Draft</option>
-          <option value="all">Both</option>
-        </SelectField>
+        <div className="relative ml-auto">
+          <label htmlFor="dashboard-status" className="sr-only">
+            Status
+          </label>
+          <select id="dashboard-status" value={status} onChange={(event) => setFilter("status", event.target.value, "active")} className="h-10 appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring">
+            <option value="active">Active</option>
+            <option value="archived">Draft</option>
+            <option value="all">Both</option>
+          </select>
+          <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        </div>
         {/* The sort choice is a filter icon; the list of choices opens from it. */}
         <label className="relative inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-ring" title={`Sort: ${SORT_LABELS[sort]}`}>
           <Filter aria-hidden="true" className="h-4 w-4" />
@@ -194,8 +200,9 @@ export default function DashboardPage() {
         </label>
       </div>
 
+      <div className="px-4 pb-16 pt-6 sm:px-6">
       {showIcons && (
-        <section aria-labelledby="icon-results-title" className="mt-8">
+        <section aria-labelledby="icon-results-title">
           <h2 id="icon-results-title" className="text-lg font-semibold">
             Icons matching “{search}”
           </h2>
@@ -225,7 +232,7 @@ export default function DashboardPage() {
         </section>
       )}
 
-      <section aria-labelledby="projects-title" className="mt-8">
+      <section aria-labelledby="projects-title" className={showIcons ? "mt-8" : ""}>
         {showIcons && (
           <h2 id="projects-title" className="mb-3 text-lg font-semibold">
             Projects
@@ -245,7 +252,7 @@ export default function DashboardPage() {
             </Button>
           </div>
         ) : projects.loading && !projects.data ? (
-          <ul aria-busy="true" aria-label="Loading projects" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul aria-busy="true" aria-label="Loading projects" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
             {Array.from({ length: 6 }, (_, i) => (
               <li key={i} className="h-56 animate-pulse rounded-2xl border border-border bg-muted" />
             ))}
@@ -288,6 +295,7 @@ export default function DashboardPage() {
           </>
         )}
       </section>
+      </div>
 
       <ProjectFormDialog
         open={form !== null}

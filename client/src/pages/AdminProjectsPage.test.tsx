@@ -20,9 +20,9 @@ const listProjects = vi.mocked(projectsApi.listProjects);
 const reply = (projects: ReturnType<typeof makeProject>[], total = projects.length) => ({ projects, total, page: 1, limit: 25 });
 const Where = () => <p data-testid="where">{useLocation().pathname}</p>;
 
-function renderPage() {
+function renderPage(path = "/admin/projects") {
   return render(
-    <MemoryRouter initialEntries={["/admin/projects"]}>
+    <MemoryRouter initialEntries={[path]}>
       <ToastProvider>
         <Routes>
           <Route path="/" element={<p>Dashboard</p>} />
@@ -38,6 +38,7 @@ function renderPage() {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(adminApi.getAdminStats).mockResolvedValue({ users: 5, admins: 1, projects: 7, publicProjects: 3, privateProjects: 4, draftProjects: 1, icons: 42, fontBuilds: 2, activeTokens: 3 });
   auth.currentUser.role = "admin";
   listProjects.mockResolvedValue(
     reply([
@@ -122,6 +123,70 @@ describe("Manage projects", () => {
     renderPage();
     await userEvent.click(await screen.findByRole("button", { name: "Transfer Feather" }));
     expect(await screen.findByRole("dialog", { name: "Transfer ownership" })).toBeInTheDocument();
+  });
+});
+
+describe("totals, owner filter and bulk actions", () => {
+  it("shows the workspace totals", async () => {
+    renderPage();
+    const totals = await screen.findByRole("region", { name: "Workspace totals" });
+    expect(await within(totals).findByText("42")).toBeInTheDocument();
+    expect(within(totals).getByText("4 private, 3 public, 1 draft")).toBeInTheDocument();
+    expect(within(totals).getByText("Font packages kept")).toBeInTheDocument();
+  });
+
+  it("shows one owner's projects from the address, with a way back to everyone's", async () => {
+    renderPage("/admin/projects?owner=u1");
+    expect(await screen.findByText("Ada Lovelace", { selector: "span.font-semibold" })).toBeInTheDocument();
+    expect(listProjects).toHaveBeenCalledWith({ status: "all", scope: "all", sort: "updated", owner: "u1", page: 1, limit: 25 });
+    await userEvent.click(screen.getByRole("button", { name: "Show every owner's projects" }));
+    await waitFor(() => expect(listProjects).toHaveBeenLastCalledWith({ status: "all", scope: "all", sort: "updated", page: 1, limit: 25 }));
+    expect(screen.queryByRole("button", { name: "Show every owner's projects" })).not.toBeInTheDocument();
+  });
+
+  it("ticks projects and shows how many are selected, with select all and clear", async () => {
+    renderPage();
+    await screen.findByRole("table", { name: "Projects" });
+    expect(screen.queryByRole("region", { name: "Selected projects" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Feather" }));
+    expect(within(screen.getByRole("region", { name: "Selected projects" })).getByText("1 project selected")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all projects on this page" }));
+    expect(screen.getByText("2 projects selected")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(screen.queryByRole("region", { name: "Selected projects" })).not.toBeInTheDocument();
+  });
+
+  it("deletes the ticked projects after asking, and reloads the list and the totals", async () => {
+    vi.mocked(adminApi.bulkDeleteProjects).mockResolvedValue({ requested: 2, done: 2, failed: [], deletedIcons: 9 });
+    renderPage();
+    await screen.findByRole("table", { name: "Projects" });
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all projects on this page" }));
+    await userEvent.click(screen.getByRole("button", { name: "Delete selected" }));
+    const dialog = screen.getByRole("dialog", { name: "Delete 2 projects?" });
+    expect(dialog).toHaveTextContent("“Feather”, “Old set”");
+    expect(adminApi.bulkDeleteProjects).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Delete projects" }));
+    expect(adminApi.bulkDeleteProjects).toHaveBeenCalledWith(["p1", "p2"]);
+    expect(await screen.findByText("Deleted 2 projects.")).toBeInTheDocument();
+    await waitFor(() => expect(listProjects).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(adminApi.getAdminStats).toHaveBeenCalledTimes(2));
+  });
+
+  it("transfers the ticked projects to one user and reports the ones that could not move", async () => {
+    vi.mocked(adminApi.listUsers).mockResolvedValue({ users: [{ id: "u9", displayName: "Grace", email: "grace@example.com", provider: "google", picture: null, createdAt: "2026-10-01T10:00:00.000Z", lastLoginAt: null, projectCount: 0, iconCount: 0, activeTokens: 0, isAdmin: false, isSelf: false }], total: 1, page: 1, limit: 100 });
+    vi.mocked(adminApi.bulkTransferProjects).mockResolvedValue({ requested: 2, done: 1, failed: [{ id: "p2", name: "Old set", message: "That user already owns this project." }] });
+    renderPage();
+    await screen.findByRole("table", { name: "Projects" });
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all projects on this page" }));
+    await userEvent.click(screen.getByRole("button", { name: "Transfer selected" }));
+    const dialog = await screen.findByRole("dialog", { name: "Transfer projects" });
+    await within(dialog).findByRole("option", { name: "Grace (grace@example.com)" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Transfer" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Choose the new owner.");
+    await userEvent.selectOptions(within(dialog).getByLabelText("New owner"), "u9");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Transfer" }));
+    expect(adminApi.bulkTransferProjects).toHaveBeenCalledWith(["p1", "p2"], "u9");
+    expect(await screen.findByText(/Moved 1 project to Grace; 1 could not move \(That user already owns this project\.\)/)).toBeInTheDocument();
   });
 });
 

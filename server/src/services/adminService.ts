@@ -108,6 +108,58 @@ export async function deleteUser(actor: SignedInActor, userId: Id, transferTo: I
   return { deletedProjects, deletedIcons, transferredProjects, revokedTokens: tokens.deletedCount };
 }
 
+// Workspace totals for the admin screens.
+export async function adminStats() {
+  const [users, projects, publicProjects, draftProjects, icons, fontBuilds, activeTokens] = await Promise.all([
+    User.countDocuments({}),
+    Project.countDocuments({}),
+    Project.countDocuments({ visibility: "public" }),
+    Project.countDocuments({ isArchived: true }),
+    Icon.countDocuments({ deletedAt: null }),
+    mongoose.connection.collection("font_builds").countDocuments({}),
+    ApiToken.countDocuments({ revokedAt: null }),
+  ]);
+  const admins = (await User.find({}, { email: 1, provider: 1, emailVerified: 1 }).lean()).filter((user) => isAdminUser(user)).length;
+  return { users, admins, projects, publicProjects, privateProjects: projects - publicProjects, draftProjects, icons, fontBuilds, activeTokens };
+}
+
+export type BulkResult = { requested: number; done: number; failed: { id: string; name: string; message: string }[] };
+
+// Moves several projects to one user. Each project is handled on its own, so one failure (for example the user already owns it) does not stop the rest.
+export async function bulkTransferProjects(projectIds: Id[], toUserId: Id, actor: SignedInActor): Promise<BulkResult> {
+  await loadUser(toUserId, "The new owner");
+  const result: BulkResult = { requested: projectIds.length, done: 0, failed: [] };
+  for (const id of projectIds) {
+    const project = await Project.findById(id);
+    if (!project) {
+      result.failed.push({ id: String(id), name: "", message: "Project not found." });
+      continue;
+    }
+    try {
+      await transferProject(project, toUserId, actor);
+      result.done += 1;
+    } catch (err) {
+      result.failed.push({ id: String(id), name: project.name, message: err instanceof Error ? err.message : "Could not move it." });
+    }
+  }
+  return result;
+}
+
+// Deletes several projects for good, each with its icons, folders and history.
+export async function bulkDeleteProjects(projectIds: Id[]): Promise<BulkResult & { deletedIcons: number }> {
+  const result = { requested: projectIds.length, done: 0, failed: [] as BulkResult["failed"], deletedIcons: 0 };
+  for (const id of projectIds) {
+    const project = await Project.findById(id);
+    if (!project) {
+      result.failed.push({ id: String(id), name: "", message: "Project not found." });
+      continue;
+    }
+    result.deletedIcons += (await deleteProject(project)).deletedIcons;
+    result.done += 1;
+  }
+  return result;
+}
+
 // Moves one project to another user. The new owner gets full control; the previous owner keeps only what the visibility rules give them.
 export async function transferProject(project: HydratedDocument<ProjectDoc>, toUserId: Id, actor: SignedInActor) {
   await loadUser(toUserId, "The new owner");

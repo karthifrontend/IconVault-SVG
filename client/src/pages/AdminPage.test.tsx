@@ -38,6 +38,7 @@ function renderPage() {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(adminApi.getAdminStats).mockResolvedValue({ users: 5, admins: 1, projects: 7, publicProjects: 3, privateProjects: 4, draftProjects: 1, icons: 42, fontBuilds: 2, activeTokens: 3 });
   counter = 0;
   auth.currentUser.role = "admin";
   const me = user({ id: "u0", displayName: "Admin", email: "admin@example.com", isAdmin: true, isSelf: true });
@@ -201,5 +202,21 @@ describe("moving a project", () => {
     await userEvent.selectOptions(screen.getByLabelText("New owner"), screen.getByRole("option", { name: /Bob/ }));
     await userEvent.click(screen.getByRole("button", { name: "Transfer" }));
     expect(await screen.findByText("That user already owns this project.")).toBeInTheDocument();
+  });
+});
+
+describe("totals and the link to a user's projects", () => {
+  it("shows the workspace totals under the tabs", async () => {
+    renderPage();
+    const totals = await screen.findByRole("region", { name: "Workspace totals" });
+    expect(await within(totals).findByText("42")).toBeInTheDocument();
+    expect(within(totals).getByText("1 admin")).toBeInTheDocument();
+  });
+
+  it("links a user who owns projects to their projects, and no link for one who owns none", async () => {
+    renderPage();
+    await screen.findByText("ada@example.com");
+    expect(screen.getByRole("link", { name: "Projects of Ada" })).toHaveAttribute("href", expect.stringMatching(/^\/admin\/projects\?owner=u\d+$/));
+    expect(screen.queryByRole("link", { name: "Projects of Bob" })).not.toBeInTheDocument();
   });
 });

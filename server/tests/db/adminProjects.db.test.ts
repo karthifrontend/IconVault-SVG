@@ -42,4 +42,59 @@ describe("manage projects (HTTP, throwaway database)", { skip: hasDatabase ? fal
     const normal = await h.call(bob.token, "GET", `/api/projects?status=all&search=${encodeURIComponent(ada.email)}&limit=100`);
     assert.equal(names(normal.body).includes("Zebra one"), false);
   });
+
+  it("filters the project list by owner", async () => {
+    const mine = await project(ada.token, "Ada only");
+    await project(bob.token, "Bob only");
+    const found = await h.call(admin.token, "GET", `/api/projects?status=all&owner=${ada.id}&limit=100`);
+    assert.equal(found.status, 200);
+    assert.ok(names(found.body).includes("Ada only") && !names(found.body).includes("Bob only"));
+    assert.ok(found.body.projects.every((p: any) => p.owner.id === ada.id));
+    assert.equal((await h.call(admin.token, "GET", "/api/projects?owner=not-an-id")).status, 400);
+    assert.ok(mine.id);
+  });
+
+  describe("stats and bulk actions", () => {
+    it("reports workspace totals to admins only", async () => {
+      const ok = await h.call(admin.token, "GET", "/api/admin/stats");
+      assert.equal(ok.status, 200);
+      for (const key of ["users", "admins", "projects", "publicProjects", "privateProjects", "draftProjects", "icons", "fontBuilds", "activeTokens"]) assert.equal(typeof ok.body[key], "number", key);
+      assert.ok(ok.body.users >= 3 && ok.body.admins >= 1);
+      assert.equal(ok.body.publicProjects + ok.body.privateProjects, ok.body.projects);
+      assert.equal((await h.call(ada.token, "GET", "/api/admin/stats")).status, 403);
+    });
+
+    it("moves several projects to one user and reports the ones that could not move", async () => {
+      const one = await project(ada.token, "Bulk one");
+      const two = await project(ada.token, "Bulk two");
+      const three = await project(bob.token, "Bulk three");
+      const moved = await h.call(admin.token, "POST", "/api/admin/projects/bulk-transfer", { projectIds: [one.id, two.id, three.id], userId: bob.id });
+      assert.equal(moved.status, 200);
+      assert.equal(moved.body.requested, 3);
+      assert.equal(moved.body.done, 2);
+      assert.deepEqual(moved.body.failed.map((f: any) => f.name), ["Bulk three"]);
+      assert.equal((await h.call(bob.token, "GET", `/api/projects/${one.id}`)).body.access.canManage, true);
+    });
+
+    it("refuses bulk actions to other users and bad input", async () => {
+      const p = await project(ada.token, "Bulk guarded");
+      assert.equal((await h.call(ada.token, "POST", "/api/admin/projects/bulk-delete", { projectIds: [p.id] })).status, 403);
+      assert.equal((await h.call(ada.token, "POST", "/api/admin/projects/bulk-transfer", { projectIds: [p.id], userId: bob.id })).status, 403);
+      assert.equal((await h.call(admin.token, "POST", "/api/admin/projects/bulk-delete", { projectIds: [] })).status, 400);
+      assert.equal((await h.call(admin.token, "POST", "/api/admin/projects/bulk-transfer", { projectIds: [p.id], userId: "x" })).status, 400);
+      assert.equal((await h.call(admin.token, "POST", "/api/admin/projects/bulk-transfer", { projectIds: [p.id], userId: "6ad700000000000000000000" })).status, 404);
+    });
+
+    it("deletes several projects for good with their icons", async () => {
+      const one = await project(ada.token, "Bulk del one");
+      const two = await project(bob.token, "Bulk del two");
+      await h.call(ada.token, "POST", `/api/projects/${one.id}/icons/paste`, { name: "x", rawSvg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1 1h10v10z"/></svg>' });
+      const gone = await h.call(admin.token, "POST", "/api/admin/projects/bulk-delete", { projectIds: [one.id, two.id, "6ad700000000000000000000"] });
+      assert.equal(gone.status, 200);
+      assert.equal(gone.body.done, 2);
+      assert.equal(gone.body.deletedIcons, 1);
+      assert.equal(gone.body.failed.length, 1);
+      assert.equal((await h.call(admin.token, "GET", `/api/projects/${one.id}`)).status, 404);
+    });
+  });
 });

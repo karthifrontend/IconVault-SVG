@@ -773,6 +773,31 @@ Client only. One commit on `main`, local only. The dashboard keeps its project c
 - Validation: client **629 of 629**; types and lint clean (the dashboard tests were rewritten for the new controls and cover the counts, the sections, one-kind lists, the type filter and the top-bar buttons). Real browser (throwaway user with one private and two public projects, plus the existing public one): buttons in the bar, pills with counts, the two sections and the filter icon looked right. Test data removed.
 - Not done: showing the dashboard as a left sidebar and list (the earlier attempt, reverted at your request).
 
+## 2026-10-21: Follow-up, full-width dashboard, more admin features and demo data (change request)
+
+One commit on `main`, local only.
+
+### Dashboard
+- **Full width:** the page no longer sits in a centred column. The filters are a **flat second-level bar** with a line under it (search, Show and Type pills, Status, the sort filter icon), like the project bar; the cards below use the whole width (up to five across).
+- **Status dropdown icon:** the browser's own arrow was cramped and sat differently from the other controls. It now has its own chevron, spaced the same as the rest.
+
+### Admin features (compared with Icon Vault)
+- **Totals** at the top of both admin screens: users (and admins), projects (private, public, draft), icons, font packages kept, active API tokens.
+- **Manage projects:** tick projects (or all on the page) to **Transfer selected** to one user or **Delete selected** (asks first; each project is handled on its own and a failure is reported without stopping the rest). Owner filter: the Users screen has a **Projects** button per user that opens the project list for that owner, with a chip to go back to everyone.
+- New server routes (admin only): `GET /api/admin/stats`, `POST /api/admin/projects/bulk-transfer` and `bulk-delete` (up to 100 projects), and `?owner=<userId>` on the project list.
+- **Not copied from Icon Vault, on purpose:** adding or editing users, changing roles and "switch account". Sign-in is Google or Microsoft with no passwords, and admin rights come only from the ADMIN_EMAILS list that is never stored; a role editor or account switching would change that trust model, so they need your decision first.
+
+### Why you saw no Manage button
+Your `server/.env` has an empty `ADMIN_EMAILS`, so nobody is an admin. Put your sign-in e-mail there (comma-separated for several) and restart the server; the Manage button then appears. I do not edit that file.
+
+### Demo profile for the admin view
+- `npm run seed:demo` (in `server/`) adds four made-up users (Demo Admin, Ada, Grace and Linus Demo, e-mails ending `@demo.example.test`) and six projects of every kind (private, public, sprite, font, one draft) with a few icons each. It is safe to run twice. `npm run seed:demo -- --remove` deletes every trace. **I ran it against your database**, so they are there now.
+- The demo users cannot sign in (no passwords); they just fill the lists. "Demo Admin" is a name only: nobody gets admin rights except through ADMIN_EMAILS.
+
+### Validation (verified)
+- Server unit **136 of 136**; database **181 of 181** (new: totals for admins only, bulk transfer with a partial failure, bulk delete with icons, refused for non-admins and bad input, the owner filter). Client **636 of 636** (new: the totals, the owner chip, ticking, bulk delete and bulk transfer, the Projects button). Types and lint clean. The slow lookups in the icon drawer accessibility test got a longer timeout after it failed once under load.
+- Real browser: I started a temporary API on port 5100 with ADMIN_EMAILS set for one throwaway user only (your .env untouched) and a temporary client on 5174, then looked at the dashboard, Manage projects and Manage users with the demo data; both temporary servers and the user were removed afterwards.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -782,7 +807,7 @@ Client only. One commit on `main`, local only. The dashboard keeps its project c
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 629 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 175 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 636 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 181 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.
