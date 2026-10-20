@@ -23,6 +23,8 @@ type UploadDialogProps = {
   // Called as soon as something was added, so the lists can refresh behind the dialog.
   onUploaded: (summary: UploadSummary) => void;
   onPasted: (result: PasteResult) => void;
+  // Which tab to show first.
+  initialTab?: "files" | "paste";
 };
 
 export default function UploadDialog({ open, onClose, ...rest }: UploadDialogProps) {
@@ -35,8 +37,8 @@ export default function UploadDialog({ open, onClose, ...rest }: UploadDialogPro
 
 type Tab = "files" | "paste";
 
-function UploadForm({ projectId, folders, defaultFolderId, onClose, onUploaded, onPasted }: Omit<UploadDialogProps, "open">) {
-  const [tab, setTab] = useState<Tab>("files");
+function UploadForm({ projectId, folders, defaultFolderId, onClose, onUploaded, onPasted, initialTab = "files" }: Omit<UploadDialogProps, "open">) {
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [files, setFiles] = useState<File[]>([]);
   const [problems, setProblems] = useState<{ file: string; message: string }[]>([]);
   const [pasteName, setPasteName] = useState("");

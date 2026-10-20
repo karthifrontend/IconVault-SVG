@@ -183,9 +183,23 @@ describe("project workspace", () => {
     await clean();
   });
 
+  it("the Upload icons menu and the import dialogs it opens", async () => {
+    project("/projects/p1");
+    await userEvent.click(await screen.findByRole("button", { name: "More ways to add icons" }));
+    await clean();
+    await userEvent.click(screen.getByRole("menuitem", { name: /Import SVG Sprite/ }));
+    await screen.findByRole("dialog", { name: "Import a sprite" });
+    await clean();
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByRole("button", { name: "More ways to add icons" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: /Import Icon Font/ }));
+    await screen.findByRole("dialog", { name: "Import a font" });
+    await clean();
+  });
+
   it("the add icons, move and tag dialogs", async () => {
     project("/projects/p1");
-    await userEvent.click((await screen.findAllByRole("button", { name: "Add icons" }))[0] as HTMLElement);
+    await userEvent.click((await screen.findAllByRole("button", { name: "Upload icons" }))[0] as HTMLElement);
     await clean();
     await userEvent.click(screen.getByRole("tab", { name: /paste/i }));
     await clean();
@@ -212,24 +226,20 @@ describe("project workspace", () => {
     await clean();
   });
 
-  it("sprite section and the import dialog", async () => {
+  it("sprite section", async () => {
     project("/projects/p1/sprite");
     await screen.findByText(/symbols/);
     expect(await screen.findByTitle("Sprite preview")).toBeInTheDocument();
     await clean();
-    await userEvent.click(screen.getByRole("button", { name: "Import a sprite" }));
-    await clean();
   });
 
-  it("font section, a built font, and the import dialog", async () => {
+  it("font section and a built font", async () => {
     vi.mocked(projectsApi.getProject).mockResolvedValue(makeDetail({ id: "p1", name: "Feather", purpose: "font" }));
     project("/projects/p1/font");
     await screen.findByRole("button", { name: "Build font" });
     await clean();
     await userEvent.click(screen.getByRole("button", { name: "Build font" }));
     await screen.findByRole("button", { name: "Copy class fth-home" });
-    await clean();
-    await userEvent.click(screen.getByRole("button", { name: "Import a font" }));
     await clean();
   });
 });

@@ -1,12 +1,12 @@
-// Tests for the Font section and the font import dialog: building with the chosen options, validation before sending, the preview and the character list, warnings, copy, download, permissions, errors, and importing a font (preview first, options, results).
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+// Tests for the Font section: building with the chosen options, validation before sending, the preview and the character list, warnings, copy, download, permissions and errors.
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as fontsApi from "../../api/fonts";
 import * as iconsApi from "../../api/icons";
 import { ApiError } from "../../api/http";
-import type { FontBuildResult, FontImportPreview, FontImportResult } from "../../api/types";
+import type { FontBuildResult } from "../../api/types";
 import { ToastProvider } from "../../context/ToastContext";
 import { WorkspaceContext, type WorkspaceContextValue } from "../../context/workspaceContext";
 import * as clipboard from "../../lib/clipboard";
@@ -23,7 +23,6 @@ vi.mock("../../utils/zipBundle", () => ({ triggerBrowserDownload: vi.fn() }));
 vi.mock("../../lib/fontPreview", async (importOriginal) => ({ ...(await importOriginal<typeof import("../../lib/fontPreview")>()), loadPreviewFont: vi.fn(), unloadPreviewFont: vi.fn() }));
 
 const buildFont = vi.mocked(fontsApi.buildFont);
-const importFont = vi.mocked(fontsApi.importFont);
 const built = (over: Partial<FontBuildResult> = {}): FontBuildResult => ({
   fontName: "Feather",
   prefix: "fth",
@@ -165,7 +164,6 @@ describe("building", () => {
   it("does not refresh anything for a read-only viewer, and explains that characters are not saved", async () => {
     const fns = setup({ project: makeDetail({ id: "p1", purpose: "font", access: READ_ONLY }) });
     expect(screen.getByText(/characters are not saved/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Import a font" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Build font" }));
     await screen.findByText("2 icons");
     expect(fns.refreshIcons).not.toHaveBeenCalled();
@@ -306,7 +304,7 @@ describe("the page layout", () => {
   it("puts the actions at the top, with Copy CSS beside Build font, and groups the controls in titled sections", () => {
     setup();
     const actions = screen.getByRole("group", { name: "Font actions" });
-    expect(within(actions).getAllByRole("button").map((b) => b.textContent)).toEqual(["Download font", "Copy CSS", "Build font", "Import a font"]);
+    expect(within(actions).getAllByRole("button").map((b) => b.textContent)).toEqual(["Download font", "Copy CSS", "Build font"]);
     // Download font is the main action; Build font is the secondary one.
     expect(within(actions).getByRole("button", { name: "Download font" }).className).toContain("bg-primary");
     expect(within(actions).getByRole("button", { name: "Build font" }).className).not.toContain("bg-primary");
@@ -440,86 +438,5 @@ describe("the built font", () => {
     await open();
     await userEvent.click(screen.getByRole("button", { name: "Build font" }));
     await waitFor(() => expect(preview.unloadPreviewFont).toHaveBeenCalled());
-  });
-});
-
-describe("importing a font", () => {
-  const dry = (over: Partial<FontImportPreview> = {}): FontImportPreview => ({ dryRun: true, kind: "truetype", total: 40, importable: 12, truncated: false, limit: 2000, sample: [{ name: "home", codepoint: "E001" }, { name: "star", codepoint: "E002" }], ...over });
-  const final = (over: Partial<FontImportResult> = {}): FontImportResult => ({ ...dry({ dryRun: false }), created: [makeIcon({ id: "n1" }), makeIcon({ id: "n2" })], replaced: [], skipped: [], errors: [], codepointsKept: 2, codepointsDropped: 0, ...over });
-
-  async function open(file: File | null = new File(["font"], "icons.ttf", { type: "font/ttf" })) {
-    const fns = setup();
-    await userEvent.click(screen.getByRole("button", { name: "Import a font" }));
-    const dialog = screen.getByRole("dialog", { name: "Import a font" });
-    if (file) fireEvent.change(within(dialog).getByLabelText("Font file"), { target: { files: [file] } });
-    return { fns, dialog };
-  }
-
-  it("asks the server what the font holds before importing anything", async () => {
-    importFont.mockResolvedValue(dry());
-    const { dialog } = await open();
-    expect(await within(dialog).findByText(/has 40 glyphs/)).toBeInTheDocument();
-    expect(within(dialog).getByRole("status")).toHaveTextContent(/12 icons will be imported, for example home, star/);
-    expect(importFont).toHaveBeenCalledWith("p1", expect.any(File), null, { dryRun: true, privateUseOnly: true });
-    expect(within(dialog).getByRole("button", { name: "Import 12 icons" })).toBeEnabled();
-  });
-
-  it("asks again when the names file or the Private Use choice changes", async () => {
-    importFont.mockResolvedValue(dry());
-    const { dialog } = await open();
-    await within(dialog).findByText(/has 40 glyphs/);
-    const map = new File([".icon-a:before{}"], "map.css", { type: "text/css" });
-    fireEvent.change(within(dialog).getByLabelText("Names (optional)"), { target: { files: [map] } });
-    await waitFor(() => expect(importFont).toHaveBeenLastCalledWith("p1", expect.any(File), map, { dryRun: true, privateUseOnly: true }));
-    await userEvent.click(within(dialog).getByLabelText(/Only icon characters/));
-    await waitFor(() => expect(importFont).toHaveBeenLastCalledWith("p1", expect.any(File), map, { dryRun: true, privateUseOnly: false }));
-  });
-
-  it("imports with the chosen folder and options, then shows the result and refreshes", async () => {
-    importFont.mockResolvedValueOnce(dry()).mockResolvedValueOnce(final());
-    const { fns, dialog } = await open();
-    await within(dialog).findByText(/has 40 glyphs/);
-    await userEvent.selectOptions(within(dialog).getByLabelText("Folder"), "ui");
-    await userEvent.selectOptions(within(dialog).getByLabelText("If an icon with that name exists"), "skip");
-    await userEvent.click(within(dialog).getByLabelText("Optimize to make the icons smaller"));
-    await userEvent.click(within(dialog).getByRole("button", { name: "Import 12 icons" }));
-    expect(await within(dialog).findByText("Imported 2 icons.")).toBeInTheDocument();
-    expect(importFont).toHaveBeenLastCalledWith("p1", expect.any(File), null, { folderId: "ui", strategy: "skip", optimize: false, privateUseOnly: true });
-    expect(within(dialog).getByText(/2 characters kept/)).toBeInTheDocument();
-    expect(fns.refreshIcons).toHaveBeenCalled();
-    expect(fns.refreshFolders).toHaveBeenCalled();
-    expect(fns.refreshProject).toHaveBeenCalled();
-  });
-
-  it("lists glyphs that could not be imported and characters that were not kept", async () => {
-    importFont.mockResolvedValueOnce(dry()).mockResolvedValueOnce(final({ codepointsDropped: 1, errors: [{ file: "bad", message: "Contains a script." }], skipped: [{ name: "star", reason: "Exists" }] }));
-    const { dialog } = await open();
-    await within(dialog).findByText(/has 40 glyphs/);
-    await userEvent.click(within(dialog).getByRole("button", { name: /Import 12 icons/ }));
-    expect(await within(dialog).findByText(/1 character already used here and not kept/)).toBeInTheDocument();
-    expect(within(dialog).getByText("Contains a script.")).toBeInTheDocument();
-    expect(within(dialog).getByText("1 icon skipped.")).toBeInTheDocument();
-  });
-
-  it("shows the reason for a file that is not a font, and cannot import it", async () => {
-    importFont.mockRejectedValue(new ApiError("That is not a font file this tool can read.", 400));
-    const { dialog } = await open(new File(["zip"], "pack.zip"));
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent("not a font file");
-    expect(within(dialog).getByRole("button", { name: "Import" })).toBeDisabled();
-  });
-
-  it("keeps the dialog open with the reason when the import itself fails", async () => {
-    importFont.mockResolvedValueOnce(dry()).mockRejectedValueOnce(new ApiError("You can only change projects you own.", 403));
-    const { dialog, fns } = await open();
-    await within(dialog).findByText(/has 40 glyphs/);
-    await userEvent.click(within(dialog).getByRole("button", { name: "Import 12 icons" }));
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent("only change projects you own");
-    expect(fns.refreshIcons).not.toHaveBeenCalled();
-  });
-
-  it("mentions when a font was cut off at the limit", async () => {
-    importFont.mockResolvedValue(dry({ truncated: true, limit: 2000 }));
-    const { dialog } = await open();
-    expect(await within(dialog).findByText(/Only the first 2000 are read/)).toBeInTheDocument();
   });
 });

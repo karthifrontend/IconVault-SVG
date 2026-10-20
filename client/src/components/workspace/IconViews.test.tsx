@@ -1,5 +1,5 @@
 // Tests for the icon cards, the table view, the toolbar and the bulk bar with its dialogs.
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { DRAG_TYPE } from "../../lib/dragIcons";
@@ -125,8 +125,7 @@ describe("IconToolbar", () => {
       surface: "theme" as const,
       onSurface: vi.fn(),
       canAdd: true,
-      onAdd: vi.fn(),
-      onCopyFrom: vi.fn(),
+      onUpload: vi.fn(),
       loaded: 5,
       selected: 0,
       onSelectAll: vi.fn(),
@@ -154,17 +153,68 @@ describe("IconToolbar", () => {
     expect(screen.getByRole("button", { name: "Grid view" })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("offers adding and copying only to people who can add", async () => {
-    const { onAdd, onCopyFrom } = setup();
-    await userEvent.click(screen.getByRole("button", { name: "Add icons" }));
+  it("offers uploading and copying only to people who can add", async () => {
+    const { onUpload } = setup();
+    await userEvent.click(screen.getByRole("button", { name: "Upload icons" }));
+    expect(onUpload).toHaveBeenLastCalledWith("files");
     await userEvent.click(screen.getByRole("button", { name: "Copy from project" }));
-    expect(onAdd).toHaveBeenCalledTimes(1);
-    expect(onCopyFrom).toHaveBeenCalledTimes(1);
+    expect(onUpload).toHaveBeenLastCalledWith("copy");
+  });
+
+  it("lists every way to add icons in the Upload icons menu", async () => {
+    const { onUpload } = setup();
+    const trigger = screen.getByRole("button", { name: "More ways to add icons" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(trigger);
+    const menu = screen.getByRole("menu", { name: "Add icons" });
+    expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "Upload Files / ZIPUpload SVGs or drag & drop ZIP files",
+      "From Another ProjectNewSelect and copy icons from other workspaces",
+      "Import SVG SpriteExtract symbols from an SVG sprite file",
+      "Import Icon FontExtract glyphs from TTF, WOFF, WOFF2",
+      "Paste SVG CodePaste raw SVG markup directly",
+    ]);
+    await userEvent.click(within(menu).getByRole("menuitem", { name: /Import Icon Font/ }));
+    expect(onUpload).toHaveBeenCalledWith("font");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByRole("menuitem", { name: /Import SVG Sprite/ }));
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByRole("menuitem", { name: /Paste SVG Code/ }));
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByRole("menuitem", { name: /From Another Project/ }));
+    expect(onUpload.mock.calls.map((call) => call[0])).toEqual(["font", "sprite", "paste", "copy"]);
+  });
+
+  it("moves through the menu with the keyboard and closes on Escape", async () => {
+    setup();
+    const trigger = screen.getByRole("button", { name: "More ways to add icons" });
+    trigger.focus();
+    await userEvent.keyboard("{ArrowDown}");
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: /Upload Files/ })).toHaveFocus());
+    await userEvent.keyboard("{ArrowDown}");
+    expect(screen.getByRole("menuitem", { name: /From Another Project/ })).toHaveFocus();
+    await userEvent.keyboard("{End}");
+    expect(screen.getByRole("menuitem", { name: /Paste SVG Code/ })).toHaveFocus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(screen.getByRole("menuitem", { name: /Upload Files/ })).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("closes the menu when clicking elsewhere", async () => {
+    setup();
+    await userEvent.click(screen.getByRole("button", { name: "More ways to add icons" }));
+    await userEvent.click(document.body);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
   it("hides add and copy for read-only users", () => {
     setup({ canAdd: false });
-    expect(screen.queryByRole("button", { name: "Add icons" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload icons" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "More ways to add icons" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Copy from project" })).not.toBeInTheDocument();
   });
 
@@ -178,10 +228,10 @@ describe("IconToolbar", () => {
   });
 
   it("shows a partial selection as indeterminate and a full one as checked", () => {
-    const { unmount } = render(<IconToolbar search="" onSearch={() => {}} sort="newest" onSort={() => {}} view="grid" onView={() => {}} surface="theme" onSurface={() => {}} canAdd={false} onAdd={() => {}} onCopyFrom={() => {}} loaded={4} selected={2} onSelectAll={() => {}} />);
+    const { unmount } = render(<IconToolbar search="" onSearch={() => {}} sort="newest" onSort={() => {}} view="grid" onView={() => {}} surface="theme" onSurface={() => {}} canAdd={false} onUpload={() => {}} loaded={4} selected={2} onSelectAll={() => {}} />);
     expect((screen.getByRole("checkbox", { name: "Select all 4 shown" }) as HTMLInputElement).indeterminate).toBe(true);
     unmount();
-    render(<IconToolbar search="" onSearch={() => {}} sort="newest" onSort={() => {}} view="grid" onView={() => {}} surface="theme" onSurface={() => {}} canAdd={false} onAdd={() => {}} onCopyFrom={() => {}} loaded={4} selected={4} onSelectAll={() => {}} />);
+    render(<IconToolbar search="" onSearch={() => {}} sort="newest" onSort={() => {}} view="grid" onView={() => {}} surface="theme" onSurface={() => {}} canAdd={false} onUpload={() => {}} loaded={4} selected={4} onSelectAll={() => {}} />);
     expect(screen.getByRole("checkbox", { name: "Select all 4 shown" })).toBeChecked();
   });
 

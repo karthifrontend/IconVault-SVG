@@ -1,5 +1,5 @@
 // The Font section, laid out in groups: the actions at the top (Download font is the main action, with Copy CSS and Build font beside it), then Icons (which icons go in, with the checklist), Font settings, and Target formats; below them the result: a summary, any conversion warnings, and one "Stable Unicode codepoints mapping" table with every glyph, its character (editable), CSS entity and CSS class. The font is built on the server; for editors, new characters are saved on the icons so rebuilding later keeps every glyph on the same character. Editors can also import an existing font.
-import { Copy, Download, FileUp, Hammer, ListChecks } from "lucide-react";
+import { Copy, Download, Hammer, ListChecks } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { buildFont, downloadFont } from "../../api/fonts";
 import { updateIcon } from "../../api/icons";
@@ -19,7 +19,6 @@ import { Button } from "../ui/Button";
 import { SelectField, TextField } from "../ui/Fields";
 import CodepointTable from "./CodepointTable";
 import IconChecklistDialog from "./IconChecklistDialog";
-import ImportFontDialog from "./ImportFontDialog";
 
 const FORMATS: { value: FontFormat; label: string; hint: string }[] = [
   { value: "woff2", label: "WOFF2", hint: "smallest, all modern browsers" },
@@ -42,7 +41,7 @@ function Group({ id, title, children }: { id: string; title: string; children: R
 }
 
 export default function FontTab() {
-  const { project, folderList, refreshIcons, refreshFolders, refreshProject } = useWorkspace();
+  const { project, folderList, refreshIcons, refreshProject } = useWorkspace();
   const { showToast } = useToast();
   const canEdit = project.access.canEdit;
   const folderOptions = flattenFolderTree(buildFolderTree(folderList.folders));
@@ -72,7 +71,6 @@ export default function FontTab() {
     if (adopted) clearCachedBuild();
   }, [adopted]);
   const [filter, setFilter] = useState("");
-  const [importing, setImporting] = useState(false);
 
   // Make sure the preview font of the shown build is registered (a build handed over from the Icons screen registered it there), and take it out again when the build is replaced or the section closes.
   const family = result?.family;
@@ -188,11 +186,6 @@ export default function FontTab() {
             <Button type="submit" icon={<Hammer aria-hidden="true" className="h-4 w-4" />} loading={building}>
               Build font
             </Button>
-            {canEdit && (
-              <Button icon={<FileUp aria-hidden="true" className="h-4 w-4" />} onClick={() => setImporting(true)}>
-                Import a font
-              </Button>
-            )}
           </div>
         </div>
 
@@ -323,20 +316,6 @@ export default function FontTab() {
           setChoosing(false);
           // Build with the new choice right away (the state above is not visible to this call yet).
           void runBuild(iconIds);
-        }}
-      />
-      <ImportFontDialog
-        open={importing}
-        projectId={project.id}
-        folders={folderList.folders}
-        defaultFolderId={scope === "all" || scope === "selected" ? null : scope}
-        onClose={() => setImporting(false)}
-        onImported={(summary) => {
-          if (summary.created.length + summary.replaced.length > 0) {
-            refreshIcons();
-            refreshFolders();
-            refreshProject();
-          }
         }}
       />
     </div>

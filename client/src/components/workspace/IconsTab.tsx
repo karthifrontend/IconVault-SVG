@@ -26,7 +26,10 @@ import IconCard from "./IconCard";
 import IconDrawer from "./IconDrawer";
 import IconList from "./IconList";
 import IconToolbar, { type IconSort, type IconView } from "./IconToolbar";
+import ImportFontDialog from "./ImportFontDialog";
+import ImportSpriteDialog from "./ImportSpriteDialog";
 import UploadDialog from "./UploadDialog";
+import type { UploadKind } from "./UploadMenu";
 
 const SORTS: readonly IconSort[] = ["newest", "oldest", "name", "name-desc", "largest"];
 const VIEWS: readonly IconView[] = ["grid", "list"];
@@ -34,7 +37,7 @@ const PAGE = 200;
 // The server returns at most this many in one request.
 const MAX_SHOWN = 1000;
 
-type Dialog = "add" | "copy" | "move" | "tag" | "delete" | null;
+type Dialog = "add" | "paste" | "copy" | "sprite" | "font" | "move" | "tag" | "delete" | null;
 
 export default function IconsTab() {
   const { project, folderList, selectedFolder, refreshProject, refreshFolders, refreshIcons, iconsVersion } = useWorkspace();
@@ -146,8 +149,7 @@ export default function IconsTab() {
         surface={surface}
         onSurface={setSurface}
         canAdd={project.access.canAddIcons}
-        onAdd={() => setDialog("add")}
-        onCopyFrom={() => setDialog("copy")}
+        onUpload={(kind: UploadKind) => setDialog(kind === "files" ? "add" : kind)}
         loaded={shown.length}
         selected={selection.size}
         onSelectAll={(checked) => (checked ? selection.selectAll(shown.map((icon) => icon.id)) : selection.clear())}
@@ -176,7 +178,7 @@ export default function IconsTab() {
             <p className="mt-1 text-sm text-muted-foreground">{search ? "Try a different search." : project.access.canAddIcons ? "Add some by uploading SVG files, pasting code, or copying from another project." : "The owner has not added any here yet."}</p>
             {!search && project.access.canAddIcons && (
               <Button variant="primary" className="mt-4" onClick={() => setDialog("add")}>
-                Add icons
+                Upload icons
               </Button>
             )}
           </div>
@@ -225,7 +227,8 @@ export default function IconsTab() {
       )}
 
       <UploadDialog
-        open={dialog === "add"}
+        open={dialog === "add" || dialog === "paste"}
+        initialTab={dialog === "paste" ? "paste" : "files"}
         projectId={project.id}
         folders={folderList.folders}
         defaultFolderId={currentFolderId}
@@ -236,6 +239,27 @@ export default function IconsTab() {
         onPasted={(result) => {
           refreshAll();
           if (result.outcome !== "skipped") showToast(`${result.outcome === "created" ? "Added" : "Replaced"} “${result.icon.name}”.`, "success");
+        }}
+      />
+      <ImportSpriteDialog
+        open={dialog === "sprite"}
+        projectId={project.id}
+        prefix={project.prefix}
+        folders={folderList.folders}
+        defaultFolderId={currentFolderId}
+        onClose={() => setDialog(null)}
+        onImported={(summary) => {
+          if (summary.created.length + summary.replaced.length > 0) refreshAll();
+        }}
+      />
+      <ImportFontDialog
+        open={dialog === "font"}
+        projectId={project.id}
+        folders={folderList.folders}
+        defaultFolderId={currentFolderId}
+        onClose={() => setDialog(null)}
+        onImported={(summary) => {
+          if (summary.created.length + summary.replaced.length > 0) refreshAll();
         }}
       />
       <CopyFromProjectDialog

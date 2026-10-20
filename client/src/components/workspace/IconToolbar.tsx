@@ -1,10 +1,11 @@
-// Controls above the icon list: search, sort, grid or list view, the preview background, and (for editors) adding icons. Also the "select all" checkbox.
-import { Copy, LayoutGrid, List, Plus, Search } from "lucide-react";
+// Controls above the icon list: search, sort, grid or list view, the preview background, and (for editors) the Upload icons menu. Also the "select all" checkbox.
+import { Copy, LayoutGrid, List, Search } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { cn } from "../../lib/cn";
 import { SURFACES, SURFACE_LABELS, type Surface } from "../../lib/previewSurface";
 import { Button } from "../ui/Button";
 import { SelectField } from "../ui/Fields";
+import UploadMenu, { type UploadKind } from "./UploadMenu";
 
 export type IconSort = "newest" | "oldest" | "name" | "name-desc" | "largest";
 export type IconView = "grid" | "list";
@@ -19,15 +20,14 @@ type IconToolbarProps = {
   surface: Surface;
   onSurface: (surface: Surface) => void;
   canAdd: boolean;
-  onAdd: () => void;
-  onCopyFrom: () => void;
+  onUpload: (kind: UploadKind) => void;
   // Select all: how many are loaded and how many are selected.
   loaded: number;
   selected: number;
   onSelectAll: (checked: boolean) => void;
 };
 
-export default function IconToolbar({ search, onSearch, sort, onSort, view, onView, surface, onSurface, canAdd, onAdd, onCopyFrom, loaded, selected, onSelectAll }: IconToolbarProps) {
+export default function IconToolbar({ search, onSearch, sort, onSort, view, onView, surface, onSurface, canAdd, onUpload, loaded, selected, onSelectAll }: IconToolbarProps) {
   const allRef = useRef<HTMLInputElement | null>(null);
   const all = loaded > 0 && selected === loaded;
   const some = selected > 0 && selected < loaded;
@@ -100,13 +100,11 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
           Select all {loaded} shown
         </label>
         {canAdd && (
-          <div className="flex gap-2">
-            <Button size="sm" icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={onCopyFrom}>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={() => onUpload("copy")}>
               Copy from project
             </Button>
-            <Button size="sm" variant="primary" icon={<Plus aria-hidden="true" className="h-4 w-4" />} onClick={onAdd}>
-              Add icons
-            </Button>
+            <UploadMenu onSelect={onUpload} />
           </div>
         )}
       </div>

@@ -9,8 +9,8 @@ Keep SVG icons in projects and folders, and compile them into a single `sprite.s
 
 - Sign-in with Google or Microsoft is required. A signed-out visitor sees a landing page.
 - Projects dashboard and workspaces: folders, search, grid or table, bulk move / tag / optimize / download, trash with Undo, icon details drawer with versions, settings.
-- Add icons by uploading SVG files or ZIPs, pasting SVG code, copying from another project, or importing an existing sprite file (each symbol becomes an icon).
-- Icon fonts (projects created as "font" projects): build a font from all icons or one folder as WOFF2, WOFF, TTF, EOT and/or SVG font, preview every glyph with its class and character, and download a ZIP with the fonts, CSS, SCSS, a glyph map, a specimen page and a README. Each icon keeps its character between builds. Import an existing TTF, OTF, WOFF, WOFF2 or SVG font and its glyphs become icons.
+- The Icons page has an **Upload icons** button with a menu: upload SVG files or ZIPs, copy from another project, import an SVG sprite (each symbol becomes an icon), import an icon font (each glyph becomes an icon), or paste SVG code.
+- Icon fonts (projects created as "font" projects): build a font from all icons or one folder as WOFF2, WOFF, TTF, EOT and/or SVG font, preview every glyph with its class and character, and download a ZIP with the fonts, CSS, SCSS, a glyph map, a specimen page and a README. Each icon keeps its character between builds. Existing TTF, OTF, WOFF, WOFF2 or SVG fonts are imported from the Icons page's Upload icons menu.
 - Move projects in and out: export a project as one ZIP (settings, folders, icons) and import it as a new private project, in the interface or with the command line.
 - Administrators (emails in `ADMIN_EMAILS`) can list users, delete a user (their projects are deleted or handed to someone else), and move a project to another owner. There are no passwords.
 - Personal API tokens (account menu, API tokens) for the command line and scripts: shown once, revocable, never admin.

@@ -545,6 +545,26 @@ Requested after the direct flow: use "Build" instead of "Generate", build first 
 - A font project with hundreds of icons takes longer to build before the page opens; the button shows it is working, but there is no progress figure.
 - The Sprite page's top actions were not rearranged.
 
+## 2026-10-20: Follow-up, Upload icons menu on the Icons page (change request)
+
+Requested after the Font page review: Build font and Import a font should not sit on the Font page; on the Icons (project home) page the main button becomes **Upload icons** with the extra ways to add icons, as in Icon Vault. Client only. One commit on `main`, local only.
+
+### Changes
+| Part | Change |
+|---|---|
+| **Upload icons** | On the Icons page the blue **Add icons** button is now a split button, **Upload icons** (opens the upload dialog) plus a chevron that opens a menu titled "Add icons". The same wording is used on the empty state. |
+| **The menu** | **Upload Files / ZIP** (Upload SVGs or drag & drop ZIP files), **From Another Project** with a "New" badge (Select and copy icons from other workspaces), **Import SVG Sprite** (Extract symbols from an SVG sprite file), **Import Icon Font** (Extract glyphs from TTF, WOFF, WOFF2), **Paste SVG Code** (Paste raw SVG markup directly; opens the upload dialog on its Paste tab). Keyboard: Arrow Down or Arrow Up on the chevron opens it, arrows, Home and End move, Escape closes and returns focus; clicking elsewhere closes it. The separate **Copy from project** button stays beside it. Only people who can add icons see any of this. |
+| **Import moved** | The sprite and font import dialogs now open from this menu. **Import a sprite** is gone from the Sprite page and **Import a font** from the Font page; the dialogs themselves are unchanged. |
+| **Build font stays** | The Font page keeps **Build font** (secondary, after Download font and Copy CSS): it is how changed settings are applied and how the page is built when you arrive from the tab rather than from the Icons page. It can be removed on request. |
+| **Small fix** | The upload dialog accepts which tab to show first. The Upload icons label no longer wraps on a phone. |
+
+### Validation (verified)
+- Client `npm test`: **561 of 561** (new: the menu's five items and descriptions, each item's callback, keyboard moves and Escape with focus return, closing on an outside click, no menu for read-only people; the sprite and font import tests moved into their own file and run against the dialogs directly; the a11y checks now open the menu and both import dialogs). Types and lint clean.
+- Real browser (throwaway user and project): the menu matched the reference, Import Icon Font opened its dialog, dark mode and a 375 px phone width had no horizontal scroll and the label on one line, the Font page's actions are Download font, Copy CSS, Build font. Test data removed; the database holds your 1 user and 2 projects.
+
+### Not tested, or open
+- Importing a real sprite or font file in the browser was not repeated; the dialogs are unchanged and covered by tests.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -554,7 +574,7 @@ Requested after the direct flow: use "Build" instead of "Generate", build first 
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 557 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 561 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

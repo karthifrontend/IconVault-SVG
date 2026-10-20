@@ -117,7 +117,7 @@ describe("empty states", () => {
   it("invites adding the first icons", async () => {
     setup();
     expect(await screen.findByText("No icons yet.")).toBeInTheDocument();
-    await userEvent.click(screen.getAllByRole("button", { name: "Add icons" })[1] as HTMLElement);
+    await userEvent.click(screen.getAllByRole("button", { name: "Upload icons" })[1] as HTMLElement);
     expect(screen.getByRole("dialog", { name: "Add icons" })).toBeInTheDocument();
   });
 
@@ -125,7 +125,7 @@ describe("empty states", () => {
     setup({ project: makeDetail({ id: "p1", access: READ_ONLY }) });
     expect(await screen.findByText("No icons yet.")).toBeInTheDocument();
     expect(screen.getByText("The owner has not added any here yet.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Add icons" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload icons" })).not.toBeInTheDocument();
   });
 
   it("names an empty folder and the uncategorized list", async () => {
@@ -235,7 +235,7 @@ describe("selection", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Alpha" }));
     const bar = screen.getByRole("region", { name: "Selected icons" });
     expect(within(bar).getAllByRole("button").map((b) => b.textContent)).toEqual(["Build sprite", "Download", "Clear selection"]);
-    expect(screen.queryByRole("button", { name: "Add icons" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload icons" })).not.toBeInTheDocument();
   });
 
   it("drags the whole selection when a selected icon is dragged, and only itself otherwise", async () => {

@@ -1,5 +1,5 @@
 // The Sprite section: compiles the project's icons (all, or one folder with its subfolders) into an SVG sprite in the browser, with a live preview, copy and download, a ZIP bundle (sprite, grid sprite, demo page, preview image) and the symbol ids with their <use> code. Editors can also import an existing sprite into the project. Anyone who can see the project can build and download.
-import { Copy, Download, FileArchive, FileUp, ListChecks } from "lucide-react";
+import { Copy, Download, FileArchive, ListChecks } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useToast } from "../../context/ToastContext";
@@ -16,12 +16,11 @@ import { createZip, triggerBrowserDownload } from "../../utils/zipBundle";
 import { Button } from "../ui/Button";
 import { SelectField } from "../ui/Fields";
 import IconChecklistDialog from "./IconChecklistDialog";
-import ImportSpriteDialog from "./ImportSpriteDialog";
 
 const MAX_LISTED_IDS = 200;
 
 export default function SpriteTab() {
-  const { project, folderList, refreshIcons, refreshFolders, refreshProject, iconsVersion } = useWorkspace();
+  const { project, folderList, iconsVersion } = useWorkspace();
   const { showToast } = useToast();
   // Icons handed over by the bulk bar ("Generate sprite") arrive as the chosen icons.
   const handed = readBuildSelection(useLocation().state);
@@ -29,7 +28,6 @@ export default function SpriteTab() {
   const [choiceVersion, setChoiceVersion] = useState(0);
   const [choosing, setChoosing] = useState(false);
   const [scope, setScope] = useState(handed ? "selected" : "all");
-  const [importing, setImporting] = useState(false);
   const [bundleBusy, setBundleBusy] = useState(false);
   const [filter, setFilter] = useState("");
   const folderOptions = flattenFolderTree(buildFolderTree(folderList.folders));
@@ -93,11 +91,6 @@ export default function SpriteTab() {
           <Button icon={<ListChecks aria-hidden="true" className="h-4 w-4" />} onClick={() => setChoosing(true)}>
             Review / edit checklist
           </Button>
-          {project.access.canAddIcons && (
-            <Button icon={<FileUp aria-hidden="true" className="h-4 w-4" />} onClick={() => setImporting(true)}>
-              Import a sprite
-            </Button>
-          )}
         </div>
       </div>
 
@@ -179,21 +172,6 @@ export default function SpriteTab() {
           setChosen(iconIds);
           setChoiceVersion((value) => value + 1);
           setScope("selected");
-        }}
-      />
-      <ImportSpriteDialog
-        open={importing}
-        projectId={project.id}
-        prefix={project.prefix}
-        folders={folderList.folders}
-        defaultFolderId={scope === "all" ? null : scope}
-        onClose={() => setImporting(false)}
-        onImported={(summary) => {
-          if (summary.created.length + summary.replaced.length > 0) {
-            refreshIcons();
-            refreshFolders();
-            refreshProject();
-          }
         }}
       />
     </div>
