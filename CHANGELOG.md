@@ -819,6 +819,10 @@ Client only. One commit on `main`, local only.
 - **One control height:** I measured the top bar and found 32 to 40 px controls side by side. Now every control in the top bar, the project bar, the dashboard filter bar and the icon toolbar is **36 px** (New project, Import project, Manage, the theme switch, the account button; Upload icons and its arrow, From Another Project, Download font, Copy CSS; the search, pills, Status and sort; the size, colour, style, sort, More and view controls). Checked in the browser on the dashboard and on a project page.
 - Validation: client **640 of 640**; types and lint clean.
 
+## 2026-10-21: Follow-up, project name in the bar (change request)
+
+Client only. One commit on `main`, local only. In the project bar the name is exactly **20 px**, and a long name is **cut off with an ellipsis** (hover shows all of it) instead of wrapping. The Private and project-type badges always stay on the **same row** as the name. Checked in the browser with a very long name: 20 px computed size, ellipsis, name and badges on one line, no sideways scroll. Client tests: 641.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -828,7 +832,7 @@ Client only. One commit on `main`, local only.
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 640 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 182 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 641 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 182 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

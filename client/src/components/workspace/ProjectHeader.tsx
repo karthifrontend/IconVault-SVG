@@ -45,10 +45,10 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
       {crumbSlot ? createPortal(breadcrumb, crumbSlot) : <div className="px-4 pt-3 sm:px-6">{breadcrumb}</div>}
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr]">
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <ProjectAvatar name={project.name} color={project.color} />
-          <h1 className="max-w-64 truncate text-xl font-bold tracking-tight">{project.name}</h1>
-          <div className="flex flex-wrap items-center gap-1.5">
+          <h1 title={project.name} className="min-w-0 truncate text-[20px] font-bold leading-7 tracking-tight">{project.name}</h1>
+          <div className="flex shrink-0 flex-nowrap items-center gap-1.5 whitespace-nowrap">
             <VisibilityBadge visibility={project.visibility} />
             <PurposeBadge purpose={project.purpose} long />
           </div>

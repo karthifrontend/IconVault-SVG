@@ -302,3 +302,16 @@ describe("dropping icons on a folder", () => {
     expect(await screen.findByText("You can only change projects you own.")).toBeInTheDocument();
   });
 });
+
+describe("the project name in the bar", () => {
+  it("is 20px, cut off with an ellipsis when long, and never pushes the badges onto another row", async () => {
+    getProject.mockResolvedValue(makeDetail({ id: "p1", name: "A very long project name that goes on and on and on (Copy)", purpose: "sprite", visibility: "private" }));
+    renderPage();
+    const heading = await screen.findByRole("heading", { level: 1 });
+    expect(heading).toHaveClass("truncate", "min-w-0", "text-[20px]");
+    expect(heading).toHaveAttribute("title", "A very long project name that goes on and on and on (Copy)");
+    const badges = screen.getByText("Private").closest("div") as HTMLElement;
+    expect(badges).toHaveClass("shrink-0", "flex-nowrap");
+    expect(heading.parentElement).not.toHaveClass("flex-wrap");
+  });
+});
