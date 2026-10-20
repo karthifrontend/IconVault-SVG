@@ -43,6 +43,17 @@ describe("manage projects (HTTP, throwaway database)", { skip: hasDatabase ? fal
     assert.equal(names(normal.body).includes("Zebra one"), false);
   });
 
+  it("filters the user list by sign-in provider", async () => {
+    const google = await h.call(admin.token, "GET", "/api/admin/users?provider=google&limit=100");
+    assert.equal(google.status, 200);
+    assert.ok(google.body.users.length >= 3 && google.body.users.every((u: any) => u.provider === "google"));
+    const microsoft = await h.call(admin.token, "GET", "/api/admin/users?provider=microsoft&limit=100");
+    assert.ok(microsoft.body.users.every((u: any) => u.provider === "microsoft"));
+    assert.equal((await h.call(admin.token, "GET", "/api/admin/users?provider=nope")).status, 400);
+    const all = await h.call(admin.token, "GET", "/api/admin/users?limit=100");
+    assert.ok(all.body.total >= google.body.total + microsoft.body.total);
+  });
+
   it("filters the project list by owner", async () => {
     const mine = await project(ada.token, "Ada only");
     await project(bob.token, "Bob only");
@@ -58,9 +69,12 @@ describe("manage projects (HTTP, throwaway database)", { skip: hasDatabase ? fal
     it("reports workspace totals to admins only", async () => {
       const ok = await h.call(admin.token, "GET", "/api/admin/stats");
       assert.equal(ok.status, 200);
-      for (const key of ["users", "admins", "projects", "publicProjects", "privateProjects", "draftProjects", "icons", "fontBuilds", "activeTokens"]) assert.equal(typeof ok.body[key], "number", key);
+      for (const key of ["users", "admins", "members", "googleUsers", "microsoftUsers", "projects", "publicProjects", "privateProjects", "spriteProjects", "fontProjects", "draftProjects", "icons", "fontBuilds", "activeTokens"]) assert.equal(typeof ok.body[key], "number", key);
       assert.ok(ok.body.users >= 3 && ok.body.admins >= 1);
       assert.equal(ok.body.publicProjects + ok.body.privateProjects, ok.body.projects);
+      assert.equal(ok.body.spriteProjects + ok.body.fontProjects, ok.body.projects);
+      assert.equal(ok.body.admins + ok.body.members, ok.body.users);
+      assert.ok(ok.body.googleUsers >= 3);
       assert.equal((await h.call(ada.token, "GET", "/api/admin/stats")).status, 403);
     });
 

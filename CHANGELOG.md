@@ -798,6 +798,17 @@ Your `server/.env` has an empty `ADMIN_EMAILS`, so nobody is an admin. Put your 
 - Server unit **136 of 136**; database **181 of 181** (new: totals for admins only, bulk transfer with a partial failure, bulk delete with icons, refused for non-admins and bad input, the owner filter). Client **636 of 636** (new: the totals, the owner chip, ticking, bulk delete and bulk transfer, the Projects button). Types and lint clean. The slow lookups in the icon drawer accessibility test got a longer timeout after it failed once under load.
 - Real browser: I started a temporary API on port 5100 with ADMIN_EMAILS set for one throwaway user only (your .env untouched) and a temporary client on 5174, then looked at the dashboard, Manage projects and Manage users with the demo data; both temporary servers and the user were removed afterwards.
 
+## 2026-10-21: Follow-up, admin screens split by topic, sign-in filter and a way back (change request)
+
+One commit on `main`, local only.
+
+- **Users screen:** the cards now show only user numbers: **Users, Admins, Members, Google sign-ins, Microsoft sign-ins**. A **Sign-in** pill filter (All, Google, Microsoft, each with its count) narrows the list (new `provider` filter on `GET /api/admin/users`).
+- **Projects screen:** the cards now show only project numbers: **Projects, Private, Public, Sprite projects, Font projects, Drafts**. Icons, font packages and API tokens are no longer shown there.
+- **Back to the dashboard:** a **Back to dashboard** button sits next to the Users and Projects tabs on both admin screens.
+- The totals route returns the new counts too (`members`, `googleUsers`, `microsoftUsers`, `spriteProjects`, `fontProjects`).
+- Demo users sign in with the "system" provider, so they count in Users but in neither the Google nor the Microsoft number.
+- Validation: server database tests for the admin routes **17 of 17** (new: the provider filter, the added counts); client **639 of 639**; types and lint clean. Not looked at in the browser this time (it needs an admin session; see the entry before).
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -807,7 +818,7 @@ Your `server/.env` has an empty `ADMIN_EMAILS`, so nobody is an admin. Put your 
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 636 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 181 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 639 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 182 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

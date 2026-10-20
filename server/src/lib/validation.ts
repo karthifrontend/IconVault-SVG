@@ -188,6 +188,8 @@ export type ListIconsQuery = z.infer<typeof listIconsQuerySchema>;
 
 export const listUsersQuerySchema = z.object({
   search: z.string().trim().max(100).optional(),
+  // Only people who sign in with this provider.
+  provider: z.enum(["all", "google", "microsoft"]).default("all"),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });

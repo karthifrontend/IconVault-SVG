@@ -5,7 +5,8 @@ import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { bulkDeleteProjects } from "../api/admin";
 import { deleteProject, listProjects } from "../api/projects";
 import type { ProjectSummary } from "../api/types";
-import AdminStats from "../components/admin/AdminStats";
+import { ProjectStatCards } from "../components/admin/AdminStats";
+import { useAdminStats } from "../hooks/useAdminStats";
 import AdminTabs from "../components/admin/AdminTabs";
 import BulkTransferDialog from "../components/admin/BulkTransferDialog";
 import TransferProjectDialog from "../components/admin/TransferProjectDialog";
@@ -35,6 +36,7 @@ export default function AdminProjectsPage() {
   const [statsVersion, setStatsVersion] = useState(0);
   const [bulkTransferring, setBulkTransferring] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const stats = useAdminStats(statsVersion);
   const listKey = `${owner}|${search}|${page}`;
   // Ticked projects only count for the list they were ticked in.
   const [ticked, setTicked] = useState<{ key: string; ids: string[] }>({ key: "", ids: [] });
@@ -61,7 +63,7 @@ export default function AdminProjectsPage() {
       <h1 className="text-2xl font-bold tracking-tight">Manage projects</h1>
       <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Every project in the workspace, including private and draft ones. Move a project to another owner or delete it for good.</p>
       <AdminTabs />
-      <AdminStats version={statsVersion} />
+      <ProjectStatCards stats={stats} />
 
       <div className="mt-6">
         <label htmlFor="admin-project-search" className="sr-only">

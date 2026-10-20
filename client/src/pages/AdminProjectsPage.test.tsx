@@ -38,7 +38,7 @@ function renderPage(path = "/admin/projects") {
 
 beforeEach(() => {
   vi.resetAllMocks();
-  vi.mocked(adminApi.getAdminStats).mockResolvedValue({ users: 5, admins: 1, projects: 7, publicProjects: 3, privateProjects: 4, draftProjects: 1, icons: 42, fontBuilds: 2, activeTokens: 3 });
+  vi.mocked(adminApi.getAdminStats).mockResolvedValue({ users: 5, admins: 1, members: 4, googleUsers: 3, microsoftUsers: 1, projects: 7, publicProjects: 3, privateProjects: 4, spriteProjects: 4, fontProjects: 3, draftProjects: 1, icons: 42, fontBuilds: 2, activeTokens: 3 });
   auth.currentUser.role = "admin";
   listProjects.mockResolvedValue(
     reply([
@@ -67,6 +67,14 @@ describe("Manage projects", () => {
     expect(within(rows[1] as HTMLElement).getByText("Draft")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("2 projects");
     expect(listProjects).toHaveBeenCalledWith({ status: "all", scope: "all", sort: "updated", page: 1, limit: 25 });
+  });
+
+  it("has a way back to the dashboard", async () => {
+    renderPage();
+    await screen.findByRole("table", { name: "Projects" });
+    await userEvent.click(screen.getByRole("link", { name: "Back to dashboard" }));
+    expect(await screen.findByText("Dashboard")).toBeInTheDocument();
+    expect(screen.getByTestId("where")).toHaveTextContent("/");
   });
 
   it("shows the Users and Projects tabs with Projects current", async () => {
@@ -127,12 +135,13 @@ describe("Manage projects", () => {
 });
 
 describe("totals, owner filter and bulk actions", () => {
-  it("shows the workspace totals", async () => {
+  it("shows only project numbers: total, private, public, sprite, font and drafts", async () => {
     renderPage();
-    const totals = await screen.findByRole("region", { name: "Workspace totals" });
-    expect(await within(totals).findByText("42")).toBeInTheDocument();
-    expect(within(totals).getByText("4 private, 3 public, 1 draft")).toBeInTheDocument();
-    expect(within(totals).getByText("Font packages kept")).toBeInTheDocument();
+    const totals = await screen.findByRole("region", { name: "Project totals" });
+    expect(await within(totals).findByText("Sprite projects")).toBeInTheDocument();
+    expect([...totals.querySelectorAll("p.text-xs")].map((p) => p.textContent)).toEqual(["Projects", "Private", "Public", "Sprite projects", "Font projects", "Drafts"]);
+    expect([...totals.querySelectorAll("p.text-xl")].map((p) => p.textContent)).toEqual(["7", "4", "3", "4", "3", "1"]);
+    expect(screen.queryByRole("region", { name: "User totals" })).not.toBeInTheDocument();
   });
 
   it("shows one owner's projects from the address, with a way back to everyone's", async () => {

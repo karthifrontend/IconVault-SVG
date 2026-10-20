@@ -188,8 +188,8 @@ export type AdminUser = {
   isSelf: boolean;
 };
 export type AdminUserList = { users: AdminUser[]; total: number; page: number; limit: number };
-export type ListUsersParams = { search?: string; page?: number; limit?: number };
-export type AdminStats = { users: number; admins: number; projects: number; publicProjects: number; privateProjects: number; draftProjects: number; icons: number; fontBuilds: number; activeTokens: number };
+export type ListUsersParams = { search?: string; provider?: "all" | "google" | "microsoft"; page?: number; limit?: number };
+export type AdminStats = { users: number; admins: number; members: number; googleUsers: number; microsoftUsers: number; projects: number; publicProjects: number; privateProjects: number; spriteProjects: number; fontProjects: number; draftProjects: number; icons: number; fontBuilds: number; activeTokens: number };
 // What a bulk transfer or delete reports: how many were done and which ones could not be.
 export type BulkProjectsResult = { requested: number; done: number; failed: { id: string; name: string; message: string }[]; deletedIcons?: number };
 export type DeleteUserResult = { deletedProjects: number; deletedIcons: number; transferredProjects: number; revokedTokens: number };

@@ -4,10 +4,12 @@ import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { listUsers } from "../api/admin";
 import type { AdminUser } from "../api/types";
-import AdminStats from "../components/admin/AdminStats";
+import { UserStatCards } from "../components/admin/AdminStats";
+import { useAdminStats } from "../hooks/useAdminStats";
 import AdminTabs from "../components/admin/AdminTabs";
 import DeleteUserDialog from "../components/admin/DeleteUserDialog";
 import { Button } from "../components/ui/Button";
+import SegmentedGroup from "../components/ui/SegmentedGroup";
 import Badge from "../components/ui/Badge";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -27,7 +29,9 @@ export default function AdminPage() {
   const [deleting, setDeleting] = useState<AdminUser | null>(null);
   const [statsVersion, setStatsVersion] = useState(0);
   const isAdmin = currentUser?.role === "admin";
-  const users = useResource(isAdmin ? `admin-users:${search}:${page}` : null, () => listUsers({ ...(search ? { search } : {}), page, limit: PAGE_SIZE }));
+  const [provider, setProvider] = useState<"all" | "google" | "microsoft">("all");
+  const stats = useAdminStats(statsVersion);
+  const users = useResource(isAdmin ? `admin-users:${provider}:${search}:${page}` : null, () => listUsers({ ...(provider !== "all" ? { provider } : {}), ...(search ? { search } : {}), page, limit: PAGE_SIZE }));
 
   if (!isAdmin) return <Navigate to="/" replace />;
 
@@ -41,13 +45,26 @@ export default function AdminPage() {
       <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Everyone who has signed in. Users are created by signing in with Google or Microsoft, and there are no passwords to manage. Admins are the emails in the server’s ADMIN_EMAILS setting.</p>
 
       <AdminTabs />
-      <AdminStats version={statsVersion} />
+      <UserStatCards stats={stats} />
 
-      <div className="mt-6">
+      <div className="mt-6 flex flex-wrap items-center gap-3">
         <label htmlFor="admin-search" className="sr-only">
           Search users
         </label>
         <input id="admin-search" type="search" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Search by name or email" autoComplete="off" className="h-10 w-full max-w-sm rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring" />
+        <SegmentedGroup
+          label="Sign-in"
+          value={provider}
+          onChange={(value) => {
+            setProvider(value);
+            setPageState({ search, page: 1 });
+          }}
+          options={[
+            { value: "all", label: "All", count: stats.data?.users },
+            { value: "google", label: "Google", count: stats.data?.googleUsers },
+            { value: "microsoft", label: "Microsoft", count: stats.data?.microsoftUsers },
+          ]}
+        />
       </div>
 
       {users.error && !users.data ? (
@@ -60,7 +77,7 @@ export default function AdminPage() {
       ) : !users.data ? (
         <div aria-busy="true" aria-label="Loading users" className="mt-4 h-48 animate-pulse rounded-xl bg-muted" />
       ) : rows.length === 0 ? (
-        <p className="mt-6 rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">{search ? `No users match “${search}”.` : "There are no users."}</p>
+        <p className="mt-6 rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">{search ? `No users match “${search}”.` : provider !== "all" ? "No users sign in with that provider." : "There are no users."}</p>
       ) : (
         <>
           <p role="status" className="mt-4 text-sm text-muted-foreground">

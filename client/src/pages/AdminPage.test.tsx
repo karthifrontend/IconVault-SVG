@@ -38,7 +38,7 @@ function renderPage() {
 
 beforeEach(() => {
   vi.resetAllMocks();
-  vi.mocked(adminApi.getAdminStats).mockResolvedValue({ users: 5, admins: 1, projects: 7, publicProjects: 3, privateProjects: 4, draftProjects: 1, icons: 42, fontBuilds: 2, activeTokens: 3 });
+  vi.mocked(adminApi.getAdminStats).mockResolvedValue({ users: 5, admins: 1, members: 4, googleUsers: 3, microsoftUsers: 1, projects: 7, publicProjects: 3, privateProjects: 4, spriteProjects: 4, fontProjects: 3, draftProjects: 1, icons: 42, fontBuilds: 2, activeTokens: 3 });
   counter = 0;
   auth.currentUser.role = "admin";
   const me = user({ id: "u0", displayName: "Admin", email: "admin@example.com", isAdmin: true, isSelf: true });
@@ -206,11 +206,33 @@ describe("moving a project", () => {
 });
 
 describe("totals and the link to a user's projects", () => {
-  it("shows the workspace totals under the tabs", async () => {
+  it("has a way back to the dashboard", async () => {
     renderPage();
-    const totals = await screen.findByRole("region", { name: "Workspace totals" });
-    expect(await within(totals).findByText("42")).toBeInTheDocument();
-    expect(within(totals).getByText("1 admin")).toBeInTheDocument();
+    await screen.findByText("ada@example.com");
+    await userEvent.click(screen.getByRole("link", { name: "Back to dashboard" }));
+    expect(await screen.findByText("Dashboard")).toBeInTheDocument();
+  });
+
+  it("shows only user numbers under the tabs: users, admins, members and the two sign-in kinds", async () => {
+    renderPage();
+    const totals = await screen.findByRole("region", { name: "User totals" });
+    expect(await within(totals).findByText("Google sign-ins")).toBeInTheDocument();
+    expect([...totals.querySelectorAll("p.text-xs")].map((p) => p.textContent)).toEqual(["Users", "Admins", "Members", "Google sign-ins", "Microsoft sign-ins"]);
+    expect([...totals.querySelectorAll("p.text-xl")].map((p) => p.textContent)).toEqual(["5", "1", "4", "3", "1"]);
+    expect(screen.queryByRole("region", { name: "Project totals" })).not.toBeInTheDocument();
+  });
+
+  it("filters users by sign-in provider, with counts on the pills", async () => {
+    renderPage();
+    await screen.findByText("ada@example.com");
+    const group = within(screen.getByRole("group", { name: "Sign-in" }));
+    expect(await group.findByRole("button", { name: "All 5" })).toBeInTheDocument();
+    expect(group.getByRole("button", { name: "Google 3" })).toBeInTheDocument();
+    expect(group.getByRole("button", { name: "Microsoft 1" })).toBeInTheDocument();
+    await userEvent.click(group.getByRole("button", { name: "Microsoft 1" }));
+    await waitFor(() => expect(listUsers).toHaveBeenLastCalledWith({ provider: "microsoft", page: 1, limit: 25 }));
+    await userEvent.click(group.getByRole("button", { name: "All 5" }));
+    await waitFor(() => expect(listUsers).toHaveBeenLastCalledWith({ page: 1, limit: 25 }));
   });
 
   it("links a user who owns projects to their projects, and no link for one who owns none", async () => {

@@ -29,6 +29,7 @@ export type AdminUser = {
 
 export async function listUsers(actor: SignedInActor, query: ListUsersQuery) {
   const filter: Record<string, unknown> = {};
+  if (query.provider !== "all") filter.provider = query.provider;
   if (query.search) {
     const pattern = new RegExp(escapeRegExp(query.search), "i");
     filter.$or = [{ displayName: pattern }, { email: pattern }];
@@ -110,9 +111,12 @@ export async function deleteUser(actor: SignedInActor, userId: Id, transferTo: I
 
 // Workspace totals for the admin screens.
 export async function adminStats() {
-  const [users, projects, publicProjects, draftProjects, icons, fontBuilds, activeTokens] = await Promise.all([
+  const [users, google, microsoft, projects, spriteProjects, publicProjects, draftProjects, icons, fontBuilds, activeTokens] = await Promise.all([
     User.countDocuments({}),
+    User.countDocuments({ provider: "google" }),
+    User.countDocuments({ provider: "microsoft" }),
     Project.countDocuments({}),
+    Project.countDocuments({ purpose: "sprite" }),
     Project.countDocuments({ visibility: "public" }),
     Project.countDocuments({ isArchived: true }),
     Icon.countDocuments({ deletedAt: null }),
@@ -120,7 +124,7 @@ export async function adminStats() {
     ApiToken.countDocuments({ revokedAt: null }),
   ]);
   const admins = (await User.find({}, { email: 1, provider: 1, emailVerified: 1 }).lean()).filter((user) => isAdminUser(user)).length;
-  return { users, admins, projects, publicProjects, privateProjects: projects - publicProjects, draftProjects, icons, fontBuilds, activeTokens };
+  return { users, admins, members: users - admins, googleUsers: google, microsoftUsers: microsoft, projects, publicProjects, privateProjects: projects - publicProjects, spriteProjects, fontProjects: projects - spriteProjects, draftProjects, icons, fontBuilds, activeTokens };
 }
 
 export type BulkResult = { requested: number; done: number; failed: { id: string; name: string; message: string }[] };
