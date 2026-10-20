@@ -10,6 +10,7 @@ Keep SVG icons in projects and folders, and compile them into a single `sprite.s
 - Sign-in with Google or Microsoft is required. A signed-out visitor sees a landing page.
 - Projects dashboard and workspaces: folders, search, grid or table, bulk move / tag / optimize / download, trash with Undo, icon details drawer with versions, settings.
 - Add icons by uploading SVG files or ZIPs, pasting SVG code, copying from another project, or importing an existing sprite file (each symbol becomes an icon).
+- Icon fonts (projects created as "font" projects): build a font from all icons or one folder as WOFF2, WOFF, TTF, EOT and/or SVG font, preview every glyph with its class and character, and download a ZIP with the fonts, CSS, SCSS, a glyph map, a specimen page and a README. Each icon keeps its character between builds. Import an existing TTF, OTF, WOFF, WOFF2 or SVG font and its glyphs become icons.
 - Move projects in and out: export a project as one ZIP (settings, folders, icons) and import it as a new private project, in the interface or with the command line.
 - Administrators (emails in `ADMIN_EMAILS`) can list users, delete a user (their projects are deleted or handed to someone else), and move a project to another owner. There are no passwords.
 - Personal API tokens (account menu, API tokens) for the command line and scripts: shown once, revocable, never admin.
@@ -109,6 +110,16 @@ Every route needs `Authorization: Bearer <session token>`. Errors are `{ "error"
 | GET | `/api/projects/:projectId/export` | The project as a ZIP (`project.json` plus the SVGs; not the trash or saved versions) |
 | POST | `/api/projects/import` | Multipart field `file`: create a new private project from an export ZIP. Every SVG is cleaned again; problems are listed, not fatal |
 | GET | `/api/projects/:projectId/sprite` | The icons compiled into one SVG sprite (`?folderId=` for a folder or `root`); header `X-Sprite-Symbols` |
+
+### Icon fonts
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/projects/:projectId/font/build` | Build a font and return a preview: `css`, a small WOFF2 (`preview.base64`), the class and character of every icon, warnings and file sizes. Body: `scope` all/folder/selected (`folderId`, `iconIds`), `formats`, `fontName`, `prefix`, `startCodepoint` (E000 to F8FF), `fontHeight`, `descent`, `normalize`. Anyone who can see the project may build; only editors get new characters saved on the icons |
+| POST | `/api/projects/:projectId/font/download` | The same build as a ZIP |
+| POST | `/api/projects/:projectId/icons/import-font` | Multipart: `font` (TTF, OTF, WOFF, WOFF2 or SVG font, up to 8 MB), optional `mapping` (CSS or JSON that names the characters), `folderId`, `strategy`, `optimize`, `privateUseOnly` (default true), `dryRun` (only report what is in the font) |
+
+At most 1000 icons per font. Strokes, gradients and text do not convert cleanly to a font and are listed as warnings. Nothing is stored on the server: each build runs in a temporary folder.
 
 ### Admin and API tokens
 

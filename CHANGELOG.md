@@ -358,6 +358,41 @@ Logged separately from Phases 0 to 5. Server, client and a new `cli/` folder. Co
 - Phase 7: icon fonts (font builder and font import).
 - Phase 8: hardening (accessibility, responsive checks, security review).
 
+## 2026-10-20: Phase 7, icon fonts: build and import (Icon Vault integration)
+
+Logged separately from Phases 0 to 6. Server and client; the command line is unchanged. Commits on `main`: `f57a4a7` (server: build, download, import), `e55ebff` (interface), plus this entry. Local only. **You still set `ADMIN_EMAILS` yourself; your `.env` was not touched.**
+
+### Changes
+| Part | Change |
+|---|---|
+| **Dependencies** | Server: `fantasticon` (the same font engine Icon Vault used; builds TTF, WOFF, WOFF2, EOT, SVG font, CSS, SCSS, JSON and a specimen page), `opentype.js` and `wawoff2` (reading fonts), `@types/opentype.js`. Nothing added to the client. |
+| **Font section** | Font projects (chosen when the project is created, as before) get a **Font** section; sprite projects keep **Sprite**, and each project type no longer shows or opens the other's section (a wrong address redirects to the icons). Options: icons to include (all or a folder with subfolders), font name, class prefix, first character, formats, and under Advanced: font height, descent and scaling. **Build font** shows the icon count, each format's size, conversion warnings, and a grid of every glyph drawn with the font that was just built, with its class name and character (click to copy the class). **Copy CSS** and **Download ZIP** (fonts, `.css`, `.scss`, `.json` glyph map, `.html` specimen, README). |
+| **Stable characters** | An icon that already has a codepoint keeps it. New icons get the next free character from the chosen start in the Private Use Area (E000 to F8FF, wrapping around), skipping characters used by icons outside the build. For editors the new characters are saved on the icons (so rebuilding later, or building a different folder, never moves a glyph); a viewer of a public project can build and download but nothing is saved. |
+| **Import a font** | TTF, OTF, WOFF, WOFF2 and SVG fonts, recognised by their content, not their name (max 8 MB, 2000 glyphs). An optional CSS (`.icon-home:before`) or JSON file gives glyphs real names. The dialog first asks the server what the font holds (nothing is added yet), then imports through the same cleaning pipeline as any upload, with folder, name-clash handling and optimize. By default only icon characters (Private Use Area) are imported, so a text font does not add hundreds of letters; turn that off to import everything. A glyph keeps its character when it is free in the project; otherwise the result says how many were not kept. |
+
+### Behaviour you may notice
+- Sprite projects no longer have a Font section and font projects no longer have a Sprite section. If you want both from one set of icons, copy the icons into a project of the other type (Copy from project).
+- A font build writes codepoints onto your icons (editors only). They show in the icon drawer under "Font codepoint" and can be changed there.
+- Bundle size: client JavaScript 503.2 kB to 539.8 kB. Server install is larger (font tooling); `npm audit` reports high and critical issues in the server's dependency tree (see below).
+
+### Validation (verified)
+- Server `npm test`: **122 of 122** (new: codepoint planning including wraparound and a full area, conversion warnings, mapping parser, and reading **real TTF, WOFF, WOFF2 and SVG fonts** built by the same engine, plus damaged, empty, oversized and unrelated files). `npm run test:db`: **152 of 152** (new: building with stable and saved codepoints, scopes, options, shapes other than paths, warnings, viewer rules; the ZIP's contents; importing with names, codepoints, clashes, folders, permissions and bad files; and a **round trip** where a font built from one project imports into another and rebuilds with the same icons and characters).
+- Client `npm test`: **461 of 461** (new: preview helper, Font section, import dialog, section redirects). `tsc` and `npm run build` pass; lint unchanged at 5 problems.
+- Browser pane with a throwaway user (deleted afterwards): a font project built a 4-icon font (TTF 1.7 KB, WOFF 1.1 KB, WOFF2 744 B) and the glyphs on the page were drawn from the built font (square, circle, house, star on E001 to E004, marked new); a TTF made by the server was imported into a second project through the dialog (dry run said 4 glyphs and the real names; import kept all 4 characters); building there gave the same four glyphs on E001 to E004 with none new; phone width has no sideways scroll. The database is back to your 1 user and 2 projects.
+
+### Not tested, or open
+- **Real Google or Microsoft sign-in** and your real `ADMIN_EMAILS`, as before.
+- **Fonts from outside this tool** were not tried beyond a hand-made SVG font in tests: real-world icon fonts (Font Awesome, Material Icons, IcoMoon files) have ligatures, composite glyphs and unusual metrics that may need adjustments. WOFF (version 1) and OTF with CFF outlines are read by the same library but were only covered by the tests for WOFF.
+- Not checked in a browser: the Download ZIP button in the Font section, copying CSS or a class, filtering a long list, EOT and SVG-font output opened in an old browser, folder scope, and import with a names file. Not checked at all: how a built font looks in a real page outside the preview (open the specimen `.html` from the ZIP to see).
+- **Stroke-based icons come out thin or empty** (as in Icon Vault): the font engine needs filled shapes. The warning says so, but there is no "convert strokes to outlines" step yet.
+- No build history and no stored builds (Icon Vault kept ZIPs on disk): every build is made on request. Choosing exactly which icons to include by selecting them in the grid is supported by the API (`scope: selected`) but not in the interface yet; use a folder.
+- The command line has no font commands yet.
+- Up to 1000 icons per font. Characters outside the basic Private Use Area (E000 to F8FF) are not handed out; icons that already have such a character keep it.
+- **`npm audit` on the server now lists high and critical issues** in the dependency tree that came with the font tooling; they have not been reviewed or fixed yet (Phase 8).
+
+### Next
+- Phase 8: hardening: accessibility pass, responsive check across the screens, security review (including the new dependencies), and the cleanups listed in the open items above.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -367,11 +402,11 @@ Logged separately from Phases 0 to 5. Server, client and a new `cli/` folder. Co
 - Client lists unused dependencies: `svgo`, `svgson`, `svgstore`, `zustand`, `react-dropzone` (`react-router-dom` has been used since Phase 4). Not removed yet.
 - `npm audit` vulnerabilities remain in both `server/` and `client/`.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 432 (Phases 3 to 6), the server 101 unit plus 132 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 461 (Phases 3 to 7), the server 122 unit plus 152 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.
 - Rotate the database password and `SESSION_SECRET` if the zip or `.env` was ever shared.
 - Add more test users or publish the Google app if others need access; configure Microsoft sign-in if wanted.
 - ~~Initialize Git~~ Done in Phase 0. Still open: add a remote and push if wanted.
-- Phase 7 fonts; Phase 8 hardening (see the Not tested, or open lists of Phases 2, 5 and 6).
+- Phase 8 hardening (see the Not tested, or open lists of Phases 2, 5, 6 and 7).
