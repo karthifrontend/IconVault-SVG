@@ -71,13 +71,40 @@ describe("loading and failure", () => {
   });
 });
 
+describe("sprite or font section", () => {
+  const sprite = () => getProject.mockResolvedValue(makeDetail({ id: "p1", name: "Feather", purpose: "sprite" }));
+
+  it("a sprite project has a Sprite section and no Font section", async () => {
+    sprite();
+    renderPage();
+    expect(await screen.findByRole("link", { name: "Sprite" })).toHaveAttribute("href", "/projects/p1/sprite");
+    expect(screen.queryByRole("link", { name: "Font" })).not.toBeInTheDocument();
+  });
+
+  it("sends a sprite project away from /font, and a font project away from /sprite", async () => {
+    sprite();
+    const first = renderPage("/projects/p1/font");
+    await screen.findByRole("heading", { level: 1, name: "Feather" });
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/projects/p1"));
+    first.unmount();
+
+    getProject.mockResolvedValue(makeDetail({ id: "p1", name: "Feather", purpose: "font" }));
+    renderPage("/projects/p1/sprite");
+    await screen.findByRole("heading", { level: 1, name: "Feather" });
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/projects/p1"));
+  });
+});
+
 describe("header", () => {
   it("shows the project, its badges and owner, and links to each section with counts", async () => {
     renderPage();
     expect(await screen.findByRole("heading", { level: 1, name: "Feather" })).toBeInTheDocument();
     expect(screen.getByText("Line icons")).toBeInTheDocument();
     expect(screen.getByText("Public")).toBeInTheDocument();
-    expect(screen.getByText("Font")).toBeInTheDocument();
+    // The badge and the section link are both called "Font" for a font project.
+    expect(screen.getAllByText("Font")).toHaveLength(2);
+    expect(screen.getByRole("link", { name: "Font" })).toHaveAttribute("href", "/projects/p1/font");
+    expect(screen.queryByRole("link", { name: "Sprite" })).not.toBeInTheDocument();
     expect(screen.getByText("by Ada Lovelace")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Projects" })).toHaveAttribute("href", "/");
 

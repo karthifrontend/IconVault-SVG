@@ -11,6 +11,7 @@ import { Button } from "../components/ui/Button";
 import FolderTree from "../components/workspace/FolderTree";
 import IconsTab from "../components/workspace/IconsTab";
 import ProjectHeader from "../components/workspace/ProjectHeader";
+import FontTab from "../components/workspace/FontTab";
 import SpriteTab from "../components/workspace/SpriteTab";
 import SettingsTab from "../components/workspace/SettingsTab";
 import TrashTab from "../components/workspace/TrashTab";
@@ -165,7 +166,9 @@ export default function ProjectPage() {
             </div>
           ) : (
             <Routes>
-              <Route path="sprite" element={<SpriteTab />} />
+              {/* A project is a sprite project or a font project, chosen at creation: each has only its own section. */}
+              <Route path="sprite" element={project.data.purpose === "sprite" ? <SpriteTab /> : <Navigate to={`/projects/${projectId}`} replace />} />
+              <Route path="font" element={project.data.purpose === "font" ? <FontTab /> : <Navigate to={`/projects/${projectId}`} replace />} />
               <Route path="trash" element={<TrashTab />} />
               <Route path="settings" element={<SettingsTab />} />
               <Route path="*" element={<Navigate to={`/projects/${projectId}`} replace />} />

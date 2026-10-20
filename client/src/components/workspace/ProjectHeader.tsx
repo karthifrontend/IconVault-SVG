@@ -47,8 +47,8 @@ export default function ProjectHeader({ project }: { project: ProjectDetail }) {
           Icons
           <span className="rounded-full bg-muted px-1.5 text-xs text-muted-foreground">{project.iconCount}</span>
         </NavLink>
-        <NavLink to={`/projects/${project.id}/sprite`} className={tabClass}>
-          Sprite
+        <NavLink to={`/projects/${project.id}/${project.purpose === "font" ? "font" : "sprite"}`} className={tabClass}>
+          {project.purpose === "font" ? "Font" : "Sprite"}
         </NavLink>
         <NavLink to={`/projects/${project.id}/trash`} className={tabClass}>
           Trash

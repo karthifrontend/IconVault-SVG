@@ -198,3 +198,60 @@ export type ProjectImportResult = {
   foldersCreated: number;
   problems: { file: string; message: string }[];
 };
+
+// ---- Icon fonts (Phase 7) ----
+
+export type FontFormat = "woff2" | "woff" | "ttf" | "eot" | "svg";
+export type FontScope = "all" | "folder" | "selected";
+
+export type BuildFontInput = {
+  scope?: FontScope;
+  folderId?: string;
+  iconIds?: string[];
+  formats?: FontFormat[];
+  fontName?: string;
+  prefix?: string;
+  startCodepoint?: string;
+  fontHeight?: number;
+  descent?: number;
+  normalize?: boolean;
+};
+
+export type FontCodepoint = { id: string; name: string; slug: string; codepoint: string; className: string; isNew: boolean };
+export type FontWarning = { icon: string; message: string };
+export type FontBuildResult = {
+  fontName: string;
+  prefix: string;
+  iconCount: number;
+  warnings: FontWarning[];
+  codepoints: FontCodepoint[];
+  css: string;
+  preview: { format: "woff2"; base64: string };
+  sizes: Partial<Record<FontFormat, number>>;
+};
+
+export type FontImportOptions = {
+  folderId?: string | null;
+  strategy?: DuplicateStrategy;
+  optimize?: boolean;
+  privateUseOnly?: boolean;
+  dryRun?: boolean;
+};
+
+export type FontImportPreview = {
+  dryRun: boolean;
+  kind: "truetype" | "opentype" | "woff" | "woff2" | "svg";
+  total: number;
+  importable: number;
+  truncated: boolean;
+  limit: number;
+  sample: { name: string; codepoint: string | null }[];
+};
+export type FontImportResult = FontImportPreview & {
+  created: IconItem[];
+  replaced: IconItem[];
+  skipped: { name: string; reason: string }[];
+  errors: { file: string; message: string }[];
+  codepointsKept: number;
+  codepointsDropped: number;
+};
