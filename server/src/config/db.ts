@@ -1,6 +1,7 @@
 // MongoDB connection helper. Loads models and exposes ensureConnected() / connectDb() for the rest of the server.
 import mongoose from "mongoose";
 import User from "../models/User.js";
+import ApiToken from "../models/ApiToken.js";
 import Project from "../models/Project.js";
 import Folder from "../models/Folder.js";
 import Icon from "../models/Icon.js";
@@ -51,6 +52,7 @@ export async function connectDb(): Promise<typeof mongoose> {
         await Folder.syncIndexes();
         await Icon.syncIndexes();
         await IconVersion.syncIndexes();
+        await ApiToken.syncIndexes();
       } catch (err) {
         // Don't fail the boot just because the index sync didn't land; surface the error in the logs so it can be diagnosed without taking the API down.
         console.error(

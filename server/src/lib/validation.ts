@@ -181,3 +181,13 @@ export function parseUploadFields(body: Record<string, unknown> | undefined) {
 }
 
 export type ListIconsQuery = z.infer<typeof listIconsQuerySchema>;
+
+export const listUsersQuerySchema = z.object({
+  search: z.string().trim().max(100).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+export type ListUsersQuery = z.infer<typeof listUsersQuerySchema>;
+
+export const deleteUserSchema = z.object({ transferTo: objectId.optional() }).strict();
+export const transferProjectSchema = z.object({ userId: objectId }).strict();
