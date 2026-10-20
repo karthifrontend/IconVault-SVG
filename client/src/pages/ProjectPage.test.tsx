@@ -77,7 +77,7 @@ describe("sprite or font section", () => {
   it("a sprite project has a Sprite section and no Font section", async () => {
     sprite();
     renderPage();
-    expect(await screen.findByRole("link", { name: "Sprite" })).toHaveAttribute("href", "/projects/p1/sprite");
+    expect(await screen.findByRole("link", { name: "Sprite Builder" })).toHaveAttribute("href", "/projects/p1/sprite");
     expect(screen.queryByRole("link", { name: "Font Builder" })).not.toBeInTheDocument();
   });
 
@@ -134,7 +134,7 @@ describe("header", () => {
     expect(screen.getByText("Icon Font Project")).toBeInTheDocument();
     expect(screen.queryByText(/^Prefix:/)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Font Builder" })).toHaveAttribute("href", "/projects/p1/font");
-    expect(screen.queryByRole("link", { name: "Sprite" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Sprite Builder" })).not.toBeInTheDocument();
     expect(screen.queryByText(/^by /)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/");
     expect(within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByText("Feather")).toHaveAttribute("aria-current", "page");

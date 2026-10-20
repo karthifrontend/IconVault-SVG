@@ -65,6 +65,12 @@ export const projectSchema = new Schema(
       default: 0,
       min: 0,
     },
+    // Like fontBuildCount, for the Sprite Builder's kept ZIPs.
+    spriteBuildCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     isArchived: {
       type: Boolean,
       default: false,

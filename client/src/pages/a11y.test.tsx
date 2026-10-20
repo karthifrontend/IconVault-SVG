@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as adminApi from "../api/admin";
 import * as foldersApi from "../api/folders";
 import * as fontsApi from "../api/fonts";
+import * as spritesApi from "../api/sprites";
 import * as iconsApi from "../api/icons";
 import * as projectsApi from "../api/projects";
 import * as tokensApi from "../api/tokens";
@@ -31,6 +32,7 @@ vi.mock("../api/icons");
 vi.mock("../api/admin");
 vi.mock("../api/tokens");
 vi.mock("../api/fonts");
+vi.mock("../api/sprites");
 vi.mock("../lib/fontPreview", async (importOriginal) => ({ ...(await importOriginal<typeof import("../lib/fontPreview")>()), loadPreviewFont: vi.fn().mockResolvedValue(true), unloadPreviewFont: vi.fn() }));
 
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 11l9-8 9 8v10H3z"/></svg>';
@@ -67,6 +69,7 @@ beforeEach(() => {
   vi.mocked(tokensApi.listTokens).mockResolvedValue({ tokens: [{ id: "t1", name: "CI", prefix: "isv_AbCd", createdAt: "2026-10-01T10:00:00.000Z", lastUsedAt: null, revokedAt: null }, { id: "t2", name: "Old", prefix: "isv_ZzZz", createdAt: "2026-10-01T10:00:00.000Z", lastUsedAt: "2026-10-05T10:00:00.000Z", revokedAt: "2026-10-10T10:00:00.000Z" }], maxActive: 10 });
   vi.mocked(fontsApi.buildFont).mockResolvedValue({ fontName: "Feather", prefix: "fth", iconCount: 2, warnings: [{ icon: "Home", message: "Uses strokes." }], css: "@font-face{}", preview: { format: "woff2", base64: "AA==" }, sizes: { woff2: 1000 }, codepoints: [{ id: "i1", name: "Home", slug: "home", codepoint: "E001", className: "fth-home", isNew: true }, { id: "i2", name: "Star", slug: "star", codepoint: "E002", className: "fth-star", isNew: false }] });
   vi.mocked(fontsApi.listFontBuilds).mockResolvedValue([{ id: "b1", version: 1, fontName: "Feather", iconCount: 2, formats: ["woff2", "ttf"], size: 4600, createdAt: "2026-10-20T12:00:00.000Z" }]);
+  vi.mocked(spritesApi.listSpriteBuilds).mockResolvedValue([{ id: "s1", version: 1, mode: "symbol", iconCount: 2, size: 2100, createdAt: "2026-10-20T12:00:00.000Z" }]);
 });
 
 // Voice-control users say what they see on a button, so its accessible name must contain its visible text (WCAG 2.5.3). axe runs this rule in a real browser; here it is checked directly for the controls that have a custom label.
@@ -231,8 +234,8 @@ describe("project workspace", () => {
 
   it("sprite section", async () => {
     project("/projects/p1/sprite");
-    await screen.findByText(/symbols/);
-    expect(await screen.findByTitle("Sprite preview")).toBeInTheDocument();
+    await screen.findByRole("heading", { name: "Sprite build history" });
+    expect((await screen.findAllByRole("button", { name: /^Copy code for/ })).length).toBeGreaterThan(0);
     await clean();
   });
 

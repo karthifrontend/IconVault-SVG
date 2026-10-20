@@ -9,7 +9,7 @@ Keep SVG icons in projects and folders, and compile them into a single `sprite.s
 
 - Sign-in with Google or Microsoft is required. A signed-out visitor sees a landing page.
 - Projects dashboard and workspaces: folders, search, grid or table, bulk move / tag / optimize / download, trash with Undo, icon details drawer with versions, settings.
-- Each project has one bar with its name, prefix, type and visibility, a pill menu (Icons, Font Builder or Sprite, Project Settings, Trash) and the **Upload icons** and **From Another Project** buttons. The folder sidebar has a **+** for new folders. The Icons toolbar adds an icon **size** slider, **colour** swatches and a **style** switch (Natural, Flat, Wireframe) that only change how icons are previewed.
+- Each project has one bar with its name, prefix, type and visibility, a pill menu (Icons, Font Builder or Sprite Builder, Project Settings, Trash) and the **Upload icons** and **From Another Project** buttons. The folder sidebar has a **+** for new folders. The Icons toolbar adds an icon **size** slider, **colour** swatches and a **style** switch (Natural, Flat, Wireframe) that only change how icons are previewed.
 - The Icons page has an **Upload icons** button with a menu: upload SVG files or ZIPs, copy from another project, import an SVG sprite (each symbol becomes an icon), import an icon font (each glyph becomes an icon), or paste SVG code.
 - Icon fonts (projects created as "font" projects): build a font from all icons or one folder as WOFF2, WOFF, TTF, EOT and/or SVG font, preview every glyph with its class and character, and download a ZIP (the font builds by itself when you open the page and when settings change) with the fonts, CSS, SCSS, a glyph map, a specimen page and a README. Each icon keeps its character between builds. Existing TTF, OTF, WOFF, WOFF2 or SVG fonts are imported from the Icons page's Upload icons menu.
 - Move projects in and out: export a project as one ZIP (settings, folders, icons) and import it as a new private project, in the interface or with the command line.
@@ -125,6 +125,10 @@ Every route needs `Authorization: Bearer <session token>`. Errors are `{ "error"
 | GET | `/api/projects/:projectId/font/builds` | The build history: kept packages with a version number (v1, v2, ... per project, never reused), newest first (at most 20 per project) |
 | GET | `/api/projects/:projectId/font/builds/:buildId/download` | A kept package again |
 | DELETE | `/api/projects/:projectId/font/builds/:buildId` | Remove a kept package (editors) |
+| POST | `/api/projects/:projectId/sprite/builds` | Keep a sprite ZIP the browser built (editors; multipart `bundle` up to 12 MB, `mode` symbol/stack/css, `iconCount`) |
+| GET | `/api/projects/:projectId/sprite/builds` | The sprite build history, newest first with version numbers (at most 20 per project) |
+| GET | `/api/projects/:projectId/sprite/builds/:buildId/download` | A kept sprite ZIP again |
+| DELETE | `/api/projects/:projectId/sprite/builds/:buildId` | Remove a kept sprite ZIP (editors) |
 | POST | `/api/projects/:projectId/icons/import-font` | Multipart: `font` (TTF, OTF, WOFF, WOFF2 or SVG font, up to 8 MB), optional `mapping` (CSS or JSON that names the characters), `folderId`, `strategy`, `optimize`, `privateUseOnly` (default true), `dryRun` (only report what is in the font) |
 
 At most 1000 icons per font. An icon's character is four hex digits from E000 to F8FF (the Private Use Area); the Font section's "Stable Unicode codepoints mapping" table lets editors change it, and the font is rebuilt with the new value. Strokes, gradients and text do not convert cleanly to a font and are listed as warnings. Builds run in a temporary folder that is removed afterwards. Only the ZIPs editors download are kept (the font build history, last 20, each under 12 MB) and they go away with the project.
@@ -150,6 +154,7 @@ Limits: 1 MB per SVG, 200 files and 25 MB per file per upload request, 500 SVGs 
 - `folders`: nested through `parentId` (null = project root), ordered by `orderIndex`.
 - `icons`: one SVG per document (markup stored in the database), `slug` unique per project among active icons, `codepoint` unique per project among active icons that have one, soft delete through `deletedAt`.
 - `icon_versions`: earlier states of an icon, each with its own markup.
+- `sprite_builds`: the sprite ZIPs editors downloaded from the Sprite Builder (project, who, version, architecture, symbol count, size and the ZIP), at most 20 per project; `spriteBuildCount` on the project hands out the version numbers.
 - `font_builds`: the font packages editors downloaded (project, who, version, font name, icon count, formats, size and the ZIP), at most 20 per project. The project's `fontBuildCount` hands out the version numbers.
 - `api_tokens`: owner, name, a SHA-256 hash of the token (never the token), its first characters for display, `lastUsedAt`, `revokedAt`.
 

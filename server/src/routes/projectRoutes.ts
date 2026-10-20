@@ -3,12 +3,14 @@ import { Router } from "express";
 import multer from "multer";
 import { BadRequestError } from "../lib/errors.js";
 import { actorOf, loadProject, parseObjectId, sendDownload } from "../lib/http.js";
-import { buildFontSchema, createProjectSchema, listProjectsQuerySchema, updateProjectSchema } from "../lib/validation.js";
+import { buildFontSchema, createProjectSchema, spriteBuildFieldsSchema, listProjectsQuerySchema, updateProjectSchema } from "../lib/validation.js";
 import { heavyLimit } from "../middleware/rateLimit.js";
 import { requireDb } from "../middleware/requireDb.js";
 import { requireUser } from "../middleware/requireUser.js";
 import { canEdit } from "../lib/permissions.js";
 import { deleteFontBuild, getFontBuildZip, listFontBuilds, recordFontBuild } from "../services/fontHistory.js";
+import { deleteSpriteBuild, getSpriteBuildZip, listSpriteBuilds, recordSpriteBuild } from "../services/spriteHistory.js";
+import { MAX_STORED_SPRITE_BYTES } from "../models/SpriteBuild.js";
 import { buildFont, iconsForFont, zipFontBuild } from "../services/fontService.js";
 import { exportProject, importProject } from "../services/projectArchive.js";
 import { buildProjectSprite } from "../services/spriteService.js";
@@ -105,6 +107,34 @@ router.get("/:projectId/font/builds/:buildId/download", heavyLimit, async (req, 
 router.delete("/:projectId/font/builds/:buildId", async (req, res) => {
   const project = await loadProject(actorOf(req), req.params.projectId, "edit");
   await deleteFontBuild(project._id, String(req.params.buildId));
+  res.json({ deleted: true });
+});
+
+// The Sprite Builder's history: ZIPs editors downloaded (built in the browser and sent here after the download), newest first, at most 20 per project.
+const spriteUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_STORED_SPRITE_BYTES, files: 1 } });
+
+router.post("/:projectId/sprite/builds", heavyLimit, spriteUpload.single("bundle"), async (req, res) => {
+  const actor = actorOf(req);
+  const project = await loadProject(actor, req.params.projectId, "edit");
+  if (!req.file) throw new BadRequestError("Send the sprite ZIP in the bundle field.");
+  const fields = spriteBuildFieldsSchema.parse(req.body ?? {});
+  res.status(201).json(await recordSpriteBuild(project._id, actor.id, fields, req.file.buffer));
+});
+
+router.get("/:projectId/sprite/builds", async (req, res) => {
+  const project = await loadProject(actorOf(req), req.params.projectId, "view");
+  res.json({ builds: await listSpriteBuilds(project._id) });
+});
+
+router.get("/:projectId/sprite/builds/:buildId/download", heavyLimit, async (req, res) => {
+  const project = await loadProject(actorOf(req), req.params.projectId, "view");
+  const file = await getSpriteBuildZip(project._id, String(req.params.buildId));
+  sendDownload(res, { filename: `${project.prefix ?? "sprite"}-sprite-v${file.version}.zip`, contentType: "application/zip", body: file.zip });
+});
+
+router.delete("/:projectId/sprite/builds/:buildId", async (req, res) => {
+  const project = await loadProject(actorOf(req), req.params.projectId, "edit");
+  await deleteSpriteBuild(project._id, String(req.params.buildId));
   res.json({ deleted: true });
 });
 

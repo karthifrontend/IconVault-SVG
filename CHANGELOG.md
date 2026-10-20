@@ -837,6 +837,39 @@ Client only. One commit on `main`, local only.
 
 Client only. One commit on `main`, local only. The dashboard card now has the **Private / type (and Draft) badges above the title**, then the avatar, name and menu, a one line description, a roomier grey box for the sample icons (more padding, 12 px between icons, at least 36 px high; the icons stay at **18 px**, up to six), and "Created by". More space inside the card (14 px padding, 10 px between rows) and under the description. I tried 32 px icons on request and went back to 18 px because they were too big. Client tests: 641.
 
+## 2026-10-21: Follow-up, Sprite Builder like the Font Builder and Icon Vault's sprite page (change request)
+
+One commit on `main`, local only.
+
+### Like the Font Builder
+- **Actions in the project bar:** **Download sprite ZIP** (the main, filled button) and **Copy sprite**. The separate **Download sprite.svg** button is gone: the sprite file is inside the ZIP together with the demo page, the grid sprite and the preview image. The old "Download bundle" is now "Download sprite ZIP".
+- **Builds by itself:** the sprite is built in the browser as soon as the page opens and again whenever the icons, the scope or an option change; the ZIP button is switched on as soon as the first build is shown. There is no Build button.
+- **Three columns** like Icon Vault: **1. Scope selection** (whole project with its icon count, selected folder with a folder list, selected icons, and the Icon checklist card with "n / total" and Review / edit checklist), **2. Sprite architecture**, **3. Processing options**.
+
+### Features taken from Icon Vault's sprite page
+| Icon Vault | Here |
+|---|---|
+| Symbol, Stack and CSS companion sprite | all three; Stack makes nested `<svg>` icons shown by `:target` (for `<img src="sprite.svg#id">`), CSS adds a `sprite.css` to the ZIP; the code you copy for a symbol follows the choice |
+| ID pattern `{prefix}-{name}` | same; it must contain `{name}`, and a bad one is explained and ignored until fixed |
+| Convert to currentColor | same (fills and strokes; `none`, gradients and `currentColor` are left alone) |
+| Namespace gradient and mask ids | same, on by default (each icon's inner ids get its name in front, and every reference is updated) |
+| Sprite build history with download and delete | added: every sprite ZIP an editor downloads is kept (the last 20) with a version number v1, v2, ..., newest first, with the architecture, symbol count and size; anyone who can see the project can download one again, editors can delete them |
+| Live preview, symbol list | the preview panel was removed at your request (the demo page is still inside the ZIP); the id list with a copy button per symbol stays |
+
+- **Left out on purpose:** "Run SVGO optimization" and "Preserve viewBox". Icons are already cleaned and optimized when they are uploaded, and changing the viewBox again could shift an icon, so the two switches would do nothing useful here.
+- **How the history is kept:** the ZIP is built in the browser, and after an editor's download it is sent to the server (`POST /api/projects/:id/sprite/builds`, up to 12 MB, must be a ZIP). If keeping it fails the download still works. Also `GET /api/projects/:id/sprite/builds`, `GET .../:buildId/download` and `DELETE .../:buildId`. They are removed with the project. The count that hands out version numbers is `spriteBuildCount` on the project, like the font one. New collection `sprite_builds`.
+
+### Tab name
+The **Sprite** tab is now **Sprite Builder** (sprite projects), matching **Font Builder**. The page address is unchanged.
+
+### Validation (verified)
+- Server unit **136 of 136**; database **188 of 188** (new: `spriteHistory.db.test.ts`, 6 tests: keeping, listing and downloading again, who may send, list and delete, bad uploads, deleting with version numbers never reused, the 20 limit and removal with the project).
+- Client **670 of 670** (new: the sprite options, the history component, the page layout and each architecture, id pattern and colour option, history for editors and not for viewers). Types and lint clean.
+- Real browser (throwaway user, sprite project with four icons): the three columns and the actions in the bar; Download sprite ZIP uploaded the ZIP and the history showed "v1 Symbol sprite (4 symbols)". Test data removed.
+
+### Not tested, or open
+- The browser pane cannot open the downloaded file, so what is inside the ZIP was checked by tests (the file names and the sprite text for each architecture), not by opening it.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -846,7 +879,7 @@ Client only. One commit on `main`, local only. The dashboard card now has the **
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 641 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 182 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 670 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 188 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

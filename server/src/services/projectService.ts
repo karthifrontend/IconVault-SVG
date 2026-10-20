@@ -9,6 +9,7 @@ import Project, { type ProjectDoc } from "../models/Project.js";
 import User from "../models/User.js";
 import { deleteIconsAndVersions } from "./cascade.js";
 import { deleteFontBuilds } from "./fontHistory.js";
+import { deleteSpriteBuilds } from "./spriteHistory.js";
 
 type Id = Types.ObjectId;
 type ProjectLike = Pick<
@@ -180,6 +181,7 @@ export async function deleteProject(project: HydratedDocument<ProjectDoc>) {
   const deletedIcons = await deleteIconsAndVersions({ projectId: project._id });
   const folders = await Folder.deleteMany({ projectId: project._id });
   await deleteFontBuilds(project._id);
+  await deleteSpriteBuilds(project._id);
   await Project.deleteOne({ _id: project._id });
   return { deletedIcons, deletedFolders: folders.deletedCount };
 }

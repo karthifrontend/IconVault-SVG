@@ -63,7 +63,7 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
           </NavLink>
           <NavLink to={`/projects/${project.id}/${isFont ? "font" : "sprite"}`} className={pillClass}>
             {isFont ? <Type aria-hidden="true" className="h-4 w-4" /> : <Shapes aria-hidden="true" className="h-4 w-4" />}
-            {isFont ? "Font Builder" : "Sprite"}
+            {isFont ? "Font Builder" : "Sprite Builder"}
           </NavLink>
           <NavLink to={`/projects/${project.id}/settings`} className={pillClass}>
             <Settings aria-hidden="true" className="h-4 w-4" />

@@ -196,6 +196,12 @@ export const listUsersQuerySchema = z.object({
 export type ListUsersQuery = z.infer<typeof listUsersQuerySchema>;
 
 export const deleteUserSchema = z.object({ transferTo: objectId.optional() }).strict();
+// The facts sent with a sprite ZIP that is kept in the history (multipart text fields, so they arrive as strings).
+export const spriteBuildFieldsSchema = z.object({
+  mode: z.enum(["symbol", "stack", "css"]),
+  iconCount: z.coerce.number().int().min(0).max(100000),
+});
+
 export const transferProjectSchema = z.object({ userId: objectId }).strict();
 // Several projects at once (the Manage projects screen): at most 100 per request.
 export const bulkTransferSchema = z.object({ projectIds: z.array(objectId).min(1).max(100), userId: objectId }).strict();

@@ -1,6 +1,6 @@
 // Tests for turning icons into a sprite and a sprite back into icons.
 import { describe, expect, it } from "vitest";
-import { buildSprite, spriteToFiles, svgToSymbol, symbolId } from "./spriteBuild";
+import { DEFAULT_SPRITE_OPTIONS, buildSprite, formatSymbolId, idPatternProblem, prepareSvg, snippetFor, spriteToFiles, svgToSymbol, symbolId } from "./spriteBuild";
 
 // jsdom files have no .text(), so read them the old way.
 const readFile = (file: File) =>
@@ -82,5 +82,79 @@ describe("spriteToFiles", () => {
   it("returns null for a plain icon or a broken document", () => {
     expect(spriteToFiles(svg("<path/>"), "fth")).toBeNull();
     expect(spriteToFiles("garbage", "fth")).toBeNull();
+  });
+});
+
+describe("sprite options", () => {
+  const colored = { name: "Home", slug: "home", svg: svg('<path fill="#ff0000" stroke="#00ff00" d="M0 0h1"/><circle fill="none" cx="1" cy="1" r="1"/>', 'viewBox="0 0 24 24"') };
+  const gradient = { name: "Grad", slug: "grad", svg: svg('<defs><linearGradient id="a"><stop offset="0" stop-color="#000"/></linearGradient><clipPath id="c"><rect width="4" height="4"/></clipPath></defs><path fill="url(#a)" clip-path="url(#c)" d="M0 0h4"/><use href="#a"/>', 'viewBox="0 0 24 24"') };
+
+  it("defaults to a symbol sprite with {prefix}-{name} ids and no colour change", () => {
+    const built = buildSprite([colored], "fth");
+    expect(built.mode).toBe("symbol");
+    expect(built.css).toBeNull();
+    expect(built.ids).toEqual(["fth-home"]);
+    expect(built.xml).toBe(built.symbolXml);
+    expect(built.xml).toContain('fill="#ff0000"');
+    expect(DEFAULT_SPRITE_OPTIONS.idPattern).toBe("{prefix}-{name}");
+  });
+
+  it("makes a stack sprite whose icons show only when targeted", () => {
+    const built = buildSprite([colored], "fth", { ...DEFAULT_SPRITE_OPTIONS, mode: "stack" });
+    expect(built.xml).toContain(":root > svg:target { display: inline; }");
+    expect(built.xml).toContain('<svg id="fth-home" viewBox="0 0 24 24">');
+    expect(built.xml).not.toContain("<symbol");
+    // The preview always has symbols to draw.
+    expect(built.symbolXml).toContain('<symbol id="fth-home"');
+  });
+
+  it("adds a companion stylesheet in the CSS mode", () => {
+    const built = buildSprite([colored], "fth", { ...DEFAULT_SPRITE_OPTIONS, mode: "css" });
+    expect(built.xml).toContain("<symbol");
+    expect(built.css).toContain(".icon {");
+    expect(built.css).toContain(".fth-home {");
+  });
+
+  it("builds ids from the pattern, and falls back to the default for a bad one", () => {
+    expect(buildSprite([colored], "fth", { ...DEFAULT_SPRITE_OPTIONS, idPattern: "icon_{name}" }).ids).toEqual(["icon_home"]);
+    expect(buildSprite([colored], "fth", { ...DEFAULT_SPRITE_OPTIONS, idPattern: "{prefix}-" }).ids).toEqual(["fth-home"]);
+    expect(formatSymbolId("{prefix}__{name}", "a", "b")).toBe("a__b");
+    expect(idPatternProblem("{prefix}-{name}")).toBeNull();
+    expect(idPatternProblem("{prefix}")).toMatch(/must contain \{name\}/);
+    expect(idPatternProblem("a b{name}")).toMatch(/Use only letters/);
+  });
+
+  it("turns colours into currentColor but leaves none and gradients alone", () => {
+    const out = prepareSvg(colored.svg, "home", { stripColors: true, namespaceIds: false });
+    expect(out).toContain('fill="currentColor"');
+    expect(out).toContain('stroke="currentColor"');
+    expect(out).toContain('fill="none"');
+    expect(out).not.toContain("#ff0000");
+    expect(prepareSvg(gradient.svg, "grad", { stripColors: true, namespaceIds: false })).toContain("url(#a)");
+  });
+
+  it("renames ids inside an icon and every reference to them", () => {
+    const out = prepareSvg(gradient.svg, "grad", { stripColors: false, namespaceIds: true });
+    expect(out).toContain('id="grad-a"');
+    expect(out).toContain('id="grad-c"');
+    expect(out).toContain("url(#grad-a)");
+    expect(out).toContain("url(#grad-c)");
+    expect(out).toContain('href="#grad-a"');
+    expect(out).not.toContain('id="a"');
+  });
+
+  it("keeps two icons that use the same inner id apart", () => {
+    const a = { name: "A", slug: "a", svg: svg('<defs><linearGradient id="g"/></defs><path fill="url(#g)" d="M0 0"/>', 'viewBox="0 0 24 24"') };
+    const b = { name: "B", slug: "b", svg: svg('<defs><linearGradient id="g"/></defs><path fill="url(#g)" d="M1 1"/>', 'viewBox="0 0 24 24"') };
+    const built = buildSprite([a, b], "x");
+    expect(built.xml).toContain('id="a-g"');
+    expect(built.xml).toContain('id="b-g"');
+    expect(buildSprite([a, b], "x", { ...DEFAULT_SPRITE_OPTIONS, namespaceIds: false }).xml.match(/id="g"/g)?.length).toBe(2);
+  });
+
+  it("gives the code that shows a symbol for each architecture", () => {
+    expect(snippetFor("symbol", "fth-home")).toBe('<svg width="24" height="24"><use href="#fth-home"></use></svg>');
+    expect(snippetFor("stack", "fth-home")).toBe('<img src="sprite.svg#fth-home" width="24" height="24" alt="">');
+    expect(snippetFor("css", "fth-home", "icons.svg")).toBe('<svg class="icon"><use href="icons.svg#fth-home"></use></svg>');
   });
 });

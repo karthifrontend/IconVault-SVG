@@ -243,6 +243,9 @@ export type FontBuildResult = {
 // One kept download in the font build history.
 export type FontBuildSummary = { id: string; version: number; fontName: string; iconCount: number; formats: FontFormat[]; size: number; createdAt: string };
 
+// One kept download in the sprite build history.
+export type SpriteBuildSummary = { id: string; version: number; mode: "symbol" | "stack" | "css"; iconCount: number; size: number; createdAt: string };
+
 export type FontImportOptions = {
   folderId?: string | null;
   strategy?: DuplicateStrategy;
