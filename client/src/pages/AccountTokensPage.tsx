@@ -139,7 +139,7 @@ function CreateForm({ onClose, onCreated }: { onClose: () => void; onCreated: (t
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <TextField label="Name" value={name} maxLength={60} autoComplete="off" onChange={(event) => setName(event.target.value)} hint="Helps you recognise it later, e.g. “CI server”." />
+      <TextField label="Name" value={name} maxLength={60} autoComplete="off" autoFocus onChange={(event) => setName(event.target.value)} hint="Helps you recognise it later, e.g. “CI server”." />
       {error && (
         <p role="alert" className="text-sm font-medium text-destructive">
           {error}

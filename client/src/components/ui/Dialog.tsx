@@ -27,7 +27,11 @@ export default function Dialog({ open, onClose, title, description, size = "md",
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
+    if (open && !dialog.open) {
+      dialog.showModal();
+      // React's autoFocus runs while the dialog is still closed, so it does nothing here and the browser would focus the Close button. Put the cursor in the first text field instead, when there is one.
+      dialog.querySelector<HTMLElement>("input:not([type]), input[type=text], input[type=search], input[type=email], input[type=url], input[type=password], textarea")?.focus();
+    }
     if (!open && dialog.open) dialog.close();
   }, [open]);
 

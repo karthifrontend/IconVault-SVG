@@ -10,6 +10,9 @@ Keep SVG icons in projects and folders, and compile them into a single `sprite.s
 - Sign-in with Google or Microsoft is required. A signed-out visitor sees a landing page.
 - Projects dashboard and workspaces: folders, search, grid or table, bulk move / tag / optimize / download, trash with Undo, icon details drawer with versions, settings.
 - Add icons by uploading SVG files or ZIPs, pasting SVG code, copying from another project, or importing an existing sprite file (each symbol becomes an icon).
+- Move projects in and out: export a project as one ZIP (settings, folders, icons) and import it as a new private project, in the interface or with the command line.
+- Administrators (emails in `ADMIN_EMAILS`) can list users, delete a user (their projects are deleted or handed to someone else), and move a project to another owner. There are no passwords.
+- Personal API tokens (account menu, API tokens) for the command line and scripts: shown once, revocable, never admin.
 - Sprite section: compile all icons or one folder into a sprite in the browser; preview, copy, download `sprite.svg`, or download a ZIP with the sprite, a grid sprite, `demo.html` and `preview.png`; copy the `<use>` code for each symbol.
 - Colour theme: light, dark or follow the system (switch in the header; the choice is remembered).
 
@@ -74,7 +77,7 @@ All routes except sign-in need `Authorization: Bearer <session token>`.
 |---|---|---|
 | POST | `/api/auth/google` | Exchange a Google ID token for a session token |
 | POST | `/api/auth/microsoft` | Exchange a Microsoft ID token for a session token |
-| GET | `/api/auth/me` | Current user |
+| GET | `/api/auth/me` | Current user (`authMethod` is `session` or `token`) |
 
 The earlier `/api/sprites` library routes were removed in Phase 5.
 
@@ -103,6 +106,21 @@ Every route needs `Authorization: Bearer <session token>`. Errors are `{ "error"
 | GET | `/api/icons/:iconId/download` | The SVG as an attachment |
 | POST | `/api/icons/:iconId/optimize`, `/restore` | Optimize; take out of the trash |
 | GET / POST | `/api/icons/:iconId/versions`, `/versions/:versionId/restore` | History (newest 20 kept); restore an earlier state |
+| GET | `/api/projects/:projectId/export` | The project as a ZIP (`project.json` plus the SVGs; not the trash or saved versions) |
+| POST | `/api/projects/import` | Multipart field `file`: create a new private project from an export ZIP. Every SVG is cleaned again; problems are listed, not fatal |
+| GET | `/api/projects/:projectId/sprite` | The icons compiled into one SVG sprite (`?folderId=` for a folder or `root`); header `X-Sprite-Symbols` |
+
+### Admin and API tokens
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/admin/users` | Users with project, icon and active token counts (`search`, `page`, `limit`) |
+| DELETE | `/api/admin/users/:userId` | Delete a user and revoke their tokens; body `{ "transferTo": userId }` hands their projects over, otherwise they are deleted. You cannot delete yourself |
+| POST | `/api/admin/projects/:projectId/transfer` | Body `{ "userId" }`: move the project to another owner |
+| GET / POST | `/api/tokens` | List your tokens (never the secret); create one (`name`; the secret is returned once). At most 10 active |
+| DELETE | `/api/tokens/:tokenId` | Revoke (immediate and permanent) |
+
+Admin routes need an admin **session**. A token (`Authorization: Bearer isv_…`) works for everything else a signed-in user can do, but it never has admin rights and cannot manage tokens. Only a hash of each token is stored.
 
 Limits: 1 MB per SVG, 200 files and 25 MB per file per upload request, 500 SVGs and 50 MB unpacked per ZIP, 1000 icons per upload, 500 ids per batch call. Uploaded SVGs are cleaned (scripts, event handlers, images, filters, external links and XML entities are removed; `<style>` rules are inlined first) and must be well-formed XML.
 
@@ -113,8 +131,24 @@ Limits: 1 MB per SVG, 200 files and 25 MB per file per upload request, 500 SVGs 
 - `folders`: nested through `parentId` (null = project root), ordered by `orderIndex`.
 - `icons`: one SVG per document (markup stored in the database), `slug` unique per project among active icons, `codepoint` unique per project among active icons that have one, soft delete through `deletedAt`.
 - `icon_versions`: earlier states of an icon, each with its own markup.
+- `api_tokens`: owner, name, a SHA-256 hash of the token (never the token), its first characters for display, `lastUsedAt`, `revokedAt`.
 
 Admins are not stored: a user is an admin when their email is in `ADMIN_EMAILS`.
+
+## Command line
+
+`cli/` holds `svgsprite`, a dependency-free Node (18+) tool that uses the API with a personal token:
+
+```bash
+node cli/bin/svgsprite.mjs login --url http://localhost:5000   # paste a token from the web app (API tokens)
+node cli/bin/svgsprite.mjs projects
+node cli/bin/svgsprite.mjs upload "Feather" ./icons            # .svg and .zip files; folders are searched
+node cli/bin/svgsprite.mjs sprite "Feather" --out sprite.svg
+node cli/bin/svgsprite.mjs export "Feather" --out feather.zip
+node cli/bin/svgsprite.mjs import feather.zip
+```
+
+`svgsprite help` lists everything. For CI, set `SVGSPRITE_URL` and `SVGSPRITE_TOKEN` instead of running `login`. `npm link` inside `cli/` installs the `svgsprite` command. Exit code 0 is success, 1 an error, 2 some files could not be added.
 
 ## Maintenance scripts
 
@@ -132,4 +166,5 @@ Scripts live in `server/src/scripts/` (`backup-db.ts`, `drop-legacy-sprites.ts`)
 | `npm run test:db` | `server/` | Model tests against a throwaway database on your cluster, dropped afterwards. Needs `MONGODB_URI` |
 | `npm run build` | `server/` and `client/` | Production build |
 | `npm test` | `client/` | Component, theme, contrast and API-client tests (Vitest and Testing Library). No server needed |
+| `npm test` | `cli/` | Command line tests against a mock of the API. No server or network needed |
 | `npm run lint` | `client/` | ESLint. Currently reports 5 known problems (in `AuthContext`, `ToastContext` and `previewPng`); see CHANGELOG.md |

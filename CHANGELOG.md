@@ -318,6 +318,46 @@ Logged separately from Phases 0 to 4. Client and server. Commits on `main`: `c0d
 ### Next
 - Phase 6: admin area (users list, delete, transfer), project export and import, API token and the new CLI.
 
+## 2026-10-20: Phase 6, admin area, project export and import, API tokens and the command line (Icon Vault integration)
+
+Logged separately from Phases 0 to 5. Server, client and a new `cli/` folder. Commits on `main`: `6.1` admin API and token model, `6.2` export, import and server-built sprite, `6.3` API tokens, `6.4` interface, `6.5` command line, plus the final commit with the dialog focus fix and docs. Local only. **You still set `ADMIN_EMAILS` yourself in `server/.env`; it was not touched.**
+
+### Changes
+| Part | Change |
+|---|---|
+| **Admin API** | `GET /api/admin/users` (counts of projects, active icons and active tokens, search, paging, admin flag, "you"); `DELETE /api/admin/users/:id` (you cannot delete yourself; their projects are deleted with icons and versions, or handed to another user with `transferTo`; their tokens are removed; their old session stops working at once); `POST /api/admin/projects/:id/transfer`. Admin session required. No passwords exist, as decided. |
+| **Export and import** | `GET /api/projects/:id/export` writes one ZIP: `project.json` (settings, folders including empty ones, each icon's name, folder, tags, codepoint) and the SVGs in folders. Not included: trash and saved versions. `POST /api/projects/import` creates a **new private project owned by the importer** (named "(Imported)" if the name is taken). The manifest is validated (format, version, limits: 5000 icons, 100 MB unpacked, 1 MB per SVG), every SVG goes through the normal cleaning pipeline again (scripts and handlers removed whatever the archive claims), folder names like `..` are neutralised, a missing or broken icon is listed as a problem and the rest still import, a taken codepoint is dropped with a note, and nothing is left behind if no icon can be imported. |
+| **Sprite on the server** | `GET /api/projects/:id/sprite` (optionally one folder or `root`) builds the same symbol sprite the web app builds, for scripts and the command line. |
+| **API tokens** | New `api_tokens` collection. Tokens look like `isv_` plus 43 random characters, are shown **once**, only their SHA-256 hash is stored, up to 10 active per user, revocable (immediate, permanent, kept in the list as revoked), last-used time recorded (at most once a minute). A token works as the user for projects, folders and icons, but **never has admin rights, and cannot create, list or revoke tokens** (so a leaked token cannot make more). `/api/auth/me` shows `authMethod`. |
+| **Interface** | Account menu gains **API tokens** (everyone) and **Administration** (admins). Administration: user table with search and paging, delete dialog (move their projects to another user, or delete them). API tokens page: list, create (secret shown once with a copy button, gone from the page afterwards), revoke with confirmation. Project **Settings**: **Export project** (anyone who can see the project) and, for admins, **Transfer ownership**. Dashboard: **Import project**. |
+| **Command line** | New `cli/` (`svgsprite`, Node 18+, no dependencies): `login`, `logout`, `whoami`, `projects`, `icons`, `upload` (files and folders, batches of 100, replace/skip/rename, `--no-optimize`), `sprite`, `export`, `import`. Projects are found by id, exact name or prefix, and an ambiguous name is an error, never a guess. The token is stored in a file readable only by you (mode 600) and never printed. Settings come from flags, then `SVGSPRITE_URL` / `SVGSPRITE_TOKEN`, then the saved file. Exit code 0 ok, 1 error, 2 some files not added. |
+| **Dialogs** | Fixed along the way: a dialog now puts the cursor in its first text field when it opens. Before, React's `autoFocus` ran while the dialog was still closed, so the browser focused the Close button; typing a name and pressing Enter closed the dialog. This also affected the folder, tag and project dialogs. |
+
+### Changes in behaviour you may notice
+- Typing straight into a dialog that has a text field now works (see above).
+- `/api/auth/me` has a new `authMethod` field; for a token it always reports role `user`.
+- The server no longer lets the old `sprites` routes exist (Phase 5); nothing else removed.
+
+### Validation (verified)
+- Server `npm test`: **101 of 101** (new: archive reading and sprite symbols, token format and hashing). `npm run test:db` against a throwaway database: **132 of 132** (new: admin routes, export/import/sprite, tokens). `tsc` passes.
+- Client `npm test`: **432 of 432** (new: admin screen and its dialogs, API tokens screen, dashboard import, Settings export and transfer, account menu links and routes, dialog focus). Lint unchanged at 5 problems; `tsc` passes.
+- CLI `npm test`: **29 of 29** against a mock API (arguments, saved settings and file mode, every command, batching, error messages, exit codes, the token never printed).
+- **Real end-to-end run** of the command line against the running dev server with a real token and a throwaway user: `whoami`, create a project, `upload` by project name (folder of SVGs; an SVG with a `<script>` and `onload` came back cleaned), `icons`, `sprite`, `export`, `import` (new project with 3 icons), then the token was revoked and the next command was refused with a clear message. A token could not create tokens (403) or call an admin route (403).
+- **Browser pane** (second server and client on other ports with the admin email passed as an environment variable, so your `.env` was untouched): the Administration page listed every user including yours; deleting a throwaway user moved their project to the throwaway admin ("1 project moved", counts updated); the API tokens page showed tokens with only prefixes, creating one showed the secret once and it was gone from the page after closing; project Settings showed Export project and Transfer ownership for the admin. All throwaway data (users, projects, tokens) was removed; the database is back to your 1 user and 2 projects.
+
+### Not tested, or open
+- **Real Google or Microsoft sign-in** and your real `ADMIN_EMAILS` were not exercised (please sign in once and open Administration as yourself). Be careful on that page: it lists your real account too.
+- Not tried in a browser: the Transfer ownership dialog itself (only its button; the dialog is unit-tested and the API is database-tested), revoking from the page (unit and API tested), importing a project from the dashboard, downloading an export from Settings.
+- `npm link` / installing the CLI globally, Windows paths, and very large uploads from the CLI were not tried. The CLI does not recreate local folders as project folders (use a ZIP for that).
+- Importing a ZIP that was **not** made by this app is refused unless it has a valid `project.json`; plain ZIPs of SVGs go through Add icons or `svgsprite upload`.
+- Token management needs a browser session by design; there is no CLI command to create tokens.
+- Tokens do not expire on their own (revoke them). Deleting a user removes their tokens.
+- Admin can move or delete users but cannot edit them (users come from Google or Microsoft).
+
+### Next
+- Phase 7: icon fonts (font builder and font import).
+- Phase 8: hardening (accessibility, responsive checks, security review).
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -327,11 +367,11 @@ Logged separately from Phases 0 to 4. Client and server. Commits on `main`: `c0d
 - Client lists unused dependencies: `svgo`, `svgson`, `svgstore`, `zustand`, `react-dropzone` (`react-router-dom` has been used since Phase 4). Not removed yet.
 - `npm audit` vulnerabilities remain in both `server/` and `client/`.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 398 (Phases 3 to 5) and the server 92 unit plus 100 database tests. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 432 (Phases 3 to 6), the server 101 unit plus 132 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.
 - Rotate the database password and `SESSION_SECRET` if the zip or `.env` was ever shared.
 - Add more test users or publish the Google app if others need access; configure Microsoft sign-in if wanted.
 - ~~Initialize Git~~ Done in Phase 0. Still open: add a remote and push if wanted.
-- Phase 6 onward: admin area, project export and import, API tokens and the CLI; Phase 7 fonts; Phase 8 hardening (see the Phase 2 and Phase 5 sections, Not tested, or open).
+- Phase 7 fonts; Phase 8 hardening (see the Not tested, or open lists of Phases 2, 5 and 6).

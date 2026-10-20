@@ -65,6 +65,25 @@ describe("Dialog", () => {
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
   });
 
+  it("puts the cursor in the first text field when it opens, so typing and Enter work at once", async () => {
+    render(<Harness />);
+    await userEvent.click(screen.getByRole("button", { name: "Open it" }));
+    expect(screen.getByLabelText("Name")).toHaveFocus();
+  });
+
+  it("does not steal focus for a checkbox or file input", async () => {
+    render(
+      <Dialog open onClose={() => undefined} title="Options">
+        <label>
+          Optimize <input type="checkbox" />
+        </label>
+        <input type="file" aria-label="Pick a file" />
+      </Dialog>,
+    );
+    expect(screen.getByLabelText("Optimize")).not.toHaveFocus();
+    expect(screen.getByLabelText("Pick a file")).not.toHaveFocus();
+  });
+
   it("closes with the Close button, Escape and a backdrop click", async () => {
     render(<Harness />);
     const open = () => userEvent.click(screen.getByRole("button", { name: "Open it" }));
