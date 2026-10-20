@@ -42,6 +42,8 @@ export const updateProjectSchema = z
     color,
     visibility: z.enum(VISIBILITIES),
     isArchived: z.boolean(),
+    // The sidebar's name for icons in no folder; empty goes back to "Uncategorized".
+    uncategorizedName: z.string().trim().max(40),
   })
   .partial()
   .strict()

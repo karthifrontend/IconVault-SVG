@@ -1,5 +1,5 @@
-// Top of a project, in one bar: where you are (back to Projects), the project's name with its type and visibility (each in its own colour), the sections as a pill menu (Icons, Icon Font or Sprite, Settings, Trash), and a slot on the right where the Icons screen places Upload icons and From Another Project. Under the bar: an Archived badge when it is archived, and a note when it is read-only for you.
-import { Archive, ArrowLeft, Settings, Trash2, Type, Layers, Shapes } from "lucide-react";
+// Top of a project, in one bar: where you are (a centred Dashboard / project breadcrumb), the project's name with its type and visibility (each in its own colour), the sections as a pill menu (Icons, Icon Font or Sprite, Settings, Trash), and a slot on the right where the Icons screen places Upload icons and From Another Project. Under the bar: an Archived badge when it is archived, and a note when it is read-only for you.
+import { Archive, Settings, Trash2, Type, Layers, Shapes } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import type { ProjectDetail } from "../../api/types";
 import { cn } from "../../lib/cn";
@@ -19,12 +19,23 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
   const isFont = project.purpose === "font";
   return (
     <header>
-      <Link to="/" className="inline-flex items-center gap-1 rounded-sm text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-        <ArrowLeft aria-hidden="true" className="h-4 w-4" />
-        Projects
-      </Link>
+      <nav aria-label="Breadcrumb" className="flex justify-center">
+        <ol className="inline-flex max-w-full items-center gap-2 rounded-xl border border-border bg-card px-4 py-1.5 text-sm">
+          <li>
+            <Link to="/" className="rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+              Dashboard
+            </Link>
+          </li>
+          <li aria-hidden="true" className="text-muted-foreground">
+            /
+          </li>
+          <li aria-current="page" className="min-w-0 truncate font-semibold">
+            {project.name}
+          </li>
+        </ol>
+      </nav>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-border bg-card px-4 py-3">
+      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-border bg-card px-4 py-3 lg:grid lg:grid-cols-[1fr_auto_1fr]">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <ProjectAvatar name={project.name} color={project.color} />
           <h1 className="max-w-64 truncate text-xl font-bold tracking-tight">{project.name}</h1>
@@ -34,7 +45,7 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
           </div>
         </div>
 
-        <nav aria-label="Project sections" className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-muted p-1">
+        <nav aria-label="Project sections" className="flex flex-wrap items-center justify-center gap-1 justify-self-center rounded-xl border border-border bg-muted p-1">
           {/* Absolute paths: relative links would resolve against the current section. */}
           <NavLink to={`/projects/${project.id}`} end className={pillClass}>
             <Layers aria-hidden="true" className="h-4 w-4" />
@@ -56,7 +67,7 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
           </NavLink>
         </nav>
 
-        <div ref={actionsRef} className="ml-auto flex flex-wrap items-center gap-2 empty:hidden" />
+        <div ref={actionsRef} className="ml-auto flex flex-wrap items-center justify-end gap-2 empty:hidden lg:ml-0" />
       </div>
 
       {project.isArchived && (

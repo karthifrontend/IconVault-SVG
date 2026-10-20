@@ -136,7 +136,9 @@ describe("header", () => {
     expect(screen.getByRole("link", { name: "Icon Font" })).toHaveAttribute("href", "/projects/p1/font");
     expect(screen.queryByRole("link", { name: "Sprite" })).not.toBeInTheDocument();
     expect(screen.queryByText(/^by /)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Projects" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/");
+    expect(within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByText("Feather")).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("link", { name: "Projects" })).not.toBeInTheDocument();
 
     const nav = screen.getByRole("navigation", { name: "Project sections" });
     expect(within(nav).getByRole("link", { name: /Icons/ })).toHaveTextContent("7");
@@ -200,7 +202,7 @@ describe("folder selection", () => {
     expect(screen.getByTestId("where")).toHaveTextContent("/projects/p1?folder=arrows");
     expect(screen.getByRole("button", { name: /^Arrows/ })).toHaveAttribute("aria-current", "true");
 
-    await userEvent.click(screen.getByRole("button", { name: /Uncategorized/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Uncategorized/ }));
     expect(screen.getByTestId("where")).toHaveTextContent("?folder=root");
 
     await userEvent.click(screen.getByRole("button", { name: /^All icons/ }));
@@ -222,7 +224,7 @@ describe("folder selection", () => {
     renderPage();
     await screen.findByRole("heading", { level: 1 });
     expect(screen.getByRole("button", { name: /^All icons/ })).toHaveTextContent("7");
-    expect(screen.getByRole("button", { name: /Uncategorized/ })).toHaveTextContent("4");
+    expect(screen.getByRole("button", { name: /^Uncategorized/ })).toHaveTextContent("4");
   });
 
   it("has a folder toggle for small screens that names the current folder", async () => {

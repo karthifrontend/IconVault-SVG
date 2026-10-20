@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { ApiError } from "../api/http";
 import { createFolder, deleteFolder, listFolders, moveFolder, renameFolder } from "../api/folders";
-import { batchMoveIcons } from "../api/icons";
-import { getProject } from "../api/projects";
+import { batchMoveIcons, batchRestoreIcons, trashUncategorizedIcons } from "../api/icons";
+import { getProject, updateProject } from "../api/projects";
 import type { FolderList } from "../api/types";
 import { Button } from "../components/ui/Button";
 import FolderTree from "../components/workspace/FolderTree";
@@ -114,7 +114,7 @@ export default function ProjectPage() {
                   onClick={() => setFoldersOpen((open) => !open)}
                   className="flex w-full items-center justify-between rounded-lg border border-input bg-background px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring lg:hidden"
                 >
-                  <span>Folder: {selectedFolder === "all" ? "All icons" : selectedFolder === "root" ? "Uncategorized" : folderPath(folderList.folders, selectedFolder)}</span>
+                  <span>Folder: {selectedFolder === "all" ? "All icons" : selectedFolder === "root" ? project.data.uncategorizedName || "Uncategorized" : folderPath(folderList.folders, selectedFolder)}</span>
                   {foldersOpen ? <ChevronUp aria-hidden="true" className="h-4 w-4" /> : <ChevronDown aria-hidden="true" className="h-4 w-4" />}
                 </button>
                 <div id="folder-panel" className={`${foldersOpen ? "mt-2 block" : "hidden"} lg:mt-0 lg:block`}>
@@ -126,6 +126,34 @@ export default function ProjectPage() {
                   <FolderTree
                     folders={folderList.folders}
                     uncategorizedCount={folderList.uncategorizedCount}
+                    uncategorizedName={project.data.uncategorizedName}
+                    canManage={project.data.access.canManage}
+                    onRenameUncategorized={async (name) => {
+                      await updateProject(projectId, { uncategorizedName: name });
+                      project.reload();
+                    }}
+                    onTrashUncategorized={async () => {
+                      const result = await trashUncategorizedIcons(projectId);
+                      folders.reload();
+                      project.reload();
+                      setIconsVersion((value) => value + 1);
+                      showToast(`Moved ${pluralize(result.matched, "icon")} to the trash.`, "success", [
+                        {
+                          label: "Undo",
+                          type: "primary",
+                          onClick: () => {
+                            batchRestoreIcons(projectId, result.ids).then(
+                              () => {
+                                folders.reload();
+                                project.reload();
+                                setIconsVersion((value) => value + 1);
+                              },
+                              (err: unknown) => showToast(err instanceof Error ? err.message : "Could not restore the icons.", "error"),
+                            );
+                          },
+                        },
+                      ]);
+                    }}
                     totalCount={project.data.iconCount}
                     selected={selectedFolder}
                     onSelect={selectFolder}

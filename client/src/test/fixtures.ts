@@ -20,6 +20,7 @@ export function makeProject(over: Partial<ProjectSummary> = {}): ProjectSummary 
     purpose: "sprite",
     visibility: "private",
     isArchived: false,
+    uncategorizedName: "",
     createdAt: "2026-10-01T10:00:00.000Z",
     updatedAt: "2026-10-18T10:00:00.000Z",
     owner: { id: "u1", displayName: "Ada Lovelace" },

@@ -12,7 +12,7 @@ import { deleteIconsAndVersions } from "./cascade.js";
 type Id = Types.ObjectId;
 type ProjectLike = Pick<
   HydratedDocument<ProjectDoc>,
-  "_id" | "ownerId" | "name" | "description" | "prefix" | "color" | "purpose" | "visibility" | "isArchived" | "createdAt" | "updatedAt"
+  "_id" | "ownerId" | "name" | "description" | "prefix" | "color" | "purpose" | "visibility" | "isArchived" | "uncategorizedName" | "createdAt" | "updatedAt"
 >;
 
 export type SampleIcon = { id: string; name: string; svg: string };
@@ -26,6 +26,7 @@ export type ProjectSummary = {
   purpose: "sprite" | "font";
   visibility: "public" | "private";
   isArchived: boolean;
+  uncategorizedName: string;
   createdAt: Date;
   updatedAt: Date;
   owner: { id: string; displayName: string; email?: string };
@@ -67,6 +68,7 @@ function serialize(
     purpose: project.purpose ?? "sprite",
     visibility: project.visibility ?? "private",
     isArchived: project.isArchived ?? false,
+    uncategorizedName: project.uncategorizedName ?? "",
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
     owner: owner ?? { id: String(project.ownerId), displayName: "Unknown user" },

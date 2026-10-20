@@ -643,6 +643,23 @@ Requested after seeing the toolbar. Client only. One commit on `main`, local onl
 - **Background:** the "Background: Match theme" dropdown is gone. A **More** button (after sort) opens a menu with the preview background as a single-choice list (Match theme, Light, Dark, Checkerboard), with the current one ticked. It is the place for further view options later. Keyboard: arrows open and move, Escape closes.
 - Validation: client tests, types and lint (counts in Known issues). Checked in the browser at 1500 px: search first, one row, More menu opens with the current background ticked.
 
+## 2026-10-20: Follow-up, breadcrumb on top, centred menu and a menu for Uncategorized (change request)
+
+Requested from the Icon Vault screenshots. One commit on `main`, local only. The Font page comparison is a separate entry.
+
+### Client
+- **Breadcrumb:** a centred pill "Dashboard / <project>" above the project bar (Dashboard links to the project list). The back button with the "Projects" label is removed.
+- **Menu:** Icons, Icon Font (or Sprite), Settings and Trash are centred in the bar (on screens from 1024 px wide; the name and badges sit on the left and the upload buttons on the right).
+- **Uncategorized menu:** the sidebar row has a ⋮ menu like the folders: **Rename** (the owner or an admin) and **Reset name** (when renamed) and **Move all to trash** (editors; disabled when empty; asks first; the toast has Undo).
+
+### Server
+- New project setting `uncategorizedName` (up to 40 characters, empty means "Uncategorized"), changed with the existing `PATCH /api/projects/:id` (owner or admin only) and returned with every project.
+- New `POST /api/projects/:projectId/icons/uncategorized/trash` (editors): sends every active icon that is in no folder to the trash and returns their ids (used for Undo through the existing restore call).
+- What "rename" means: Uncategorized is not a real folder (those icons simply have no folder), so renaming it only changes the label shown in the sidebar and the mobile folder button. Other places still say "Uncategorized (project root)" in their folder pickers.
+
+### Validation (verified)
+- Server database tests: new `tests/db/uncategorized.db.test.ts` (4 tests: rename, trim, reset; the 40 character limit and a non-owner refused; only folderless icons trashed and restorable; edit access needed and other projects untouched). Client tests for the menu (labels, rename dialog, reset, confirm then trash, disabled when empty, hidden for read-only).
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**

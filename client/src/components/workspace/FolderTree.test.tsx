@@ -209,3 +209,52 @@ describe("dropping icons", () => {
     expect(onDropIcons).not.toHaveBeenCalled();
   });
 });
+
+describe("the Uncategorized menu", () => {
+  it("offers rename and move-to-trash to the owner, with the group's own name shown", async () => {
+    setup({ canManage: true, uncategorizedName: "Loose", onRenameUncategorized: vi.fn().mockResolvedValue(undefined), onTrashUncategorized: vi.fn().mockResolvedValue(undefined) });
+    expect(screen.getByRole("button", { name: /^Loose/ })).toHaveTextContent("4");
+    await userEvent.click(screen.getByRole("button", { name: "Actions for Loose" }));
+    expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Rename", "Reset name", "Move all to trash"]);
+  });
+
+  it("renames through a dialog and resets the name", async () => {
+    const onRenameUncategorized = vi.fn().mockResolvedValue(undefined);
+    setup({ canManage: true, uncategorizedName: "Loose", onRenameUncategorized, onTrashUncategorized: vi.fn() });
+    await userEvent.click(screen.getByRole("button", { name: "Actions for Loose" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+    const dialog = screen.getByRole("dialog", { name: "Rename “Loose”" });
+    const input = within(dialog).getByRole("textbox");
+    expect(input).toHaveValue("Loose");
+    await userEvent.clear(input);
+    await userEvent.type(input, "Misc");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Rename" }));
+    expect(onRenameUncategorized).toHaveBeenCalledWith("Misc");
+    await userEvent.click(screen.getByRole("button", { name: "Actions for Loose" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Reset name" }));
+    expect(onRenameUncategorized).toHaveBeenLastCalledWith("");
+  });
+
+  it("asks before moving everything to the trash, then does it", async () => {
+    const onTrashUncategorized = vi.fn().mockResolvedValue(undefined);
+    setup({ onTrashUncategorized });
+    await userEvent.click(screen.getByRole("button", { name: "Actions for Uncategorized" }));
+    expect(screen.getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Move all to trash"]);
+    await userEvent.click(screen.getByRole("menuitem", { name: "Move all to trash" }));
+    const dialog = screen.getByRole("dialog", { name: /Move all 4 icons in “Uncategorized” to the trash\?/ });
+    expect(onTrashUncategorized).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Move to trash" }));
+    expect(onTrashUncategorized).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables move-to-trash when there is nothing loose", async () => {
+    setup({ uncategorizedCount: 0, onTrashUncategorized: vi.fn() });
+    await userEvent.click(screen.getByRole("button", { name: "Actions for Uncategorized" }));
+    expect(screen.getByRole("menuitem", { name: "Move all to trash" })).toBeDisabled();
+  });
+
+  it("has no menu for people who cannot edit", () => {
+    setup({ canEdit: false, onTrashUncategorized: vi.fn() });
+    expect(screen.queryByRole("button", { name: "Actions for Uncategorized" })).not.toBeInTheDocument();
+  });
+});

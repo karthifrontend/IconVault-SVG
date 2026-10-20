@@ -52,6 +52,13 @@ export const projectSchema = new Schema(
       enum: PROJECT_VISIBILITIES,
       default: "private",
     },
+    // What the sidebar calls the icons that are in no folder. Empty means "Uncategorized".
+    uncategorizedName: {
+      type: String,
+      trim: true,
+      maxlength: 40,
+      default: "",
+    },
     isArchived: {
       type: Boolean,
       default: false,

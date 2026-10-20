@@ -113,6 +113,12 @@ export async function batchDeleteIcons(projectId: string, iconIds: string[], opt
   return data;
 }
 
+// Sends every icon that is in no folder to the trash; the ids come back so the caller can offer Undo.
+export async function trashUncategorizedIcons(projectId: string): Promise<{ ids: string[]; matched: number }> {
+  const { data } = await http.post<{ ids: string[]; matched: number }>(`${project(projectId)}/icons/uncategorized/trash`);
+  return data;
+}
+
 export async function batchRestoreIcons(projectId: string, iconIds: string[]): Promise<BatchRestoreResult> {
   const { data } = await http.post<BatchRestoreResult>(`${project(projectId)}/icons/batch/restore`, { iconIds });
   return data;

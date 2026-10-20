@@ -26,6 +26,8 @@ export type ProjectSummary = {
   purpose: ProjectPurpose;
   visibility: ProjectVisibility;
   isArchived: boolean;
+  // The sidebar's name for icons in no folder; empty means "Uncategorized".
+  uncategorizedName: string;
   createdAt: string;
   updatedAt: string;
   owner: ProjectOwner;
@@ -58,7 +60,7 @@ export type CreateProjectInput = {
 };
 
 // Purpose cannot change after creation.
-export type UpdateProjectInput = Partial<Omit<CreateProjectInput, "purpose">> & { isArchived?: boolean };
+export type UpdateProjectInput = Partial<Omit<CreateProjectInput, "purpose">> & { isArchived?: boolean; uncategorizedName?: string };
 
 export type FolderItem = {
   id: string;

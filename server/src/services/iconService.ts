@@ -355,6 +355,14 @@ export async function batchDelete(projectId: Id, ids: Id[], permanent: boolean) 
   return { requested: ids.length, matched: result.matchedCount };
 }
 
+// Moves every active icon that is in no folder to the trash. Returns the ids so the page can offer Undo.
+export async function trashUncategorized(projectId: Id) {
+  const icons = await Icon.find({ projectId, folderId: null, deletedAt: null }, { _id: 1 }).lean();
+  const ids = icons.map((icon) => String(icon._id));
+  if (ids.length > 0) await Icon.updateMany({ projectId, _id: { $in: icons.map((icon) => icon._id) }, deletedAt: null }, { $set: { deletedAt: new Date() } });
+  return { ids, matched: ids.length };
+}
+
 export async function batchRestore(projectId: Id, ids: Id[]) {
   const icons = await Icon.find({ projectId, _id: { $in: ids }, deletedAt: { $ne: null } });
   const adjusted: { id: string; changes: string[] }[] = [];

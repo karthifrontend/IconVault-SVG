@@ -32,6 +32,7 @@ import {
   batchOptimize,
   batchRestore,
   batchTag,
+  trashUncategorized,
   copyIcons,
   deletePermanently,
   downloadIcons,
@@ -193,6 +194,12 @@ router.post("/projects/:projectId/icons/batch/delete", async (req, res) => {
   const project = await loadProject(actorOf(req), req.params.projectId, "edit");
   const input = batchDeleteSchema.parse(req.body ?? {});
   res.json(await batchDelete(project._id, toIds(input.iconIds), input.permanent));
+});
+
+// The sidebar's Uncategorized menu: send every icon that is in no folder to the trash.
+router.post("/projects/:projectId/icons/uncategorized/trash", async (req, res) => {
+  const project = await loadProject(actorOf(req), req.params.projectId, "edit");
+  res.json(await trashUncategorized(project._id));
 });
 
 router.post("/projects/:projectId/icons/batch/restore", async (req, res) => {
