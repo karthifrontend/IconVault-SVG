@@ -10,7 +10,7 @@ const prefix = z.string().trim().toLowerCase().regex(/^[a-z0-9_-]{1,20}$/, "use 
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/, "must look like #3b82f6");
 const tag = z.string().trim().toLowerCase().min(1).max(40);
 const tags = z.array(tag).max(50);
-const codepoint = z
+export const codepointSchema = z
   .string()
   .trim()
   .regex(/^[0-9a-fA-F]{4,6}$/, "must be 4-6 hex digits")
@@ -68,7 +68,7 @@ export const updateIconSchema = z
     name: projectName,
     folderId: nullableId,
     tags,
-    codepoint: codepoint.nullable(),
+    codepoint: codepointSchema.nullable(),
     rawSvg: z.string().min(1).max(1_000_000),
   })
   .partial()

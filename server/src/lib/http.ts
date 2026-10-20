@@ -1,5 +1,5 @@
 // Small helpers shared by the project, folder and icon routes: who is asking, id parsing, and loading a project with the right permission.
-import type { Request } from "express";
+import type { Request, Response } from "express";
 import type { HydratedDocument } from "mongoose";
 import mongoose from "mongoose";
 import Project, { type ProjectDoc } from "../models/Project.js";
@@ -45,4 +45,15 @@ export async function loadProject(actor: SignedInActor, projectId: unknown, need
 // Escapes user text for use inside a regular expression.
 export function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export type DownloadFile = { filename: string; contentType: string; body: Buffer };
+
+// Sends a file for download. The restrictive headers matter: an SVG opened directly could otherwise run in the page's origin.
+export function sendDownload(res: Response, file: DownloadFile): void {
+  res.setHeader("Content-Type", file.contentType);
+  res.setHeader("Content-Disposition", `attachment; filename="${file.filename.replace(/[^\w.-]/g, "_")}"`);
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+  res.send(file.body);
 }

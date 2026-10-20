@@ -3,7 +3,7 @@ import { Router, type Request } from "express";
 import mongoose from "mongoose";
 import multer from "multer";
 import { BadRequestError, NotFoundError } from "../lib/errors.js";
-import { actorOf, loadProject, parseObjectId } from "../lib/http.js";
+import { actorOf, loadProject, parseObjectId, sendDownload } from "../lib/http.js";
 import {
   batchDeleteSchema,
   batchMoveSchema,
@@ -228,14 +228,5 @@ router.post("/icons/:iconId/restore", async (req, res) => {
   const { icon: restored, adjusted } = await restoreFromTrash(icon);
   res.json({ icon: serializeIcon(restored), adjusted });
 });
-
-// Sends a file for download. The restrictive headers matter: an SVG opened directly could otherwise run in the page's origin.
-function sendDownload(res: import("express").Response, file: { filename: string; contentType: string; body: Buffer }) {
-  res.setHeader("Content-Type", file.contentType);
-  res.setHeader("Content-Disposition", `attachment; filename="${file.filename.replace(/[^\w.-]/g, "_")}"`);
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox");
-  res.send(file.body);
-}
 
 export default router;
