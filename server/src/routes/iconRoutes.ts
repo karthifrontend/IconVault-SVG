@@ -2,16 +2,19 @@
 import { Router, type Request } from "express";
 import mongoose from "mongoose";
 import multer from "multer";
+import { z } from "zod";
 import { BadRequestError, NotFoundError } from "../lib/errors.js";
 import { actorOf, loadProject, parseObjectId, sendDownload } from "../lib/http.js";
 import {
   batchDeleteSchema,
   batchMoveSchema,
   batchTagSchema,
+  DUPLICATE_STRATEGIES,
   copyIconsSchema,
   iconIdsSchema,
   iconSearchQuerySchema,
   listIconsQuerySchema,
+  objectId,
   parseUploadFields,
   pasteIconSchema,
   updateIconSchema,
@@ -20,6 +23,7 @@ import { requireDb } from "../middleware/requireDb.js";
 import { requireUser } from "../middleware/requireUser.js";
 import Icon from "../models/Icon.js";
 import { assertFolderInProject } from "../services/folderService.js";
+import { MAX_GLYPHS, importGlyphs, privateUseOnly, readFontGlyphs } from "../services/fontImport.js";
 import {
   MAX_ICONS_PER_UPLOAD,
   batchDelete,
@@ -48,6 +52,18 @@ const router = Router();
 router.use("/icons", requireDb, requireUser);
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024, files: 200 } });
+
+const fontImportFieldsSchema = z.object({
+  folderId: z.union([objectId, z.literal(""), z.literal("root")]).optional(),
+  strategy: z.enum(DUPLICATE_STRATEGIES).default("rename"),
+  optimize: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
+  privateUseOnly: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
+  dryRun: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
+});
+function parseFontImportFields(body: Record<string, unknown> | undefined) {
+  const parsed = fontImportFieldsSchema.parse({ ...(body ?? {}), folderId: body?.folderId });
+  return { ...parsed, folderId: parsed.folderId === "" || parsed.folderId === "root" ? null : (parsed.folderId ?? null) };
+}
 
 const toIds = (ids: string[]) => ids.map((id) => new mongoose.Types.ObjectId(id));
 
@@ -94,6 +110,30 @@ router.post("/projects/:projectId/icons/upload", upload.array("files", 200), asy
     { strategy: fields.strategy, optimize, folderId, tags: fields.tags },
   );
   res.status(summary.created.length > 0 ? 201 : 200).json({ ...summary, limitPerUpload: MAX_ICONS_PER_UPLOAD });
+});
+
+// Import the glyphs of an existing font (field "font": TTF, OTF, WOFF, WOFF2 or SVG font; optional field "mapping": a CSS or JSON file that names the characters). Fields: folderId, strategy, optimize, privateUseOnly (default true), dryRun (only report what would be imported).
+const fontFiles = upload.fields([{ name: "font", maxCount: 1 }, { name: "mapping", maxCount: 1 }]);
+router.post("/projects/:projectId/icons/import-font", fontFiles, async (req, res) => {
+  const project = await loadProject(actorOf(req), req.params.projectId, "edit");
+  const fields = parseFontImportFields(req.body as Record<string, unknown> | undefined);
+  const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+  const font = files?.font?.[0];
+  if (!font) throw new BadRequestError('Attach the font in the "font" field.');
+  const read = await readFontGlyphs(font.buffer, files?.mapping?.[0]?.buffer.toString("utf8") ?? "");
+  const wanted = fields.privateUseOnly ? privateUseOnly(read.glyphs) : read.glyphs;
+  if (wanted.length === 0) {
+    throw new BadRequestError(fields.privateUseOnly && read.glyphs.length > 0 ? "This font has no icons in the Private Use Area. Turn off \"only icon characters\" to import every glyph." : "This font has no glyphs with outlines to import.");
+  }
+  const preview = { kind: read.kind, total: read.total, importable: wanted.length, truncated: read.truncated, limit: MAX_GLYPHS, sample: wanted.slice(0, 12).map((glyph) => ({ name: glyph.name, codepoint: glyph.codepoint })) };
+  if (fields.dryRun) {
+    res.json({ dryRun: true, ...preview });
+    return;
+  }
+  const folderId = fields.folderId ? parseObjectId(fields.folderId, "folder id") : null;
+  await assertFolderInProject(project._id, folderId);
+  const summary = await importGlyphs(project._id, wanted, { strategy: fields.strategy, optimize: fields.optimize, folderId });
+  res.status(summary.created.length > 0 ? 201 : 200).json({ dryRun: false, ...preview, ...summary });
 });
 
 router.post("/projects/:projectId/icons/paste", async (req, res) => {

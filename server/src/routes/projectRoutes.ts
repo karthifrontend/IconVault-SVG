@@ -3,9 +3,11 @@ import { Router } from "express";
 import multer from "multer";
 import { BadRequestError } from "../lib/errors.js";
 import { actorOf, loadProject, parseObjectId, sendDownload } from "../lib/http.js";
-import { createProjectSchema, listProjectsQuerySchema, updateProjectSchema } from "../lib/validation.js";
+import { buildFontSchema, createProjectSchema, listProjectsQuerySchema, updateProjectSchema } from "../lib/validation.js";
 import { requireDb } from "../middleware/requireDb.js";
 import { requireUser } from "../middleware/requireUser.js";
+import { canEdit } from "../lib/permissions.js";
+import { buildFont, iconsForFont, zipFontBuild } from "../services/fontService.js";
 import { exportProject, importProject } from "../services/projectArchive.js";
 import { buildProjectSprite } from "../services/spriteService.js";
 import { createProject, deleteProject, duplicateProject, getProjectDetail, listProjects, updateProject } from "../services/projectService.js";
@@ -61,6 +63,26 @@ router.post("/:projectId/duplicate", async (req, res) => {
 router.get("/:projectId/export", async (req, res) => {
   const project = await loadProject(actorOf(req), req.params.projectId, "view");
   sendDownload(res, await exportProject(project));
+});
+
+// Builds an icon font and returns what the page needs to preview it (a small WOFF2 plus the stylesheet and the character for every icon). Anyone who can see the project may build; only editors get the new codepoints saved on the icons.
+router.post("/:projectId/font/build", async (req, res) => {
+  const actor = actorOf(req);
+  const project = await loadProject(actor, req.params.projectId, "view");
+  const input = buildFontSchema.parse(req.body ?? {});
+  const icons = await iconsForFont(project._id, input);
+  const build = await buildFont(project._id, icons, input, canEdit(actor, project));
+  res.json({ fontName: build.fontName, prefix: build.prefix, iconCount: build.iconCount, warnings: build.warnings, codepoints: build.codepoints, css: build.css, preview: build.preview, sizes: build.sizes });
+});
+
+// The same build as a ZIP: the chosen font files, stylesheet, SCSS, glyph map, a specimen page and a README.
+router.post("/:projectId/font/download", async (req, res) => {
+  const actor = actorOf(req);
+  const project = await loadProject(actor, req.params.projectId, "view");
+  const input = buildFontSchema.parse(req.body ?? {});
+  const icons = await iconsForFont(project._id, input);
+  const build = await buildFont(project._id, icons, input, canEdit(actor, project));
+  sendDownload(res, { filename: `${build.fontName}-font.zip`, contentType: "application/zip", body: zipFontBuild(build) });
 });
 
 // The icons compiled into one SVG sprite. Optional query: folderId (a folder and its subfolders) or folderId=root (uncategorized only).

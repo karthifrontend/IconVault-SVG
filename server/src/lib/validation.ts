@@ -191,3 +191,33 @@ export type ListUsersQuery = z.infer<typeof listUsersQuerySchema>;
 
 export const deleteUserSchema = z.object({ transferTo: objectId.optional() }).strict();
 export const transferProjectSchema = z.object({ userId: objectId }).strict();
+
+// ---- Icon fonts ----
+
+export const FONT_FORMATS = ["woff2", "woff", "ttf", "eot", "svg"] as const;
+
+export const buildFontSchema = z
+  .object({
+    scope: z.enum(["all", "folder", "selected"]).default("all"),
+    folderId: objectId.optional(),
+    iconIds: z.array(objectId).min(1).max(1000).optional(),
+    formats: z.array(z.enum(FONT_FORMATS)).min(1, "choose at least one format").default(["woff2", "woff", "ttf"]),
+    fontName: z.string().trim().min(1, "is required").max(50).default("IconFont"),
+    prefix: z.string().trim().max(20).regex(/^[a-zA-Z0-9_-]*$/, "use letters, digits, - or _").default("icon"),
+    startCodepoint: z
+      .string()
+      .trim()
+      .regex(/^[0-9a-fA-F]{4}$/, "must be 4 hex digits")
+      .refine((value) => parseInt(value, 16) >= 0xe000 && parseInt(value, 16) <= 0xf8ff, "must be between E000 and F8FF")
+      .transform((value) => value.toUpperCase())
+      .default("E001"),
+    fontHeight: z.number().int().min(300).max(2048).default(1000),
+    descent: z.number().int().min(-1000).max(1000).default(0),
+    normalize: z.boolean().default(true),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.scope === "folder" && !value.folderId) ctx.addIssue({ code: "custom", path: ["folderId"], message: "choose a folder" });
+    if (value.scope === "selected" && !value.iconIds) ctx.addIssue({ code: "custom", path: ["iconIds"], message: "choose at least one icon" });
+  });
+export type BuildFontInput = z.infer<typeof buildFontSchema>;
