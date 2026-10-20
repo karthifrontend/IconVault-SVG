@@ -1,7 +1,6 @@
 // Builds the Express app (middleware, routes, error handling) without starting a server, so the entry point and the tests can both use it.
 import express, { type Express, type Request, type Response } from "express";
 import cors from "cors";
-import spritesRouter from "./routes/spriteRoutes.js";
 import authRouter from "./routes/authRoutes.js";
 import meRouter from "./routes/sessionUserRoutes.js";
 import projectRouter from "./routes/projectRoutes.js";
@@ -21,7 +20,6 @@ export function createApp(): Express {
 
   app.use("/api/auth", authRouter);
   app.use("/api/auth/me", meRouter);
-  app.use("/api/sprites", spritesRouter);
   app.use("/api/projects", projectRouter);
   app.use("/api", folderRouter);
   app.use("/api", iconRouter);

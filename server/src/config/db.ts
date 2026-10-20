@@ -1,8 +1,6 @@
 // MongoDB connection helper. Loads models and exposes ensureConnected() / connectDb() for the rest of the server.
 import mongoose from "mongoose";
 import User from "../models/User.js";
-import Sprite from "../models/Sprite.js";
-import SpriteVersion from "../models/SpriteVersion.js";
 import Project from "../models/Project.js";
 import Folder from "../models/Folder.js";
 import Icon from "../models/Icon.js";
@@ -46,11 +44,9 @@ export async function connectDb(): Promise<typeof mongoose> {
       serverSelectionTimeoutMS: SERVER_SELECTION_TIMEOUT_MS,
     })
     .then(async (m) => {
-      // Reconcile the on-disk collection indexes with the schemas defined in code. Mongoose's lazy `ensureIndexes()` only creates missing indexes; it never drops ones the schema no longer references. After the schema refactor that removed the `name` field from `Sprite`, the legacy `name_1` index (created transitively by the old unique compound on `(name, version)`) would otherwise stay on the collection and reject every new bundle write as `E11000 duplicate key ... { name: null }`. `syncIndexes` drops stale indexes and creates the current ones in a single round trip per model.
+      // Reconcile the on-disk collection indexes with the schemas defined in code. Mongoose only creates missing indexes on its own and never drops ones the schema no longer references; syncIndexes does both in one round trip per model.
       try {
         await User.syncIndexes();
-        await Sprite.syncIndexes();
-        await SpriteVersion.syncIndexes();
         await Project.syncIndexes();
         await Folder.syncIndexes();
         await Icon.syncIndexes();

@@ -74,16 +74,21 @@ describe("API smoke tests (no database)", () => {
     assert.deepEqual(await res.json(), { error: "Not found" });
   });
 
-  it("rejects library requests without a token", async () => {
-    const res = await fetch(`${base}/api/sprites`);
-    assert.equal(res.status, 401);
+  it("answers project requests with 503 while there is no database", async () => {
+    const res = await fetch(`${base}/api/projects`);
+    assert.equal(res.status, 503);
   });
 
-  it("rejects library requests with a malformed token", async () => {
-    const res = await fetch(`${base}/api/sprites`, {
+  it("does not let a malformed token past the database gate either", async () => {
+    const res = await fetch(`${base}/api/projects`, {
       headers: { Authorization: "Bearer not-a-real-token" },
     });
-    assert.equal(res.status, 401);
+    assert.equal(res.status, 503);
+  });
+
+  it("no longer serves the retired library routes", async () => {
+    const res = await fetch(`${base}/api/sprites`);
+    assert.equal(res.status, 404);
   });
 
   it("rejects /api/auth/me without a token", async () => {

@@ -1,20 +1,17 @@
 # SVG Sprite Compiler
 
-Compile individual SVG icons into a single `sprite.svg` (`<symbol>` + `<use>`), preview it, and optionally save it to a versioned library.
+Keep SVG icons in projects and folders, and compile them into a single `sprite.svg` (`<symbol>` + `<use>`) with a live preview, snippets and a download bundle. Sign-in is required; projects are private or public (public ones are read-only for others, who can copy icons).
 
-- **Client** (`client/`): React 19 + TypeScript + Vite + Tailwind CSS 4. All SVG processing (parsing, merging, conflict detection, demo/preview/ZIP generation) runs in the browser.
-- **Server** (`server/`): Express 5 + TypeScript + MongoDB (Mongoose). Handles sign-in and stores sprite bundles and their versions.
+- **Client** (`client/`): React 19 + TypeScript + Vite + Tailwind CSS 4. Compiling the sprite (symbols, grid sprite, demo page, preview image, ZIP) runs in the browser.
+- **Server** (`server/`): Express 5 + TypeScript + MongoDB (Mongoose). Handles sign-in, projects, folders and icons (uploads are cleaned and optimized on the server).
 
 ## Features
 
-- Add icons by drag-and-drop, by pasting SVG markup, or from your library.
-- Update an existing sprite: load it, add icons, and resolve id conflicts (Replace / Skip / Keep both with a new id).
-- Download a ZIP containing `sprite.svg`, `sprite-grid.svg`, `demo.html` and `preview.png`.
-- Live demo with colour/gradient controls and copy-paste snippets for HTML, React, Vue, Angular, Svelte and Next.js.
-- Sign-in with Google or Microsoft is required to use the app. A signed-out visitor sees a landing page.
-- Library: save bundles, create new versions, rename, delete, and mark bundles public or private.
-- Projects dashboard and workspaces: folders, search, grid or table, bulk move / tag / optimize / download, trash with Undo, icon details drawer with versions, settings. The earlier compiler screen is available at `/classic` until it is rebuilt inside projects.
-- Colour theme: light, dark or follow the system (switch in the header; the choice is remembered). The pre-redesign compiler screens stay light until the new workspace replaces them.
+- Sign-in with Google or Microsoft is required. A signed-out visitor sees a landing page.
+- Projects dashboard and workspaces: folders, search, grid or table, bulk move / tag / optimize / download, trash with Undo, icon details drawer with versions, settings.
+- Add icons by uploading SVG files or ZIPs, pasting SVG code, copying from another project, or importing an existing sprite file (each symbol becomes an icon).
+- Sprite section: compile all icons or one folder into a sprite in the browser; preview, copy, download `sprite.svg`, or download a ZIP with the sprite, a grid sprite, `demo.html` and `preview.png`; copy the `<use>` code for each symbol.
+- Colour theme: light, dark or follow the system (switch in the header; the choice is remembered).
 
 ## Prerequisites
 
@@ -71,20 +68,15 @@ The server also ships a `vercel.json` for deployment on Vercel.
 
 ## API
 
-All `/api/sprites` and `/api/auth/me` routes require `Authorization: Bearer <session token>`.
+All routes except sign-in need `Authorization: Bearer <session token>`.
 
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/api/auth/google` | Exchange a Google ID token for a session token |
 | POST | `/api/auth/microsoft` | Exchange a Microsoft ID token for a session token |
 | GET | `/api/auth/me` | Current user |
-| POST | `/api/sprites` | Save a bundle; always creates a new version |
-| GET | `/api/sprites` | List your bundles plus public bundles |
-| GET | `/api/sprites/:name` | Fetch by bundle name |
-| GET | `/api/sprites/id/:id` | Fetch a specific version (includes XML) |
-| PUT | `/api/sprites/:id` | Overwrite an existing version (owner only) |
-| PATCH | `/api/sprites/:id/rename` | Rename a bundle |
-| DELETE | `/api/sprites/:id` | Delete one version (`:id` is a version id). Add `?scope=bundle` to delete the whole bundle and all its versions. Deleting the last version removes the bundle. |
+
+The earlier `/api/sprites` library routes were removed in Phase 5.
 
 ## Projects, folders and icons API
 
@@ -117,11 +109,6 @@ Limits: 1 MB per SVG, 200 files and 25 MB per file per upload request, 500 SVGs 
 ## Data model
 
 - `users`: one per (provider, providerId).
-- `sprites`: the bundle (name, owner, `isPublic`, `currentVersion`, `symbolCount`); unique per (owner, bundleName).
-- `sprite_versions`: one document per (spriteId, version) holding the sprite XML and its symbol ids.
-
-Added for the Icon Vault integration (used by the project, folder and icon routes below):
-
 - `projects`: owner, name, description, prefix, colour, `purpose` (`sprite` or `font`, fixed at creation), `visibility` (`public` or `private`), `isArchived`.
 - `folders`: nested through `parentId` (null = project root), ordered by `orderIndex`.
 - `icons`: one SVG per document (markup stored in the database), `slug` unique per project among active icons, `codepoint` unique per project among active icons that have one, soft delete through `deletedAt`.
@@ -131,9 +118,10 @@ Admins are not stored: a user is an admin when their email is in `ADMIN_EMAILS`.
 
 ## Maintenance scripts
 
-Scripts live in `server/src/scripts/` (`backfill-sprite-owner.ts`, `sprite-version-maintenance.ts`, `backup-db.ts`). Run them with `npx tsx src/scripts/<file>.ts` from `server/`.
+Scripts live in `server/src/scripts/` (`backup-db.ts`, `drop-legacy-sprites.ts`). Run them with `npm run <name>` from `server/`.
 
-- `npm run backup:db` (in `server/`) dumps every collection to `backups/<timestamp>/` at the project root as MongoDB Extended JSON. The folder is git-ignored because it contains user emails and sprite data.
+- `npm run backup:db` (in `server/`) dumps every collection to `backups/<timestamp>/` at the project root as MongoDB Extended JSON. The folder is git-ignored because it contains user emails and icon data.
+- `npm run cutover:drop-legacy` (in `server/`) removes the old `sprites` and `sprite_versions` collections. It only lists what would go unless you add `-- --confirm`; it was run once at the Phase 5 cutover.
 
 ## Checks
 
@@ -144,4 +132,4 @@ Scripts live in `server/src/scripts/` (`backfill-sprite-owner.ts`, `sprite-versi
 | `npm run test:db` | `server/` | Model tests against a throwaway database on your cluster, dropped afterwards. Needs `MONGODB_URI` |
 | `npm run build` | `server/` and `client/` | Production build |
 | `npm test` | `client/` | Component, theme, contrast and API-client tests (Vitest and Testing Library). No server needed |
-| `npm run lint` | `client/` | ESLint. Currently reports 31 known problems, none in code added since Phase 0; see CHANGELOG.md |
+| `npm run lint` | `client/` | ESLint. Currently reports 5 known problems (in `AuthContext`, `ToastContext` and `previewPng`); see CHANGELOG.md |

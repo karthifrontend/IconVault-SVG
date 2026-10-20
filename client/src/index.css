@@ -131,13 +131,6 @@ pre {
   min-height: 100vh;
 }
 
-/* The pre-redesign compiler screens are light-only. They keep their own light surface (also in dark mode) until the new workspace replaces them. */
-.legacy-light {
-  background-color: #f8fafc;
-  color: #0f172a;
-  color-scheme: light;
-}
-
 @layer utilities {
   .animate-fade-in-up {
     animation: fade-in-up 0.6s ease-out both;
@@ -153,13 +146,6 @@ pre {
 
   .animate-pop-in {
     animation: pop-in 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-  }
-
-  .bg-mesh {
-    background-image:
-      radial-gradient(at 20% 0%, hsla(235, 85%, 95%, 0.6) 0px, transparent 50%),
-      radial-gradient(at 80% 100%, hsla(235, 85%, 95%, 0.4) 0px, transparent 50%),
-      radial-gradient(at 50% 50%, hsla(0, 0%, 100%, 0.8) 0px, transparent 80%);
   }
 
   .custom-scrollbar::-webkit-scrollbar {

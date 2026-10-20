@@ -27,7 +27,6 @@ const auth: MockAuth = {
 };
 
 vi.mock("./context/AuthContext", () => ({ useAuth: () => auth }));
-vi.mock("./components/Compiler", () => ({ default: () => <div>Legacy compiler screen</div> }));
 vi.mock("./pages/DashboardPage", () => ({ default: () => <main id="main"><h1>Your projects</h1></main> }));
 vi.mock("./pages/ProjectPage", () => ({ default: () => <main id="main"><h1>Project workspace</h1></main> }));
 vi.mock("./lib/navigation", () => ({ reloadPage: vi.fn() }));
@@ -82,7 +81,6 @@ describe("signed out", () => {
   it("shows the landing page, not the compiler", () => {
     renderApp();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/organized and compiled into sprites/i);
-    expect(screen.queryByText("Legacy compiler screen")).not.toBeInTheDocument();
   });
 
   it("has landmarks, a skip link that points at the main content, and a header theme switch", () => {
@@ -152,7 +150,6 @@ describe("signed in", () => {
   it("shows the dashboard, not the landing page or the classic compiler", () => {
     renderApp();
     expect(screen.getByRole("heading", { level: 1, name: "Your projects" })).toBeInTheDocument();
-    expect(screen.queryByText("Legacy compiler screen")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /skip to main content/i })).toHaveAttribute("href", "#main");
   });
 
@@ -166,18 +163,9 @@ describe("signed in", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Your projects" })).toBeInTheDocument();
   });
 
-  it("keeps the classic compiler at /classic, reachable from the header", async () => {
-    renderApp();
-    await userEvent.click(within(screen.getByRole("banner")).getByRole("link", { name: "Classic compiler" }));
-    expect(screen.getByText("Legacy compiler screen")).toBeInTheDocument();
-    expect(document.getElementById("main")).toContainElement(screen.getByText("Legacy compiler screen"));
-    await userEvent.click(within(screen.getByRole("banner")).getByRole("link", { name: /SVG Sprite Compiler/ }));
+  it("has no link to the retired classic compiler, and its address goes to the dashboard", () => {
+    renderApp("/classic");
     expect(screen.getByRole("heading", { level: 1, name: "Your projects" })).toBeInTheDocument();
-  });
-
-  it("does not offer the classic compiler link to signed-out visitors", () => {
-    auth.currentUser = null;
-    renderApp();
     expect(screen.queryByRole("link", { name: "Classic compiler" })).not.toBeInTheDocument();
   });
 

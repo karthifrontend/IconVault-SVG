@@ -1,4 +1,4 @@
-// Model for a user account. One record per external identity (Google), linked to owned sprites.
+// Model for a user account. One record per external identity (Google), owns projects.
 import mongoose, { Schema, type InferSchemaType, type Model } from "mongoose";
 
 const userSchema = new Schema(
