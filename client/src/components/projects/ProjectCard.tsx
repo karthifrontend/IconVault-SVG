@@ -1,4 +1,4 @@
-// One project on the dashboard, kept small so many fit on a screen: a small accent avatar with the name and the actions menu, a one line description (cut off with an ellipsis), the coloured badges, a row of tiny sample icons of its own, and who created it. The whole card opens the project (a stretched link on the name), and the menu sits above it.
+// One project on the dashboard, kept small so many fit on a screen: a small accent avatar with the name and the actions menu, a one line description (cut off with an ellipsis), the coloured badges (above the title), a row of small sample icons (18 px) of its own in a roomy grey box, and who created it. The whole card opens the project (a stretched link on the name), and the menu sits above it.
 import { Archive, ArchiveRestore, Copy, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { ProjectSummary } from "../../api/types";
@@ -34,7 +34,13 @@ export default function ProjectCard({ project, currentUserId, onEdit, onDuplicat
   }
 
   return (
-    <li className="relative flex flex-col gap-2 rounded-xl border border-border bg-card p-3 text-card-foreground shadow-sm transition-shadow focus-within:shadow-md hover:shadow-md">
+    <li className="relative flex flex-col gap-2.5 rounded-xl border border-border bg-card p-3.5 text-card-foreground shadow-sm transition-shadow focus-within:shadow-md hover:shadow-md">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <VisibilityBadge visibility={project.visibility} />
+        <PurposeBadge purpose={project.purpose} />
+        {project.isArchived && <Badge icon={<Archive aria-hidden="true" className="h-3 w-3" />}>Draft</Badge>}
+      </div>
+
       <div className="flex items-center gap-2.5">
         <ProjectAvatar name={project.name} color={project.color} className="h-7 w-7 rounded-lg text-xs" />
         <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">
@@ -45,25 +51,19 @@ export default function ProjectCard({ project, currentUserId, onEdit, onDuplicat
         <ActionMenu label={`Actions for ${project.name}`} actions={actions} className="relative z-10 -mr-1" />
       </div>
 
-      <p className="truncate pr-1 text-xs text-muted-foreground" title={project.description || undefined}>
+      <p className="-mt-1 truncate pr-1 text-xs text-muted-foreground" title={project.description || undefined}>
         {project.description || "No description."}
       </p>
 
-      <div className="flex flex-wrap items-center gap-1">
-        <VisibilityBadge visibility={project.visibility} />
-        <PurposeBadge purpose={project.purpose} />
-        {project.isArchived && <Badge icon={<Archive aria-hidden="true" className="h-3 w-3" />}>Draft</Badge>}
-      </div>
-
       {project.sampleIcons.length > 0 && (
-        <div className="flex items-center gap-1.5 overflow-hidden rounded-md bg-muted px-2 py-1" role="img" aria-label={`${pluralize(project.sampleIcons.length, "sample icon")}`}>
+        <div className="flex min-h-9 items-center gap-3 overflow-hidden rounded-lg bg-muted px-3 py-2" role="img" aria-label={`${pluralize(project.sampleIcons.length, "sample icon")}`}>
           {project.sampleIcons.slice(0, 6).map((icon) => (
-            <SvgPreview key={icon.id} svg={icon.svg} size={14} />
+            <SvgPreview key={icon.id} svg={icon.svg} size={18} />
           ))}
         </div>
       )}
 
-      <p className="truncate text-[11px] text-muted-foreground">
+      <p className="truncate pt-0.5 text-[11px] text-muted-foreground">
         Created by <span className="font-medium text-foreground">{mine ? "You" : project.owner.displayName}</span>
       </p>
     </li>

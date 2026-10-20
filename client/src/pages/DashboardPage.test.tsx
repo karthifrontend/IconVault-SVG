@@ -107,7 +107,7 @@ describe("listing", () => {
     const text = within(card).getByText(/A very long description/);
     expect(text).toHaveClass("truncate");
     expect(text).toHaveAttribute("title", expect.stringContaining("A very long description"));
-    expect(card).toHaveClass("p-3");
+    expect(card).toHaveClass("p-3.5");
     expect(within(card).queryByRole("img")).not.toBeInTheDocument();
   });
 

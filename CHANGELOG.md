@@ -833,6 +833,10 @@ Client only. One commit on `main`, local only.
 - **Project name:** 16 px (it was 20 px), still cut off with an ellipsis and with the badges on the same row.
 - Validation: client **641 of 641**; types and lint clean.
 
+## 2026-10-21: Follow-up, project card spacing and badges above the title (change request)
+
+Client only. One commit on `main`, local only. The dashboard card now has the **Private / type (and Draft) badges above the title**, then the avatar, name and menu, a one line description, a roomier grey box for the sample icons (more padding, 12 px between icons, at least 36 px high; the icons stay at **18 px**, up to six), and "Created by". More space inside the card (14 px padding, 10 px between rows) and under the description. I tried 32 px icons on request and went back to 18 px because they were too big. Client tests: 641.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
