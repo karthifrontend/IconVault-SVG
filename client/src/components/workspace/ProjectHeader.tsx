@@ -54,11 +54,11 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
           </NavLink>
           <NavLink to={`/projects/${project.id}/${isFont ? "font" : "sprite"}`} className={pillClass}>
             {isFont ? <Type aria-hidden="true" className="h-4 w-4" /> : <Shapes aria-hidden="true" className="h-4 w-4" />}
-            {isFont ? "Icon Font" : "Sprite"}
+            {isFont ? "Font Builder" : "Sprite"}
           </NavLink>
           <NavLink to={`/projects/${project.id}/settings`} className={pillClass}>
             <Settings aria-hidden="true" className="h-4 w-4" />
-            Settings
+            Project Settings
           </NavLink>
           <NavLink to={`/projects/${project.id}/trash`} className={pillClass}>
             <Trash2 aria-hidden="true" className="h-4 w-4" />

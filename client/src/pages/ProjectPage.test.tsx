@@ -78,7 +78,7 @@ describe("sprite or font section", () => {
     sprite();
     renderPage();
     expect(await screen.findByRole("link", { name: "Sprite" })).toHaveAttribute("href", "/projects/p1/sprite");
-    expect(screen.queryByRole("link", { name: "Icon Font" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Font Builder" })).not.toBeInTheDocument();
   });
 
   it("sends a sprite project away from /font, and a font project away from /sprite", async () => {
@@ -133,7 +133,7 @@ describe("header", () => {
     expect(screen.getByText("Public")).toBeInTheDocument();
     expect(screen.getByText("Icon Font Project")).toBeInTheDocument();
     expect(screen.queryByText(/^Prefix:/)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Icon Font" })).toHaveAttribute("href", "/projects/p1/font");
+    expect(screen.getByRole("link", { name: "Font Builder" })).toHaveAttribute("href", "/projects/p1/font");
     expect(screen.queryByRole("link", { name: "Sprite" })).not.toBeInTheDocument();
     expect(screen.queryByText(/^by /)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/");
@@ -143,7 +143,7 @@ describe("header", () => {
     const nav = screen.getByRole("navigation", { name: "Project sections" });
     expect(within(nav).getByRole("link", { name: /Icons/ })).toHaveTextContent("7");
     expect(within(nav).getByRole("link", { name: /Trash/ })).toHaveTextContent("2");
-    expect(within(nav).getByRole("link", { name: "Settings" })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Project Settings" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: /Icons/ })).toHaveAttribute("aria-current", "page");
   });
 
@@ -180,7 +180,7 @@ describe("sections", () => {
     expect(screen.queryByRole("navigation", { name: "Folders" })).not.toBeInTheDocument();
     expect(screen.getByTestId("where")).toHaveTextContent("/projects/p1/trash");
 
-    await userEvent.click(screen.getByRole("link", { name: "Settings" }));
+    await userEvent.click(screen.getByRole("link", { name: "Project Settings" }));
     expect(await screen.findByRole("heading", { name: "Danger zone" })).toBeInTheDocument();
   });
 

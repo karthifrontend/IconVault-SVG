@@ -691,6 +691,10 @@ Optional. Empty keeps the old stylesheet (any element whose class starts with th
 - Clicking the page's **Download font** button was not repeated in the browser; the download and the history entry are covered by the server tests.
 - Icon Vault shows "Generate Font (n)" and a compiled-in-browser specimen panel; here Build font keeps its own preview and the mapping table.
 
+## 2026-10-20: Follow-up, tab names (change request)
+
+Client only. One commit on `main`, local only. In the project menu the **Icon Font** tab is now **Font Builder** and **Settings** is now **Project Settings**. **Icons**, **Sprite** (sprite projects) and the Trash icon are unchanged, and the Icon Font Project badge keeps its name. Client tests and lint pass; checked by test only. Earlier entries above still use the old names because they describe what was done then.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
