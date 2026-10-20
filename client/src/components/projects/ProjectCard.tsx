@@ -27,8 +27,8 @@ export default function ProjectCard({ project, currentUserId, onEdit, onDuplicat
     actions.unshift({ label: "Edit details", icon: <Pencil aria-hidden="true" className="h-4 w-4" />, onSelect: () => onEdit(project) });
     actions.push(
       project.isArchived
-        ? { label: "Unarchive", icon: <ArchiveRestore aria-hidden="true" className="h-4 w-4" />, onSelect: () => onToggleArchive(project) }
-        : { label: "Archive", icon: <Archive aria-hidden="true" className="h-4 w-4" />, onSelect: () => onToggleArchive(project) },
+        ? { label: "Mark as active", icon: <ArchiveRestore aria-hidden="true" className="h-4 w-4" />, onSelect: () => onToggleArchive(project) }
+        : { label: "Mark as draft", icon: <Archive aria-hidden="true" className="h-4 w-4" />, onSelect: () => onToggleArchive(project) },
       { label: "Delete", icon: <Trash2 aria-hidden="true" className="h-4 w-4" />, onSelect: () => onDelete(project), destructive: true },
     );
   }
@@ -52,7 +52,7 @@ export default function ProjectCard({ project, currentUserId, onEdit, onDuplicat
       <div className="flex flex-wrap gap-1.5">
         <VisibilityBadge visibility={project.visibility} />
         <PurposeBadge purpose={project.purpose} />
-        {project.isArchived && <Badge icon={<Archive aria-hidden="true" className="h-3 w-3" />}>Archived</Badge>}
+        {project.isArchived && <Badge icon={<Archive aria-hidden="true" className="h-3 w-3" />}>Draft</Badge>}
       </div>
 
       <div className="flex h-8 items-center gap-2 overflow-hidden rounded-lg bg-muted px-2" role={project.sampleIcons.length > 0 ? "img" : undefined} aria-label={project.sampleIcons.length > 0 ? `${pluralize(project.sampleIcons.length, "sample icon")}` : undefined}>

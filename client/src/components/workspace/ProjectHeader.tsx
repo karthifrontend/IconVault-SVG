@@ -80,7 +80,7 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
 
       {project.isArchived && (
         <div className="px-4 pb-3 sm:px-6">
-          <Badge icon={<Archive aria-hidden="true" className="h-3 w-3" />}>Archived</Badge>
+          <Badge icon={<Archive aria-hidden="true" className="h-3 w-3" />}>Draft</Badge>
         </div>
       )}
 

@@ -1,4 +1,4 @@
-// Manage Projects (admins only): every project in the workspace, private and archived ones too, with its owner, a search that also matches the owner's name or email, and per project Open, Transfer ownership and Delete. Anyone else is sent to the dashboard.
+// Manage Projects (admins only): every project in the workspace, private and draft ones too, with its owner, a search that also matches the owner's name or email, and per project Open, Transfer ownership and Delete. Anyone else is sent to the dashboard.
 import { ExternalLink, Trash2, UserCog } from "lucide-react";
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
@@ -39,7 +39,7 @@ export default function AdminProjectsPage() {
   return (
     <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-4 pb-16 pt-[calc(57px+2rem)] outline-none">
       <h1 className="text-2xl font-bold tracking-tight">Manage projects</h1>
-      <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Every project in the workspace, including private and archived ones. Move a project to another owner or delete it for good.</p>
+      <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Every project in the workspace, including private and draft ones. Move a project to another owner or delete it for good.</p>
       <AdminTabs />
 
       <div className="mt-6">
@@ -85,7 +85,7 @@ export default function AdminProjectsPage() {
                         <span className="font-medium">{project.name}</span>
                         <VisibilityBadge visibility={project.visibility} />
                         <PurposeBadge purpose={project.purpose} />
-                        {project.isArchived && <Badge>Archived</Badge>}
+                        {project.isArchived && <Badge>Draft</Badge>}
                       </div>
                       <span className="font-mono text-xs text-muted-foreground">{project.prefix}</span>
                     </td>

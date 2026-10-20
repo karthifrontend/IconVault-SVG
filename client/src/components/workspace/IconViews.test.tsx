@@ -10,6 +10,7 @@ import { MoveIconsDialog, TagIconsDialog } from "./BulkDialogs";
 import IconCard from "./IconCard";
 import IconList from "./IconList";
 import IconToolbar from "./IconToolbar";
+import SelectAllBar from "./SelectAllBar";
 
 describe("IconCard", () => {
   const setup = (over: Partial<React.ComponentProps<typeof IconCard>> = {}) => {
@@ -129,9 +130,6 @@ describe("IconToolbar", () => {
       onAppearance: vi.fn(),
       canAdd: true,
       onUpload: vi.fn(),
-      loaded: 5,
-      selected: 0,
-      onSelectAll: vi.fn(),
       ...over,
     };
     render(<IconToolbar {...props} />);
@@ -326,27 +324,9 @@ describe("IconToolbar", () => {
     expect(screen.queryByRole("button", { name: "More ways to add icons" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "From Another Project" })).not.toBeInTheDocument();
   });
-
-  it("select all reflects none, some and all selected, and is off when nothing is shown", async () => {
-    const none = setup({ selected: 0 });
-    const box = screen.getByRole("checkbox", { name: "Select all 5 shown" }) as HTMLInputElement;
-    expect(box.checked).toBe(false);
-    expect(box.indeterminate).toBe(false);
-    await userEvent.click(box);
-    expect(none.onSelectAll).toHaveBeenCalledWith(true);
-  });
-
-  it("shows a partial selection as indeterminate and a full one as checked", () => {
-    const { unmount } = render(<IconToolbar search="" onSearch={() => {}} sort="newest" onSort={() => {}} view="grid" onView={() => {}} surface="theme" onSurface={() => {}} appearance={DEFAULT_APPEARANCE} onAppearance={() => {}} canAdd={false} onUpload={() => {}} loaded={4} selected={2} onSelectAll={() => {}} />);
-    expect((screen.getByRole("checkbox", { name: "Select all 4 shown" }) as HTMLInputElement).indeterminate).toBe(true);
-    unmount();
-    render(<IconToolbar search="" onSearch={() => {}} sort="newest" onSort={() => {}} view="grid" onView={() => {}} surface="theme" onSurface={() => {}} appearance={DEFAULT_APPEARANCE} onAppearance={() => {}} canAdd={false} onUpload={() => {}} loaded={4} selected={4} onSelectAll={() => {}} />);
-    expect(screen.getByRole("checkbox", { name: "Select all 4 shown" })).toBeChecked();
-  });
-
-  it("disables select all when there is nothing to select", () => {
-    setup({ loaded: 0 });
-    expect(screen.getByRole("checkbox", { name: "Select all 0 shown" })).toBeDisabled();
+  it("has no select all in the toolbar (it sits above the icon list)", () => {
+    setup();
+    expect(screen.queryByRole("checkbox", { name: /Select all/ })).not.toBeInTheDocument();
   });
 });
 
@@ -428,5 +408,30 @@ describe("bulk dialogs", () => {
     await userEvent.selectOptions(within(dialog).getByLabelText("Action"), "set");
     await userEvent.click(within(dialog).getByRole("button", { name: "Apply" }));
     expect(onSubmit).toHaveBeenCalledWith(["ui", "nav"], "set");
+  });
+});
+
+describe("SelectAllBar", () => {
+  it("reflects none, some and all selected, and reports the choice", async () => {
+    const onSelectAll = vi.fn();
+    render(<SelectAllBar loaded={5} selected={0} onSelectAll={onSelectAll} />);
+    const box = screen.getByRole("checkbox", { name: "Select all 5 shown" }) as HTMLInputElement;
+    expect(box.checked).toBe(false);
+    expect(box.indeterminate).toBe(false);
+    await userEvent.click(box);
+    expect(onSelectAll).toHaveBeenCalledWith(true);
+  });
+
+  it("shows a partial selection as indeterminate and a full one as checked", () => {
+    const { unmount } = render(<SelectAllBar loaded={4} selected={2} onSelectAll={() => {}} />);
+    expect((screen.getByRole("checkbox", { name: "Select all 4 shown" }) as HTMLInputElement).indeterminate).toBe(true);
+    unmount();
+    render(<SelectAllBar loaded={4} selected={4} onSelectAll={() => {}} />);
+    expect(screen.getByRole("checkbox", { name: "Select all 4 shown" })).toBeChecked();
+  });
+
+  it("is off when there is nothing to select", () => {
+    render(<SelectAllBar loaded={0} selected={0} onSelectAll={() => {}} />);
+    expect(screen.getByRole("checkbox", { name: "Select all 0 shown" })).toBeDisabled();
   });
 });

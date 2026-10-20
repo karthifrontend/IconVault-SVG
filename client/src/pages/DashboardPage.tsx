@@ -100,7 +100,7 @@ export default function DashboardPage() {
     try {
       await updateProject(project.id, { isArchived: !project.isArchived });
       projects.reload();
-      showToast(project.isArchived ? `Restored “${project.name}”.` : `Archived “${project.name}”.`, "success");
+      showToast(project.isArchived ? `Marked “${project.name}” as active.` : `Marked “${project.name}” as draft.`, "success");
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Could not update the project.", "error");
     }
@@ -166,8 +166,8 @@ export default function DashboardPage() {
         </SelectField>
         <SelectField label="Status" hideLabel value={status} onChange={(event) => setFilter("status", event.target.value, "active")} className="h-10 w-auto">
           <option value="active">Active</option>
-          <option value="archived">Archived</option>
-          <option value="all">Active and archived</option>
+          <option value="archived">Draft</option>
+          <option value="all">Both</option>
         </SelectField>
         <SelectField label="Sort by" hideLabel value={sort} onChange={(event) => setFilter("sort", event.target.value, "updated")} className="h-10 w-auto">
           <option value="updated">Recently updated</option>

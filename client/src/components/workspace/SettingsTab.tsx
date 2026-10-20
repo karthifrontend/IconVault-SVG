@@ -67,7 +67,7 @@ export default function SettingsTab() {
     try {
       await updateProject(project.id, { isArchived: !project.isArchived });
       refreshProject();
-      showToast(project.isArchived ? `Unarchived “${project.name}”.` : `Archived “${project.name}”.`, "success");
+      showToast(project.isArchived ? `Marked “${project.name}” as active.` : `Marked “${project.name}” as draft.`, "success");
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Could not change the project.", "error");
     } finally {
@@ -216,9 +216,9 @@ export default function SettingsTab() {
             Danger zone
           </h2>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <p className="max-w-md text-sm text-muted-foreground">{project.isArchived ? "Unarchive to show this project in your active list again." : "Archiving hides the project from your active list and from others. Nothing is deleted."}</p>
+            <p className="max-w-md text-sm text-muted-foreground">{project.isArchived ? "Mark it as active to show this project in your active list again." : "A draft is hidden from your active list and from others. Nothing is deleted."}</p>
             <Button onClick={toggleArchive} loading={busy} icon={project.isArchived ? <ArchiveRestore aria-hidden="true" className="h-4 w-4" /> : <Archive aria-hidden="true" className="h-4 w-4" />}>
-              {project.isArchived ? "Unarchive project" : "Archive project"}
+              {project.isArchived ? "Mark as active" : "Mark as draft"}
             </Button>
           </div>
           {isAdmin && (

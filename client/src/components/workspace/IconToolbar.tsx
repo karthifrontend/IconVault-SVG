@@ -1,6 +1,5 @@
 // Controls above the icon list: the preview size / colour / style, sort (an icon with a menu), a More menu (preview background) and grid or list view in one row, with search first, the "select all" checkbox  and (for editors) the Upload icons menu, which can be placed into the project header.
 import { ArrowUpDown, Box, Copy, Eye, LayoutGrid, List, Minus, Plus, Search, Square } from "lucide-react";
-import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
 import { ICON_COLORS, ICON_STYLES, ICON_STYLE_HINTS, ICON_STYLE_LABELS, MAX_ICON_SIZE, MIN_ICON_SIZE, clampIconSize, type IconAppearance, type IconStyle } from "../../lib/iconAppearance";
@@ -27,24 +26,13 @@ type IconToolbarProps = {
   actionsHost?: HTMLElement | null;
   canAdd: boolean;
   onUpload: (kind: UploadKind) => void;
-  // Select all: how many are loaded and how many are selected.
-  loaded: number;
-  selected: number;
-  onSelectAll: (checked: boolean) => void;
 };
 
 const SORT_LABELS: Record<IconSort, string> = { newest: "Newest", oldest: "Oldest", name: "Name A–Z", "name-desc": "Name Z–A", largest: "Largest" };
 const STYLE_ICONS: Record<IconStyle, typeof Eye> = { natural: Eye, flat: Square, wireframe: Box };
 
-export default function IconToolbar({ search, onSearch, sort, onSort, view, onView, surface, onSurface, appearance, onAppearance, actionsHost, canAdd, onUpload, loaded, selected, onSelectAll }: IconToolbarProps) {
-  const allRef = useRef<HTMLInputElement | null>(null);
-  const all = loaded > 0 && selected === loaded;
-  const some = selected > 0 && selected < loaded;
+export default function IconToolbar({ search, onSearch, sort, onSort, view, onView, surface, onSurface, appearance, onAppearance, actionsHost, canAdd, onUpload }: IconToolbarProps) {
 
-  // "Indeterminate" is a property of the element, not an attribute.
-  useEffect(() => {
-    if (allRef.current) allRef.current.indeterminate = some;
-  }, [some]);
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
@@ -140,15 +128,7 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
-            <input ref={allRef} type="checkbox" checked={all} disabled={loaded === 0} onChange={(event) => onSelectAll(event.target.checked)} className="h-4 w-4 accent-[hsl(var(--primary))]" />
-            Select all {loaded} shown
-          </label>
-        </div>
-        {canAdd && (actionsHost ? createPortal(actions, actionsHost) : actions)}
-      </div>
+      {canAdd && (actionsHost ? createPortal(actions, actionsHost) : <div className="flex justify-end">{actions}</div>)}
     </div>
   );
 }

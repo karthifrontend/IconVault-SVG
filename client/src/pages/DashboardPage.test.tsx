@@ -273,7 +273,7 @@ describe("project actions", () => {
     listProjects.mockResolvedValue(reply([mine()]));
     renderPage();
     const menu = await menuFor("Mine");
-    expect(within(menu).getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Edit details", "Duplicate", "Archive", "Delete"]);
+    expect(within(menu).getAllByRole("menuitem").map((i) => i.textContent)).toEqual(["Edit details", "Duplicate", "Mark as draft", "Delete"]);
   });
 
   it("offers only Duplicate on someone else's public project", async () => {
@@ -312,13 +312,19 @@ describe("project actions", () => {
     expect(await screen.findByText("Created “Mine (Copy)”.")).toBeInTheDocument();
   });
 
-  it("archives and restores", async () => {
+  it("calls the statuses Active, Draft and Both", async () => {
+    renderPage();
+    const status = (await screen.findByLabelText("Status")) as HTMLSelectElement;
+    expect([...status.options].map((option) => option.textContent)).toEqual(["Active", "Draft", "Both"]);
+  });
+
+  it("marks a project as a draft and back", async () => {
     listProjects.mockResolvedValue(reply([mine()]));
     vi.mocked(projectsApi.updateProject).mockResolvedValue(makeDetail());
     renderPage();
-    await userEvent.click(within(await menuFor("Mine")).getByRole("menuitem", { name: "Archive" }));
+    await userEvent.click(within(await menuFor("Mine")).getByRole("menuitem", { name: "Mark as draft" }));
     expect(projectsApi.updateProject).toHaveBeenCalledWith("mine1", { isArchived: true });
-    expect(await screen.findByText("Archived “Mine”.")).toBeInTheDocument();
+    expect(await screen.findByText("Marked “Mine” as draft.")).toBeInTheDocument();
   });
 
   it("offers Unarchive for an archived project and shows an Archived badge", async () => {
@@ -326,8 +332,8 @@ describe("project actions", () => {
     vi.mocked(projectsApi.updateProject).mockResolvedValue(makeDetail());
     renderPage("/?status=archived");
     const card = (await screen.findByRole("heading", { name: "Mine" })).closest("li") as HTMLElement;
-    expect(within(card).getByText("Archived")).toBeInTheDocument();
-    await userEvent.click(within(await menuFor("Mine")).getByRole("menuitem", { name: "Unarchive" }));
+    expect(within(card).getByText("Draft")).toBeInTheDocument();
+    await userEvent.click(within(await menuFor("Mine")).getByRole("menuitem", { name: "Mark as active" }));
     expect(projectsApi.updateProject).toHaveBeenCalledWith("mine1", { isArchived: false });
   });
 

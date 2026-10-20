@@ -162,10 +162,10 @@ describe("header", () => {
     expect(screen.getByRole("button", { name: "New folder" })).toBeInTheDocument();
   });
 
-  it("marks an archived project", async () => {
+  it("marks a draft project", async () => {
     getProject.mockResolvedValue(makeDetail({ id: "p1", isArchived: true }));
     renderPage();
-    expect(await screen.findByText("Archived")).toBeInTheDocument();
+    expect(await screen.findByText("Draft")).toBeInTheDocument();
   });
 });
 

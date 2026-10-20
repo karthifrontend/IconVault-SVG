@@ -26,6 +26,7 @@ import CopyFromProjectDialog from "./CopyFromProjectDialog";
 import IconCard from "./IconCard";
 import IconDrawer from "./IconDrawer";
 import IconList from "./IconList";
+import SelectAllBar from "./SelectAllBar";
 import IconToolbar, { type IconSort, type IconView } from "./IconToolbar";
 import ImportFontDialog from "./ImportFontDialog";
 import ImportSpriteDialog from "./ImportSpriteDialog";
@@ -156,9 +157,6 @@ export default function IconsTab() {
         actionsHost={actionsSlot}
         canAdd={project.access.canAddIcons}
         onUpload={(kind: UploadKind) => setDialog(kind === "files" ? "add" : kind)}
-        loaded={shown.length}
-        selected={selection.size}
-        onSelectAll={(checked) => (checked ? selection.selectAll(shown.map((icon) => icon.id)) : selection.clear())}
       />
       </div>
 
@@ -191,6 +189,7 @@ export default function IconsTab() {
           </div>
         ) : (
           <>
+            <SelectAllBar loaded={shown.length} selected={selection.size} onSelectAll={(checked) => (checked ? selection.selectAll(shown.map((icon) => icon.id)) : selection.clear())} />
             {view === "grid" ? (
               <ul className={`grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5 ${icons.loading ? "opacity-60" : ""}`}>
                 {shown.map((icon) => (

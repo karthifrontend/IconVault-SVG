@@ -212,26 +212,26 @@ describe("Settings", () => {
     expect(screen.getByText(/<i className="fth-home"/)).toBeInTheDocument();
   });
 
-  it("archives and unarchives", async () => {
+  it("marks a project as a draft", async () => {
     vi.mocked(projectsApi.updateProject).mockResolvedValue(makeDetail({ id: "p1" }));
     const fns = setup(<SettingsTab />);
-    await userEvent.click(screen.getByRole("button", { name: "Archive project" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mark as draft" }));
     expect(projectsApi.updateProject).toHaveBeenCalledWith("p1", { isArchived: true });
-    expect(await screen.findByText("Archived “Feather”.")).toBeInTheDocument();
+    expect(await screen.findByText("Marked “Feather” as draft.")).toBeInTheDocument();
     expect(fns.refreshProject).toHaveBeenCalled();
   });
 
-  it("offers to unarchive an archived project", async () => {
+  it("offers to mark a draft as active", async () => {
     vi.mocked(projectsApi.updateProject).mockResolvedValue(makeDetail({ id: "p1" }));
     setup(<SettingsTab />, { project: makeDetail({ id: "p1", name: "Feather", isArchived: true }) });
-    await userEvent.click(screen.getByRole("button", { name: "Unarchive project" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mark as active" }));
     expect(projectsApi.updateProject).toHaveBeenCalledWith("p1", { isArchived: false });
   });
 
-  it("reports a failed archive", async () => {
+  it("reports a failed change to draft", async () => {
     vi.mocked(projectsApi.updateProject).mockRejectedValue(new ApiError("Nope.", 403));
     setup(<SettingsTab />);
-    await userEvent.click(screen.getByRole("button", { name: "Archive project" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mark as draft" }));
     expect(await screen.findByText("Nope.")).toBeInTheDocument();
   });
 
@@ -286,6 +286,6 @@ describe("Settings", () => {
     setup(<SettingsTab />, { project: makeDetail({ id: "p1", access: READ_ONLY }) });
     expect(screen.getByText("Only the owner can change these settings.")).toBeInTheDocument();
     expect(screen.getByLabelText("Project name")).toBeDisabled();
-    for (const name of ["Save settings", "Archive project", "Delete project"]) expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+    for (const name of ["Save settings", "Mark as draft", "Delete project"]) expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
   });
 });

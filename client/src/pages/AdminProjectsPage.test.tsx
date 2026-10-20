@@ -63,7 +63,7 @@ describe("Manage projects", () => {
     expect(within(rows[0] as HTMLElement).getByText("Ada Lovelace")).toBeInTheDocument();
     expect(within(rows[0] as HTMLElement).getByText("ada@example.com")).toBeInTheDocument();
     expect(within(rows[0] as HTMLElement).getByText("Private")).toBeInTheDocument();
-    expect(within(rows[1] as HTMLElement).getByText("Archived")).toBeInTheDocument();
+    expect(within(rows[1] as HTMLElement).getByText("Draft")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("2 projects");
     expect(listProjects).toHaveBeenCalledWith({ status: "all", scope: "all", sort: "updated", page: 1, limit: 25 });
   });

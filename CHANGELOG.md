@@ -753,6 +753,15 @@ Client only. One commit on `main`, local only. You also asked for the dashboard 
 - **Colour tiles:** **White, Black, Blue** and the rainbow tile for more colours (it was Blue, Green, Red). Pressing the chosen tile again still goes back to the default colour.
 - Validation: types and lint clean; project page, dashboard and project tests pass (55). A full client run on a heavily loaded machine (load average above 500) timed out in 11 slow tests that pass when run on their own; the last complete clean run was 621 of 621 before this change. Real browser: the split layout and the new swatches looked right at 1500 px. Test data removed.
 
+## 2026-10-21: Follow-up, Select all above the icon list and "Draft" instead of "Archived" (change request)
+
+Client only. One commit on `main`, local only.
+
+- **Select all N shown** moved out of the toolbar: it now sits above the icon cards (only when there are icons to show). The toolbar is controls only.
+- **Draft wording:** what was called archiving is now a **draft**. The dashboard's Status dropdown reads **Active, Draft, Both** (it was Active, Archived, Active and archived). A draft project shows a **Draft** badge (dashboard card, project page, Manage projects), the card menu and Project Settings say **Mark as draft** and **Mark as active**, and the messages read "Marked “x” as draft." and "… as active.".
+- Names only: the stored field (`isArchived`), the API and the address values (`status=archived`) are unchanged, so existing projects and links keep working.
+- Validation: client **623 of 623**; types and lint clean. Tests changed for the new wording and for Select all (moved to its own component with its own tests). Not checked in the browser this time.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -762,7 +771,7 @@ Client only. One commit on `main`, local only. You also asked for the dashboard 
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 621 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 175 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 623 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 175 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.
