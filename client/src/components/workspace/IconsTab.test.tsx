@@ -1,6 +1,7 @@
 // Tests for the Icons section: loading and empty states, what is asked of the server for each folder, search and sort, views, "show more", selection, every bulk action (with undo for trash), read-only behaviour, failures, and opening an icon.
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../api/http";
 import * as iconsApi from "../../api/icons";
@@ -20,6 +21,11 @@ vi.mock("../../utils/zipBundle", () => ({ triggerBrowserDownload: vi.fn() }));
 const listIcons = vi.mocked(iconsApi.listIcons);
 const reply = (icons: ReturnType<typeof makeIcon>[], total = icons.length) => ({ icons, total, page: 1, limit: 200 });
 
+function Where() {
+  const location = useLocation();
+  return <p data-testid="where" data-state={JSON.stringify(location.state)}>{location.pathname}</p>;
+}
+
 function setup(over: Partial<WorkspaceContextValue> = {}) {
   const fns = { selectFolder: vi.fn(), refreshProject: vi.fn(), refreshFolders: vi.fn(), refreshIcons: vi.fn() };
   const value: WorkspaceContextValue = {
@@ -31,19 +37,24 @@ function setup(over: Partial<WorkspaceContextValue> = {}) {
     ...over,
   };
   const view = render(
-    <ToastProvider>
-      <WorkspaceContext.Provider value={value}>
-        <IconsTab />
-      </WorkspaceContext.Provider>
-    </ToastProvider>,
+    <MemoryRouter initialEntries={["/projects/p1"]}>
+      <ToastProvider>
+        <WorkspaceContext.Provider value={value}>
+          <IconsTab />
+        </WorkspaceContext.Provider>
+        <Where />
+      </ToastProvider>
+    </MemoryRouter>,
   );
   const rerender = (next: Partial<WorkspaceContextValue>) =>
     view.rerender(
-      <ToastProvider>
-        <WorkspaceContext.Provider value={{ ...value, ...next }}>
-          <IconsTab />
-        </WorkspaceContext.Provider>
-      </ToastProvider>,
+      <MemoryRouter initialEntries={["/projects/p1"]}>
+        <ToastProvider>
+          <WorkspaceContext.Provider value={{ ...value, ...next }}>
+            <IconsTab />
+          </WorkspaceContext.Provider>
+        </ToastProvider>
+      </MemoryRouter>,
     );
   return { ...fns, rerender };
 }
@@ -218,7 +229,7 @@ describe("selection", () => {
     await screen.findByRole("button", { name: "Open Alpha" });
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Alpha" }));
     const bar = screen.getByRole("region", { name: "Selected icons" });
-    expect(within(bar).getAllByRole("button").map((b) => b.textContent)).toEqual(["Download", "Clear selection"]);
+    expect(within(bar).getAllByRole("button").map((b) => b.textContent)).toEqual(["Generate sprite", "Download", "Clear selection"]);
     expect(screen.queryByRole("button", { name: "Add icons" })).not.toBeInTheDocument();
   });
 
@@ -337,6 +348,57 @@ describe("bulk actions", () => {
     await userEvent.click(screen.getByRole("button", { name: "Move" }));
     await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Move" }));
     expect(await within(screen.getByRole("dialog")).findByText("That folder does not exist in this project.")).toBeInTheDocument();
+  });
+});
+
+describe("generating a sprite or a font from the selection", () => {
+  const withIcons = () => listIcons.mockResolvedValue(reply(three()));
+
+  it("opens the checklist with the selected icons ticked, then goes to the Sprite section with them", async () => {
+    withIcons();
+    setup();
+    await screen.findByRole("button", { name: "Open Alpha" });
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Alpha" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Gamma" }));
+    await userEvent.click(screen.getByRole("button", { name: "Generate sprite" }));
+    const dialog = await screen.findByRole("dialog", { name: "Choose icons for the sprite" });
+    await waitFor(() => expect(within(dialog).getByRole("status")).toHaveTextContent("2 of 3 icons selected for the sprite"));
+    expect(within(dialog).getByRole("checkbox", { name: /Beta/ })).not.toBeChecked();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Generate sprite (2 icons)" }));
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/projects/p1/sprite"));
+    expect(JSON.parse(screen.getByTestId("where").getAttribute("data-state") as string)).toEqual({ iconIds: ["a", "c"], autoBuild: true });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("goes to the Font section for a font project", async () => {
+    withIcons();
+    setup({ project: makeDetail({ id: "p1", prefix: "feather", purpose: "font" }) });
+    await screen.findByRole("button", { name: "Open Alpha" });
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Beta" }));
+    await userEvent.click(screen.getByRole("button", { name: "Generate font" }));
+    const dialog = await screen.findByRole("dialog", { name: "Choose icons for the font" });
+    await userEvent.click(await within(dialog).findByRole("button", { name: "Generate font (1 icon)" }));
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/projects/p1/font"));
+    expect(JSON.parse(screen.getByTestId("where").getAttribute("data-state") as string).iconIds).toEqual(["b"]);
+  });
+
+  it("stays on the Icons screen when the checklist is cancelled, keeping the selection", async () => {
+    withIcons();
+    setup();
+    await screen.findByRole("button", { name: "Open Alpha" });
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Alpha" }));
+    await userEvent.click(screen.getByRole("button", { name: "Generate sprite" }));
+    await userEvent.click(await within(await screen.findByRole("dialog")).findByRole("button", { name: "Cancel" }));
+    expect(screen.getByTestId("where").textContent).toBe("/projects/p1");
+    expect(screen.getByText("1 icon selected")).toBeInTheDocument();
+  });
+
+  it("is offered to read-only viewers too", async () => {
+    withIcons();
+    setup({ project: makeDetail({ id: "p1", access: READ_ONLY }) });
+    await screen.findByRole("button", { name: "Open Alpha" });
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Alpha" }));
+    expect(screen.getByRole("button", { name: "Generate sprite" })).toBeInTheDocument();
   });
 });
 

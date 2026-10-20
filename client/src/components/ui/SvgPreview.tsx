@@ -16,7 +16,8 @@ export default function SvgPreview({ svg, size = 32, className, label }: SvgPrev
       role={label ? "img" : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
-      className={cn("inline-flex shrink-0 items-center justify-center text-foreground [&>svg]:h-full [&>svg]:w-full", className)}
+      // `fill-current`: shapes that do not set their own fill (SVG then paints them black) take the text colour instead, so they stay visible in dark mode. Icons with their own fill or stroke keep it.
+      className={cn("inline-flex shrink-0 items-center justify-center fill-current text-foreground [&>svg]:h-full [&>svg]:w-full", className)}
       style={{ width: size, height: size }}
       dangerouslySetInnerHTML={{ __html: svg }}
     />

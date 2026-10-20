@@ -1,46 +1,46 @@
 // The Sprite section: compiles the project's icons (all, or one folder with its subfolders) into an SVG sprite in the browser, with a live preview, copy and download, a ZIP bundle (sprite, grid sprite, demo page, preview image) and the symbol ids with their <use> code. Editors can also import an existing sprite into the project. Anyone who can see the project can build and download.
-import { Download, FileArchive, FileUp, Copy } from "lucide-react";
+import { Copy, Download, FileArchive, FileUp, ListChecks } from "lucide-react";
 import { useMemo, useState } from "react";
-import { listIcons } from "../../api/icons";
-import type { IconItem } from "../../api/types";
+import { useLocation } from "react-router-dom";
 import { useToast } from "../../context/ToastContext";
 import { useWorkspace } from "../../context/workspaceContext";
 import { useResource } from "../../hooks/useResource";
 import { copyText } from "../../lib/clipboard";
 import { buildFolderTree, flattenFolderTree } from "../../lib/folderTree";
 import { formatBytes, pluralize } from "../../lib/format";
+import { loadAllIcons, readBuildSelection } from "../../lib/loadAllIcons";
 import { buildSprite } from "../../lib/spriteBuild";
 import { buildDemoHtml, buildGridSpriteXml } from "../../utils/buildDemo";
 import { renderSpritePreviewPng } from "../../utils/previewPng";
 import { createZip, triggerBrowserDownload } from "../../utils/zipBundle";
 import { Button } from "../ui/Button";
 import { SelectField } from "../ui/Fields";
+import IconChecklistDialog from "./IconChecklistDialog";
 import ImportSpriteDialog from "./ImportSpriteDialog";
 
-const PAGE = 1000;
 const MAX_LISTED_IDS = 200;
-
-// Every icon of the chosen scope, fetched page by page (the server returns at most 1000 per request).
-async function loadAll(projectId: string, scope: string): Promise<IconItem[]> {
-  const out: IconItem[] = [];
-  for (let page = 1; ; page++) {
-    const result = await listIcons(projectId, { sort: "name", limit: PAGE, page, ...(scope === "all" ? {} : { folderId: scope, includeSubfolders: true }) });
-    out.push(...result.icons);
-    if (out.length >= result.total || result.icons.length === 0) return out;
-  }
-}
 
 export default function SpriteTab() {
   const { project, folderList, refreshIcons, refreshFolders, refreshProject, iconsVersion } = useWorkspace();
   const { showToast } = useToast();
-  const [scope, setScope] = useState("all");
+  // Icons chosen in the checklist (from the bulk bar on the Icons screen, or here) are carried in the address.
+  const location = useLocation();
+  const handed = readBuildSelection(location.state);
+  const [chosen, setChosen] = useState<string[] | null>(handed?.iconIds ?? null);
+  const [choiceVersion, setChoiceVersion] = useState(0);
+  const [choosing, setChoosing] = useState(false);
+  const [scope, setScope] = useState(handed ? "selected" : "all");
   const [importing, setImporting] = useState(false);
   const [bundleBusy, setBundleBusy] = useState(false);
   const [filter, setFilter] = useState("");
   const folderOptions = flattenFolderTree(buildFolderTree(folderList.folders));
   const fileName = project.prefix || "sprite";
 
-  const loaded = useResource(`sprite:${project.id}:${scope}:${iconsVersion}`, () => loadAll(project.id, scope));
+  const loaded = useResource(`sprite:${project.id}:${scope}:${choiceVersion}:${iconsVersion}`, async () => {
+    if (scope !== "selected") return loadAllIcons(project.id, scope);
+    const wanted = new Set(chosen ?? []);
+    return (await loadAllIcons(project.id)).filter((icon) => wanted.has(icon.id));
+  });
   const built = useMemo(() => (loaded.data ? buildSprite(loaded.data.map((icon) => ({ name: icon.name, slug: icon.slug, svg: icon.svg ?? "" })), project.prefix) : null), [loaded.data, project.prefix]);
   const demo = useMemo(() => (built && built.ids.length > 0 ? buildDemoHtml(built.ids, built.xml) : null), [built]);
   const sizeBytes = built ? new Blob([built.xml]).size : 0;
@@ -81,6 +81,7 @@ export default function SpriteTab() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="w-full max-w-xs">
           <SelectField label="Icons to include" value={scope} onChange={(event) => setScope(event.target.value)}>
+            {chosen && <option value="selected">{`Chosen icons (${chosen.length})`}</option>}
             <option value="all">All icons in the project</option>
             {folderOptions.map((folder) => (
               <option key={folder.id} value={folder.id}>
@@ -89,11 +90,16 @@ export default function SpriteTab() {
             ))}
           </SelectField>
         </div>
-        {project.access.canAddIcons && (
-          <Button icon={<FileUp aria-hidden="true" className="h-4 w-4" />} onClick={() => setImporting(true)}>
-            Import a sprite
+        <div className="flex flex-wrap gap-2">
+          <Button icon={<ListChecks aria-hidden="true" className="h-4 w-4" />} onClick={() => setChoosing(true)}>
+            Choose icons
           </Button>
-        )}
+          {project.access.canAddIcons && (
+            <Button icon={<FileUp aria-hidden="true" className="h-4 w-4" />} onClick={() => setImporting(true)}>
+              Import a sprite
+            </Button>
+          )}
+        </div>
       </div>
 
       {loaded.error && !loaded.data ? (
@@ -162,6 +168,20 @@ export default function SpriteTab() {
         </div>
       )}
 
+      <IconChecklistDialog
+        open={choosing}
+        mode="sprite"
+        projectId={project.id}
+        folders={folderList.folders}
+        initialIds={scope === "selected" ? chosen : null}
+        onClose={() => setChoosing(false)}
+        onConfirm={(iconIds) => {
+          setChoosing(false);
+          setChosen(iconIds);
+          setChoiceVersion((value) => value + 1);
+          setScope("selected");
+        }}
+      />
       <ImportSpriteDialog
         open={importing}
         projectId={project.id}

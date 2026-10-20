@@ -1,8 +1,10 @@
 // Tests for the Font section and the font import dialog: building with the chosen options, validation before sending, the preview and the character list, warnings, copy, download, permissions, errors, and importing a font (preview first, options, results).
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as fontsApi from "../../api/fonts";
+import * as iconsApi from "../../api/icons";
 import { ApiError } from "../../api/http";
 import type { FontBuildResult, FontImportPreview, FontImportResult } from "../../api/types";
 import { ToastProvider } from "../../context/ToastContext";
@@ -14,6 +16,7 @@ import * as zip from "../../utils/zipBundle";
 import FontTab from "./FontTab";
 
 vi.mock("../../api/fonts");
+vi.mock("../../api/icons");
 vi.mock("../../lib/clipboard");
 vi.mock("../../utils/zipBundle", () => ({ triggerBrowserDownload: vi.fn() }));
 vi.mock("../../lib/fontPreview", async (importOriginal) => ({ ...(await importOriginal<typeof import("../../lib/fontPreview")>()), loadPreviewFont: vi.fn(), unloadPreviewFont: vi.fn() }));
@@ -35,7 +38,7 @@ const built = (over: Partial<FontBuildResult> = {}): FontBuildResult => ({
   ...over,
 });
 
-function setup(over: Partial<WorkspaceContextValue> = {}) {
+function setup(over: Partial<WorkspaceContextValue> = {}, state?: unknown) {
   const fns = { selectFolder: vi.fn(), refreshProject: vi.fn(), refreshFolders: vi.fn(), refreshIcons: vi.fn() };
   const value: WorkspaceContextValue = {
     project: makeDetail({ id: "p1", name: "Feather Icons", prefix: "fth", purpose: "font" }),
@@ -46,11 +49,13 @@ function setup(over: Partial<WorkspaceContextValue> = {}) {
     ...over,
   };
   render(
-    <ToastProvider>
-      <WorkspaceContext.Provider value={value}>
-        <FontTab />
-      </WorkspaceContext.Provider>
-    </ToastProvider>,
+    <MemoryRouter initialEntries={[{ pathname: "/projects/p1", state }]}>
+      <ToastProvider>
+        <WorkspaceContext.Provider value={value}>
+          <FontTab />
+        </WorkspaceContext.Provider>
+      </ToastProvider>
+    </MemoryRouter>,
   );
   return fns;
 }
@@ -163,6 +168,49 @@ describe("building", () => {
     await userEvent.click(screen.getByRole("button", { name: "Build font" }));
     await screen.findByText("2 icons");
     expect(fns.refreshIcons).not.toHaveBeenCalled();
+  });
+});
+
+describe("chosen icons", () => {
+  it("builds by itself with the icons handed over by the checklist", async () => {
+    setup({}, { iconIds: ["a", "b"], autoBuild: true });
+    expect(await screen.findByText("2 icons")).toBeInTheDocument();
+    expect(buildFont).toHaveBeenCalledTimes(1);
+    expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a", "b"] }));
+    expect(screen.getByLabelText("Icons to include")).toHaveValue("selected");
+    expect(screen.getByRole("option", { name: "Chosen icons (2)" })).toBeInTheDocument();
+  });
+
+  it("does not build until asked when the icons were handed over without autoBuild", async () => {
+    setup({}, { iconIds: ["a"] });
+    expect(screen.getByRole("option", { name: "Chosen icons (1)" })).toBeInTheDocument();
+    expect(buildFont).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a"] }));
+  });
+
+  it("builds only once, not again when the screen redraws", async () => {
+    setup({}, { iconIds: ["a", "b"], autoBuild: true });
+    await screen.findByText("2 icons");
+    await userEvent.type(screen.getByLabelText("Font name"), "X");
+    expect(buildFont).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the checklist from Choose icons and builds with the new choice at once", async () => {
+    vi.mocked(iconsApi.listIcons).mockResolvedValue({ icons: [makeIcon({ id: "a", name: "Home", slug: "home" }), makeIcon({ id: "b", name: "Star", slug: "star" })], total: 2, page: 1, limit: 1000 });
+    setup();
+    await userEvent.click(screen.getByRole("button", { name: "Choose icons" }));
+    const dialog = screen.getByRole("dialog", { name: "Choose icons for the font" });
+    await within(dialog).findByText(/icons selected for the font/);
+    await userEvent.click(within(dialog).getByRole("checkbox", { name: /Star/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Generate font (1 icon)" }));
+    await waitFor(() => expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a"] })));
+    expect(screen.getByLabelText("Icons to include")).toHaveValue("selected");
+  });
+
+  it("has no Chosen option until something is chosen", () => {
+    setup();
+    expect(screen.queryByRole("option", { name: /Chosen icons/ })).not.toBeInTheDocument();
   });
 });
 

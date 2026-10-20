@@ -1,6 +1,7 @@
 // The Font section: builds an icon font from the project's icons (all, or one folder with its subfolders) on the server, shows a live preview of every glyph with its class and character, lists conversion warnings, and downloads a ZIP with the font files, stylesheet, SCSS, glyph map and a specimen page. New characters are saved on the icons for editors, so rebuilding later keeps every glyph on the same character. Editors can also import an existing font.
-import { Copy, Download, FileUp, Hammer } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { Copy, Download, FileUp, Hammer, ListChecks } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useLocation } from "react-router-dom";
 import { buildFont, downloadFont } from "../../api/fonts";
 import type { BuildFontInput, FontBuildResult, FontFormat } from "../../api/types";
 import { useToast } from "../../context/ToastContext";
@@ -8,10 +9,12 @@ import { useWorkspace } from "../../context/workspaceContext";
 import { copyText } from "../../lib/clipboard";
 import { buildFolderTree, flattenFolderTree } from "../../lib/folderTree";
 import { formatBytes, pluralize } from "../../lib/format";
+import { readBuildSelection } from "../../lib/loadAllIcons";
 import { glyphChar, loadPreviewFont, nextPreviewFamily, unloadPreviewFont } from "../../lib/fontPreview";
 import { triggerBrowserDownload } from "../../utils/zipBundle";
 import { Button } from "../ui/Button";
 import { SelectField, TextField } from "../ui/Fields";
+import IconChecklistDialog from "./IconChecklistDialog";
 import ImportFontDialog from "./ImportFontDialog";
 
 const FORMATS: { value: FontFormat; label: string; hint: string }[] = [
@@ -28,7 +31,13 @@ export default function FontTab() {
   const canEdit = project.access.canEdit;
   const folderOptions = flattenFolderTree(buildFolderTree(folderList.folders));
 
-  const [scope, setScope] = useState("all");
+  // Icons chosen in the checklist (from the bulk bar on the Icons screen, or here) are carried in the address.
+  const location = useLocation();
+  const handed = readBuildSelection(location.state);
+  const [chosen, setChosen] = useState<string[] | null>(handed?.iconIds ?? null);
+  const [choosing, setChoosing] = useState(false);
+  const [scope, setScope] = useState(handed ? "selected" : "all");
+  const [buildOnOpen] = useState(handed?.autoBuild === true);
   const [fontName, setFontName] = useState(() => project.name.replace(/[^a-zA-Z0-9_-]/g, "") || "IconFont");
   const [prefix, setPrefix] = useState(project.prefix || "icon");
   const [startCodepoint, setStartCodepoint] = useState("E001");
@@ -51,7 +60,9 @@ export default function FontTab() {
     };
   }, [result?.family]);
 
-  function options(): BuildFontInput | string {
+  function options(override?: string[]): BuildFontInput | string {
+    const picked = override ?? chosen;
+    const effectiveScope = override ? "selected" : scope;
     const height = Number(fontHeight);
     const down = Number(descent);
     if (!fontName.trim()) return "Enter a font name.";
@@ -59,9 +70,11 @@ export default function FontTab() {
     if (!/^[0-9a-fA-F]{4}$/.test(startCodepoint.trim())) return "The first character must be 4 hex digits, for example E001.";
     if (!Number.isInteger(height) || height < 300 || height > 2048) return "Font height must be a whole number from 300 to 2048.";
     if (!Number.isInteger(down) || down < -1000 || down > 1000) return "Descent must be a whole number from -1000 to 1000.";
+    if (effectiveScope === "selected" && (!picked || picked.length === 0)) return "Choose at least one icon.";
+    if (effectiveScope === "selected" && picked && picked.length > 1000) return "A font can hold 1000 icons at most. Choose fewer.";
     return {
-      scope: scope === "all" ? "all" : "folder",
-      ...(scope === "all" ? {} : { folderId: scope }),
+      scope: effectiveScope === "all" ? "all" : effectiveScope === "selected" ? "selected" : "folder",
+      ...(effectiveScope === "all" ? {} : effectiveScope === "selected" ? { iconIds: picked as string[] } : { folderId: effectiveScope }),
       formats,
       fontName: fontName.trim(),
       prefix: prefix.trim(),
@@ -72,9 +85,8 @@ export default function FontTab() {
     };
   }
 
-  async function build(event: FormEvent) {
-    event.preventDefault();
-    const input = options();
+  async function runBuild(override?: string[]) {
+    const input = options(override);
     if (typeof input === "string") return setError(input);
     setBuilding(true);
     setError(null);
@@ -95,6 +107,20 @@ export default function FontTab() {
       setBuilding(false);
     }
   }
+
+  function build(event: FormEvent) {
+    event.preventDefault();
+    void runBuild();
+  }
+
+  // Arriving from the checklist ("Generate font") builds straight away, once: the form submits itself the first time it appears, which goes through the same handler as the Build font button.
+  const autoStarted = useRef(false);
+  const formRef = (node: HTMLFormElement | null) => {
+    if (node && buildOnOpen && !autoStarted.current) {
+      autoStarted.current = true;
+      queueMicrotask(() => node.requestSubmit());
+    }
+  };
 
   async function download() {
     const input = options();
@@ -121,21 +147,27 @@ export default function FontTab() {
 
   return (
     <div>
-      <form onSubmit={build} className="rounded-2xl border border-border p-4">
+      <form ref={formRef} onSubmit={build} className="rounded-2xl border border-border p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">Icon font</h2>
             <p className="text-sm text-muted-foreground">Every icon becomes one character. Icons keep their character between builds.</p>
           </div>
-          {canEdit && (
-            <Button icon={<FileUp aria-hidden="true" className="h-4 w-4" />} onClick={() => setImporting(true)}>
-              Import a font
+          <div className="flex flex-wrap gap-2">
+            <Button icon={<ListChecks aria-hidden="true" className="h-4 w-4" />} onClick={() => setChoosing(true)}>
+              Choose icons
             </Button>
-          )}
+            {canEdit && (
+              <Button icon={<FileUp aria-hidden="true" className="h-4 w-4" />} onClick={() => setImporting(true)}>
+                Import a font
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <SelectField label="Icons to include" value={scope} onChange={(event) => setScope(event.target.value)}>
+            {chosen && <option value="selected">{`Chosen icons (${chosen.length})`}</option>}
             <option value="all">All icons in the project</option>
             {folderOptions.map((folder) => (
               <option key={folder.id} value={folder.id}>
@@ -253,6 +285,21 @@ export default function FontTab() {
         </section>
       )}
 
+      <IconChecklistDialog
+        open={choosing}
+        mode="font"
+        projectId={project.id}
+        folders={folderList.folders}
+        initialIds={scope === "selected" ? chosen : null}
+        onClose={() => setChoosing(false)}
+        onConfirm={(iconIds) => {
+          setChosen(iconIds);
+          setScope("selected");
+          setChoosing(false);
+          // Build with the new choice right away (the state above is not visible to this call yet).
+          void runBuild(iconIds);
+        }}
+      />
       <ImportFontDialog
         open={importing}
         projectId={project.id}

@@ -1,5 +1,5 @@
 // Tests for the icon cards, the table view, the toolbar and the bulk bar with its dialogs.
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { DRAG_TYPE } from "../../lib/dragIcons";
@@ -193,7 +193,7 @@ describe("IconToolbar", () => {
 
 describe("BulkBar", () => {
   function setup(over: Partial<React.ComponentProps<typeof BulkBar>> = {}) {
-    const props = { count: 3, canEdit: true, busy: false, onMove: vi.fn(), onTag: vi.fn(), onOptimize: vi.fn(), onDownload: vi.fn(), onDelete: vi.fn(), onClear: vi.fn(), ...over };
+    const props = { count: 3, canEdit: true, busy: false, generate: "sprite" as const, onMove: vi.fn(), onTag: vi.fn(), onOptimize: vi.fn(), onGenerate: vi.fn(), onDownload: vi.fn(), onDelete: vi.fn(), onClear: vi.fn(), ...over };
     render(<BulkBar {...props} />);
     return props;
   }
@@ -202,7 +202,7 @@ describe("BulkBar", () => {
     const p = setup();
     expect(screen.getByRole("region", { name: "Selected icons" })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("3 icons selected");
-    for (const [name, fn] of [["Move", p.onMove], ["Tag", p.onTag], ["Optimize", p.onOptimize], ["Download", p.onDownload], ["Delete", p.onDelete], ["Clear selection", p.onClear]] as const) {
+    for (const [name, fn] of [["Move", p.onMove], ["Tag", p.onTag], ["Optimize", p.onOptimize], ["Generate sprite", p.onGenerate], ["Download", p.onDownload], ["Delete", p.onDelete], ["Clear selection", p.onClear]] as const) {
       await userEvent.click(screen.getByRole("button", { name }));
       expect(fn).toHaveBeenCalledTimes(1);
     }
@@ -211,7 +211,19 @@ describe("BulkBar", () => {
   it("offers only Download and Clear to people who cannot edit", () => {
     setup({ canEdit: false, count: 1 });
     expect(screen.getByRole("status")).toHaveTextContent("1 icon selected");
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Download", "Clear selection"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Generate sprite", "Download", "Clear selection"]);
+  });
+
+  it("puts Generate before Download, as the primary action, and names it after the project type", () => {
+    setup();
+    const names = screen.getAllByRole("button").map((b) => b.textContent);
+    expect(names.indexOf("Generate sprite")).toBe(names.indexOf("Download") - 1);
+    expect(screen.getByRole("button", { name: "Generate sprite" }).className).toContain("bg-primary");
+    expect(screen.getByRole("button", { name: "Download" }).className).not.toContain("bg-primary ");
+    cleanup();
+    setup({ generate: "font" });
+    expect(screen.getByRole("button", { name: "Generate font" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Generate sprite" })).not.toBeInTheDocument();
   });
 
   it("disables the actions while one is running", () => {

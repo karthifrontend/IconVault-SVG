@@ -238,6 +238,11 @@ describe("ActionMenu", () => {
 });
 
 describe("SvgPreview", () => {
+  it("lets shapes without a fill follow the text colour, so they stay visible in dark mode", () => {
+    const { container } = render(<SvgPreview svg='<svg viewBox="0 0 24 24"><path d="M0 0h24v24z"/></svg>' />);
+    expect(container.firstElementChild).toHaveClass("fill-current", "text-foreground");
+  });
+
   const svg = '<svg viewBox="0 0 24 24"><path d="M0 0h24v24z"/></svg>';
 
   it("renders the markup at the given size and hides it from screen readers by default", () => {

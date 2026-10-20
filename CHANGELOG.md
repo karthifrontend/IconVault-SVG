@@ -435,6 +435,28 @@ The Phase 7 entry said the `npm audit` findings on the server "came with the fon
 - A real sign-in and `ADMIN_EMAILS` check in your own browser, then a manual VoiceOver pass.
 - Decide what to do with the open items above; none blocks use.
 
+## 2026-10-20: Follow-up, Generate a sprite or font from the selected icons (change request)
+
+Requested after Phase 8: when icons are selected there was only a Download button. Client only. Logged separately from the phases; one commit on `main`, local only.
+
+### Changes
+| Part | Change |
+|---|---|
+| **Generate button** | The bar that appears when icons are selected has a new primary button before Download: **Generate sprite** in a sprite project, **Generate font** in a font project. Everyone who can see the project gets it (building was already open to viewers). |
+| **Checklist popup** | The button opens "Choose icons for the sprite / font", with the selected icons already ticked (all of them if none were selected). It has a search by name or tag, a folder filter (a folder includes its subfolders, plus Uncategorized), Group by folder on or off, **All (n)** and **Selected (n)** views, Select all and Deselect all (they act on what is shown), Select folder and Deselect folder with a partial-state checkbox, collapsing folders, a live count, and a primary **Generate sprite (n icons)** button that is disabled with nothing ticked (and for a font above 1000 icons). Cancel leaves the Icons screen and its selection as they were. |
+| **After confirming** | You go to the project's **Sprite** or **Font** section with exactly the chosen icons: "Chosen icons (n)" appears in the icon menu. The sprite is built at once; the font **builds by itself** (once, not on every redraw). Both sections also have a **Choose icons** button to reopen the checklist later; choosing again rebuilds with the new choice, and picking "All icons" or a folder goes back to the old behaviour. The choice travels in the address (router state), so it is gone after a new visit from the dashboard, and a damaged value is ignored. |
+| **Preview colours (fix found while checking)** | Plain shapes that set no fill (SVG paints them black) were nearly invisible on the dark icon cards. Icon previews now follow the text colour, so they show in both themes; icons with their own fill or stroke are unchanged. |
+
+### Validation (verified)
+- Client `npm test`: **517 of 517** (new: the checklist dialog; the bulk bar button and its position before Download; the Icons screen opening the checklist and navigating with the chosen ids for sprite and font projects, cancelling, and read-only viewers; Sprite and Font sections with handed-over, absent and damaged choices, auto-build only once, and Choose icons; the axe checks for the Generate button and the checklist in both views; the preview colour). Types and lint clean.
+- Real browser (dark theme, throwaway user): select all, Generate sprite, the checklist matches the reference layout, untick a folder (count 5, button reads "Generate sprite (5 icons)"), confirm: Sprite section shows "Chosen icons (5)", 5 symbols, 800 B. Same for a font project: "Chosen icons (6)" and the font was built on arrival (TTF 1.9 KB, WOFF 1.2 KB, WOFF2 860 B). Test data removed; the database holds your 1 user and 2 projects.
+
+### Not tested, or open
+- The checklist was not run through a screen reader, and its axe check in the real browser (light and dark, contrast included) was not repeated for it; the automated axe tests in jsdom pass.
+- A project with hundreds of icons in the checklist (rendering speed) was not tried; the font limit message at 1000 icons is covered by a test with simulated data only.
+- Reloading the Sprite or Font page keeps the choice (the browser keeps the address state), opening the section from the project tabs does not.
+- The CLI has no equivalent (it already builds a whole project or folder with `sprite`).
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -444,7 +466,7 @@ The Phase 7 entry said the `npm audit` findings on the server "came with the fon
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 481 (Phases 3 to 8), the server 135 unit plus 152 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 517 (Phases 3 to 8 and the follow-up), the server 135 unit plus 152 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

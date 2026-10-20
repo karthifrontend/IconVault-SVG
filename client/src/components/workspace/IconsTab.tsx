@@ -1,6 +1,7 @@
 // The Icons section of a project: browse, search, sort, select, add (upload, paste, copy from another project), open an icon, and act on a selection (move, tag, optimize, download, move to the trash with an Undo). Everything that changes data refreshes the list, the folder counts and the project's totals.
 import { Layers } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { batchDeleteIcons, batchMoveIcons, batchOptimizeIcons, batchRestoreIcons, batchTagIcons, downloadIcons, listIcons } from "../../api/icons";
 import type { ListIconsParams, UploadSummary } from "../../api/types";
 import { useToast } from "../../context/ToastContext";
@@ -18,6 +19,7 @@ import BulkBar from "./BulkBar";
 import { MoveIconsDialog, TagIconsDialog } from "./BulkDialogs";
 import CopyFromProjectDialog from "./CopyFromProjectDialog";
 import IconCard from "./IconCard";
+import IconChecklistDialog from "./IconChecklistDialog";
 import IconDrawer from "./IconDrawer";
 import IconList from "./IconList";
 import IconToolbar, { type IconSort, type IconView } from "./IconToolbar";
@@ -29,11 +31,12 @@ const PAGE = 200;
 // The server returns at most this many in one request.
 const MAX_SHOWN = 1000;
 
-type Dialog = "add" | "copy" | "move" | "tag" | "delete" | null;
+type Dialog = "add" | "copy" | "move" | "tag" | "delete" | "generate" | null;
 
 export default function IconsTab() {
   const { project, folderList, selectedFolder, refreshProject, refreshFolders, refreshIcons, iconsVersion } = useWorkspace();
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const canEdit = project.access.canEdit;
 
   const [searchText, setSearchText] = useState("");
@@ -181,6 +184,8 @@ export default function IconsTab() {
           busy={busy}
           onMove={() => setDialog("move")}
           onTag={() => setDialog("tag")}
+          generate={project.purpose}
+          onGenerate={() => setDialog("generate")}
           onOptimize={optimizeSelected}
           onDownload={downloadSelected}
           onDelete={() => setDialog("delete")}
@@ -188,6 +193,19 @@ export default function IconsTab() {
         />
       )}
 
+      <IconChecklistDialog
+        open={dialog === "generate"}
+        mode={project.purpose}
+        projectId={project.id}
+        folders={folderList.folders}
+        initialIds={selection.ids}
+        onClose={() => setDialog(null)}
+        onConfirm={(iconIds) => {
+          setDialog(null);
+          // The Sprite section builds as soon as it opens; the Font section starts its build too.
+          navigate(`/projects/${project.id}/${project.purpose === "font" ? "font" : "sprite"}`, { state: { iconIds, autoBuild: true } });
+        }}
+      />
       <UploadDialog
         open={dialog === "add"}
         projectId={project.id}
