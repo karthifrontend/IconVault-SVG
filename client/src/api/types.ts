@@ -236,7 +236,7 @@ export type FontBuildResult = {
 };
 
 // One kept download in the font build history.
-export type FontBuildSummary = { id: string; fontName: string; iconCount: number; formats: FontFormat[]; size: number; createdAt: string };
+export type FontBuildSummary = { id: string; version: number; fontName: string; iconCount: number; formats: FontFormat[]; size: number; createdAt: string };
 
 export type FontImportOptions = {
   folderId?: string | null;

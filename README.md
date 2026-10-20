@@ -122,7 +122,7 @@ Every route needs `Authorization: Bearer <session token>`. Errors are `{ "error"
 |---|---|---|
 | POST | `/api/projects/:projectId/font/build` | Build a font and return a preview: `css`, a small WOFF2 (`preview.base64`), the class and character of every icon, warnings and file sizes. Body: `scope` all/folder/selected (`folderId`, `iconIds`), `formats`, `fontName`, `prefix`, `baseClass` (optional: the stylesheet then needs `class="base prefix-name"`), `startCodepoint` (E000 to F8FF), `fontHeight`, `descent`, `normalize`. Anyone who can see the project may build; only editors get new characters saved on the icons |
 | POST | `/api/projects/:projectId/font/download` | The same build as a ZIP. A download by someone who can edit the project is also kept in the build history |
-| GET | `/api/projects/:projectId/font/builds` | The build history: kept packages, newest first (at most 20 per project) |
+| GET | `/api/projects/:projectId/font/builds` | The build history: kept packages with a version number (v1, v2, ... per project, never reused), newest first (at most 20 per project) |
 | GET | `/api/projects/:projectId/font/builds/:buildId/download` | A kept package again |
 | DELETE | `/api/projects/:projectId/font/builds/:buildId` | Remove a kept package (editors) |
 | POST | `/api/projects/:projectId/icons/import-font` | Multipart: `font` (TTF, OTF, WOFF, WOFF2 or SVG font, up to 8 MB), optional `mapping` (CSS or JSON that names the characters), `folderId`, `strategy`, `optimize`, `privateUseOnly` (default true), `dryRun` (only report what is in the font) |
@@ -150,7 +150,7 @@ Limits: 1 MB per SVG, 200 files and 25 MB per file per upload request, 500 SVGs 
 - `folders`: nested through `parentId` (null = project root), ordered by `orderIndex`.
 - `icons`: one SVG per document (markup stored in the database), `slug` unique per project among active icons, `codepoint` unique per project among active icons that have one, soft delete through `deletedAt`.
 - `icon_versions`: earlier states of an icon, each with its own markup.
-- `font_builds`: the font packages editors downloaded (project, who, font name, icon count, formats, size and the ZIP), at most 20 per project.
+- `font_builds`: the font packages editors downloaded (project, who, version, font name, icon count, formats, size and the ZIP), at most 20 per project. The project's `fontBuildCount` hands out the version numbers.
 - `api_tokens`: owner, name, a SHA-256 hash of the token (never the token), its first characters for display, `lastUsedAt`, `revokedAt`.
 
 Admins are not stored: a user is an admin when their email is in `ADMIN_EMAILS`.

@@ -1,16 +1,20 @@
-// The font build history: the ZIPs editors downloaded, newest first, at most MAX_STORED_BUILDS per project (older ones are dropped as new ones arrive). Viewers of a project can list and download them; editors can delete them.
+// The font build history: the ZIPs editors downloaded, each with a version number (v1, v2, ... per project, never reused), newest first, at most MAX_STORED_BUILDS per project (older ones are dropped as new ones arrive). Viewers of a project can list and download them; editors can delete them.
 import mongoose, { type Types } from "mongoose";
 import { NotFoundError } from "../lib/errors.js";
+import Project from "../models/Project.js";
 import FontBuild, { MAX_STORED_BUILDS, MAX_STORED_BUILD_BYTES } from "../models/FontBuild.js";
 
 type Id = Types.ObjectId;
 
-export type FontBuildSummary = { id: string; fontName: string; iconCount: number; formats: string[]; size: number; createdAt: Date };
+export type FontBuildSummary = { id: string; version: number; fontName: string; iconCount: number; formats: string[]; size: number; createdAt: Date };
 
 // Keeps a downloaded package. Skips ones too large to store; the download itself is not affected.
 export async function recordFontBuild(projectId: Id, userId: string, build: { fontName: string; iconCount: number }, formats: string[], zip: Buffer): Promise<boolean> {
   if (zip.length > MAX_STORED_BUILD_BYTES) return false;
-  await FontBuild.create({ projectId, createdBy: new mongoose.Types.ObjectId(userId), fontName: build.fontName, iconCount: build.iconCount, formats, size: zip.length, zip });
+  // The next version number for this project, taken atomically so two downloads at once cannot share one.
+  const counted = await Project.findOneAndUpdate({ _id: projectId }, { $inc: { fontBuildCount: 1 } }, { new: true, projection: { fontBuildCount: 1 } });
+  if (!counted) return false;
+  await FontBuild.create({ projectId, version: counted.fontBuildCount, createdBy: new mongoose.Types.ObjectId(userId), fontName: build.fontName, iconCount: build.iconCount, formats, size: zip.length, zip });
   const extra = await FontBuild.find({ projectId }, { _id: 1 }).sort({ createdAt: -1, _id: -1 }).skip(MAX_STORED_BUILDS).lean();
   if (extra.length > 0) await FontBuild.deleteMany({ _id: { $in: extra.map((row) => row._id) } });
   return true;
@@ -18,7 +22,7 @@ export async function recordFontBuild(projectId: Id, userId: string, build: { fo
 
 export async function listFontBuilds(projectId: Id): Promise<FontBuildSummary[]> {
   const rows = await FontBuild.find({ projectId }, { zip: 0 }).sort({ createdAt: -1, _id: -1 }).lean();
-  return rows.map((row) => ({ id: String(row._id), fontName: row.fontName, iconCount: row.iconCount, formats: row.formats ?? [], size: row.size, createdAt: row.createdAt as Date }));
+  return rows.map((row) => ({ id: String(row._id), version: row.version, fontName: row.fontName, iconCount: row.iconCount, formats: row.formats ?? [], size: row.size, createdAt: row.createdAt as Date }));
 }
 
 async function findBuild(projectId: Id, buildId: string, withZip: boolean) {
@@ -30,7 +34,7 @@ async function findBuild(projectId: Id, buildId: string, withZip: boolean) {
 
 export async function getFontBuildZip(projectId: Id, buildId: string) {
   const row = await findBuild(projectId, buildId, true);
-  return { filename: `${row.fontName}-font.zip`, zip: Buffer.from(row.zip) };
+  return { filename: `${row.fontName}-font-v${row.version}.zip`, zip: Buffer.from(row.zip) };
 }
 
 export async function deleteFontBuild(projectId: Id, buildId: string): Promise<void> {

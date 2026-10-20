@@ -59,6 +59,12 @@ export const projectSchema = new Schema(
       maxlength: 40,
       default: "",
     },
+    // How many font packages were ever kept for this project. Each kept build gets the next number as its version, and numbers are never reused (not after deleting or the 20 build limit).
+    fontBuildCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     isArchived: {
       type: Boolean,
       default: false,

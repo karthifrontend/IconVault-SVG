@@ -307,13 +307,27 @@ describe("the page layout", () => {
     setup();
     const actions = screen.getByRole("group", { name: "Font actions" });
     expect(within(actions).getAllByRole("button").map((b) => b.textContent)).toEqual(["Download font", "Copy CSS", "Build font"]);
-    // Download font is the main action; Build font is the secondary one.
+    // Download font is the main (filled) action; Build font is the outlined primary button.
     expect(within(actions).getByRole("button", { name: "Download font" }).className).toContain("bg-primary");
-    expect(within(actions).getByRole("button", { name: "Build font" }).className).not.toContain("bg-primary");
+    const buildButton = within(actions).getByRole("button", { name: "Build font" });
+    expect(buildButton.className).toContain("border-primary");
+    expect(buildButton.className.split(" ")).not.toContain("bg-primary");
     for (const title of ["1. Scope selection", "2. Font & CSS settings", "3. Font metrics & normalization"]) expect(screen.getByRole("region", { name: title })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Target formats" })).toBeInTheDocument();
     // The actions come before the columns in the page.
     expect(actions.compareDocumentPosition(screen.getByRole("region", { name: "1. Scope selection" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("keeps Download font off until the font is built, and says why", async () => {
+    setup();
+    const download = screen.getByRole("button", { name: "Download font" });
+    expect(download).toBeDisabled();
+    expect(download).toHaveAccessibleDescription("Build the font first; then Download font is ready.");
+    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await screen.findByText("2 icons");
+    expect(download).toBeEnabled();
+    expect(screen.queryByText(/Build the font first/)).not.toBeInTheDocument();
+    expect(fontsApi.downloadFont).not.toHaveBeenCalled();
   });
 
   it("has Copy CSS switched off until there is a build", async () => {

@@ -1,4 +1,4 @@
-// The Font section, laid out like Icon Vault's: the actions at the top (Download font is the main action, with Copy CSS and Build font beside it), then three columns: 1. Scope selection (whole project, a folder or the chosen icons, with the icon checklist) and the target formats, 2. Font and CSS settings (name, prefix, base class, starting codepoint), 3. Font metrics and normalization. Below them the result (a summary, conversion warnings and the "Stable Unicode codepoints mapping" table with every glyph, its character (editable), CSS entity and CSS class) and the font build history. The font is built on the server; for editors, new characters are saved on the icons so rebuilding later keeps every glyph on the same character.
+// The Font section, laid out like Icon Vault's: the actions at the top (Build font is the outlined button that starts it; Download font, the main action, and Copy CSS switch on once a font is built), then three columns: 1. Scope selection (whole project, a folder or the chosen icons, with the icon checklist) and the target formats, 2. Font and CSS settings (name, prefix, base class, starting codepoint), 3. Font metrics and normalization. Below them the result (a summary, conversion warnings and the "Stable Unicode codepoints mapping" table with every glyph, its character (editable), CSS entity and CSS class) and the font build history. The font is built on the server; for editors, new characters are saved on the icons so rebuilding later keeps every glyph on the same character.
 import { CheckSquare, Copy, Download, Hammer } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { buildFont, downloadFont } from "../../api/fonts";
@@ -180,18 +180,23 @@ export default function FontTab() {
             <p className="text-sm text-muted-foreground">Every icon becomes one character. Icons keep their character between builds.</p>
           </div>
           <div role="group" aria-label="Font actions" className="flex flex-wrap items-center gap-2">
-            <Button variant="primary" icon={<Download aria-hidden="true" className="h-4 w-4" />} onClick={download} loading={downloading}>
+            <Button variant="primary" icon={<Download aria-hidden="true" className="h-4 w-4" />} onClick={download} loading={downloading} disabled={!result} aria-describedby={result ? undefined : "font-download-hint"}>
               Download font
             </Button>
             <Button icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={() => built && copy(built.css, "the stylesheet")} disabled={!built}>
               Copy CSS
             </Button>
-            <Button type="submit" icon={<Hammer aria-hidden="true" className="h-4 w-4" />} loading={building}>
+            <Button type="submit" variant="outline-primary" icon={<Hammer aria-hidden="true" className="h-4 w-4" />} loading={building}>
               Build font
             </Button>
           </div>
         </div>
 
+        {!result && (
+          <p id="font-download-hint" className="text-xs text-muted-foreground">
+            Build the font first; then Download font is ready.
+          </p>
+        )}
         {error && (
           <p role="alert" className="text-sm font-medium text-destructive">
             {error}

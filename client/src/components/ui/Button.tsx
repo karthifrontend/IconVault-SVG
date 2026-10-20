@@ -3,11 +3,12 @@ import { Loader2 } from "lucide-react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cn } from "../../lib/cn";
 
-type Variant = "primary" | "secondary" | "ghost" | "destructive";
+type Variant = "primary" | "outline-primary" | "secondary" | "ghost" | "destructive";
 type Size = "sm" | "md";
 
 const VARIANTS: Record<Variant, string> = {
   primary: "bg-primary text-primary-foreground hover:opacity-90",
+  "outline-primary": "border border-primary bg-background text-primary hover:bg-primary/10",
   secondary: "border border-input bg-background text-foreground hover:bg-accent",
   ghost: "text-foreground hover:bg-accent",
   destructive: "bg-destructive text-destructive-foreground hover:opacity-90",

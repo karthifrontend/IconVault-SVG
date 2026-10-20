@@ -41,10 +41,11 @@ describe("font build history (HTTP, throwaway database)", { skip: hasDatabase ? 
     assert.equal(list[0].iconCount, 2);
     assert.deepEqual(list[0].formats, ["woff2", "ttf"]);
     assert.equal(list[1].size, firstZip.length);
+    assert.deepEqual(list.map((b: any) => b.version), [2, 1]);
     assert.equal("zip" in list[0], false);
     const again = await h.call(owner.token, "GET", `/api/projects/${p.id}/font/builds/${list[1].id}/download`);
     assert.equal(again.status, 200);
-    assert.match(again.headers.get("content-disposition") ?? "", /First-font\.zip/);
+    assert.match(again.headers.get("content-disposition") ?? "", /First-font-v1\.zip/);
     const files = unzipSync(new Uint8Array(await again.raw.arrayBuffer()));
     assert.ok("First.ttf" in files);
   });
@@ -83,6 +84,26 @@ describe("font build history (HTTP, throwaway database)", { skip: hasDatabase ? 
     assert.equal((await builds(owner.token, q.id)).body.builds.length, 1);
   });
 
+  it("never reuses a version number, even after the newest build is deleted", async () => {
+    const p = await makeProject();
+    await download(owner.token, p.id, { fontName: "A" });
+    await download(owner.token, p.id, { fontName: "B" });
+    const [newest] = (await builds(owner.token, p.id)).body.builds;
+    assert.equal(newest.version, 2);
+    assert.equal((await h.call(owner.token, "DELETE", `/api/projects/${p.id}/font/builds/${newest.id}`)).status, 200);
+    await download(owner.token, p.id, { fontName: "C" });
+    assert.deepEqual((await builds(owner.token, p.id)).body.builds.map((b: any) => [b.fontName, b.version]), [["C", 3], ["A", 1]]);
+  });
+
+  it("numbers each project on its own", async () => {
+    const p = await makeProject();
+    const q = await makeProject();
+    await download(owner.token, p.id);
+    await download(owner.token, p.id);
+    await download(owner.token, q.id);
+    assert.deepEqual((await builds(owner.token, q.id)).body.builds.map((b: any) => b.version), [1]);
+  });
+
   it("keeps at most 20 builds, dropping the oldest, and removes them with the project", async () => {
     const p = await makeProject();
     for (let i = 0; i < 22; i += 1) await download(owner.token, p.id, { fontName: `B${i}` });
@@ -90,6 +111,9 @@ describe("font build history (HTTP, throwaway database)", { skip: hasDatabase ? 
     assert.equal(list.length, 20);
     assert.equal(list[0].fontName, "B21");
     assert.equal(list[19].fontName, "B2");
+    // Versions keep counting: the dropped builds were v1 and v2.
+    assert.equal(list[0].version, 22);
+    assert.equal(list[19].version, 3);
     assert.equal(await FontBuild.countDocuments({ projectId: p.id }), 20);
     assert.equal((await h.call(owner.token, "DELETE", `/api/projects/${p.id}`)).status, 200);
     assert.equal(await FontBuild.countDocuments({ projectId: p.id }), 0);

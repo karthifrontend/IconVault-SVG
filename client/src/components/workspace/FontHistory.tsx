@@ -20,7 +20,7 @@ export default function FontHistory({ projectId, canEdit, version }: FontHistory
   const { showToast } = useToast();
   const builds = useResource(`font-builds:${projectId}:${version}`, () => listFontBuilds(projectId));
   const [busy, setBusy] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<{ id: string; fontName: string } | null>(null);
+  const [deleting, setDeleting] = useState<{ id: string; fontName: string; version: number } | null>(null);
   const list = builds.data ?? [];
 
   async function download(id: string) {
@@ -41,7 +41,7 @@ export default function FontHistory({ projectId, canEdit, version }: FontHistory
         <History aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
         Font build history
       </h3>
-      <p className="mt-0.5 text-sm text-muted-foreground">Every package you download is kept here (the last 20), so you can download it again later.</p>
+      <p className="mt-0.5 text-sm text-muted-foreground">Every package you download is kept here with a version number (the last 20), so you can download it again later.</p>
 
       {builds.error && !builds.data ? (
         <p role="alert" className="mt-3 text-sm text-destructive">
@@ -63,17 +63,18 @@ export default function FontHistory({ projectId, canEdit, version }: FontHistory
               <FileArchive aria-hidden="true" className="h-5 w-5 shrink-0 text-primary" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">
+                  <span className="mr-2 rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">{`v${build.version}`}</span>
                   {build.fontName} <span className="font-normal text-muted-foreground">({pluralize(build.iconCount, "glyph")})</span>
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {formatDate(build.createdAt)} · {formatBytes(build.size)} · {build.formats.map((format) => format.toUpperCase()).join(", ")}
                 </p>
               </div>
-              <Button size="sm" icon={<Download aria-hidden="true" className="h-4 w-4" />} loading={busy === build.id} disabled={busy !== null} onClick={() => void download(build.id)} aria-label={`Download ${build.fontName} from ${formatDate(build.createdAt)}`}>
+              <Button size="sm" icon={<Download aria-hidden="true" className="h-4 w-4" />} loading={busy === build.id} disabled={busy !== null} onClick={() => void download(build.id)} aria-label={`Download ${build.fontName} v${build.version} from ${formatDate(build.createdAt)}`}>
                 Download
               </Button>
               {canEdit && (
-                <IconButton label={`Delete ${build.fontName} from ${formatDate(build.createdAt)}`} onClick={() => setDeleting({ id: build.id, fontName: build.fontName })}>
+                <IconButton label={`Delete ${build.fontName} v${build.version} from ${formatDate(build.createdAt)}`} onClick={() => setDeleting({ id: build.id, fontName: build.fontName, version: build.version })}>
                   <Trash2 aria-hidden="true" className="h-4 w-4" />
                 </IconButton>
               )}
@@ -84,7 +85,7 @@ export default function FontHistory({ projectId, canEdit, version }: FontHistory
 
       <ConfirmDialog
         open={deleting !== null}
-        title={`Delete the package “${deleting?.fontName ?? ""}”?`}
+        title={`Delete version ${deleting?.version ?? ""} of “${deleting?.fontName ?? ""}”?`}
         message="Only this saved copy is removed. Your icons and any file you already downloaded are not affected."
         confirmLabel="Delete"
         destructive

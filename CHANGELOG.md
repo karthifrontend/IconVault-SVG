@@ -695,6 +695,14 @@ Optional. Empty keeps the old stylesheet (any element whose class starts with th
 
 Client only. One commit on `main`, local only. In the project menu the **Icon Font** tab is now **Font Builder** and **Settings** is now **Project Settings**. **Icons**, **Sprite** (sprite projects) and the Trash icon are unchanged, and the Icon Font Project badge keeps its name. Client tests and lint pass; checked by test only. Earlier entries above still use the old names because they describe what was done then.
 
+## 2026-10-20: Follow-up, Download font after Build font, and version numbers in the history (change request)
+
+One commit on `main`, local only.
+
+- **Download font** (the filled main button) is switched off until a font has been built, and a line under the actions says "Build the font first; then Download font is ready." A font built on the Icons screen counts (the page opens already built). **Build font** is now the outlined primary button (blue border and text), and **Copy CSS** stays plain and also waits for a build. If you change settings after a build, Download font still uses the current settings; press Build font to see the new result first.
+- **Version numbers:** every kept package gets a version (v1, v2, ...) per project. The history shows it as a badge ("v3"), in the button names ("Download Feather v3 from ...") and in the file name of a download from the history (`Feather-font-v3.zip`). Numbers are never reused: after deleting the newest, or when the 20 build limit drops the oldest, the next one still continues the count. The count lives on the project (`fontBuildCount`, not shown anywhere else). A package downloaded straight from the Font page keeps its plain name (`<font>-font.zip`).
+- Validation: server database tests **173 of 173** (new: versions in order, never reused after a delete or the 20 limit, each project counts on its own); client **594 of 594** (new: Download font off until built with its hint, the outlined Build font, version badges and names). The slow accessibility lookup for the icon grid got a longer timeout because it failed twice under load. Types and lint clean. Not checked in the browser this time.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -704,7 +712,7 @@ Client only. One commit on `main`, local only. In the project menu the **Icon Fo
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 593 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 171 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 594 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 173 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

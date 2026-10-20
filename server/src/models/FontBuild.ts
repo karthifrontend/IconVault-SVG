@@ -9,6 +9,8 @@ export const fontBuildSchema = new Schema(
   {
     projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    // 1 for the first package kept for the project, then 2, 3, ... (never reused).
+    version: { type: Number, required: true, min: 1 },
     fontName: { type: String, required: true, maxlength: 50 },
     iconCount: { type: Number, required: true, min: 0 },
     formats: { type: [String], default: [] },
