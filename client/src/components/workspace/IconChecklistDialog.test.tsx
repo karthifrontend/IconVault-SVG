@@ -45,7 +45,7 @@ describe("opening", () => {
     setup({ mode: "font" });
     expect(screen.getByRole("dialog", { name: "Choose icons for the font" })).toBeInTheDocument();
     await ready();
-    expect(within(dialog()).getByRole("button", { name: "Generate font (4 icons)" })).toBeInTheDocument();
+    expect(within(dialog()).getByRole("button", { name: "Build font (4 icons)" })).toBeInTheDocument();
     expect(within(dialog()).getByText("Icon font")).toBeInTheDocument();
   });
 
@@ -74,7 +74,7 @@ describe("opening", () => {
     listIcons.mockResolvedValue({ icons: [], total: 0, page: 1, limit: 1000 });
     setup();
     expect(await within(dialog()).findByText("This project has no icons yet.")).toBeInTheDocument();
-    expect(within(dialog()).getByRole("button", { name: "Generate sprite (0 icons)" })).toBeDisabled();
+    expect(within(dialog()).getByRole("button", { name: "Build sprite (0 icons)" })).toBeDisabled();
   });
 
   it("fetches every page of a large project", async () => {
@@ -179,8 +179,8 @@ describe("generating", () => {
     const p = setup();
     await ready();
     await userEvent.click(row(/Home/));
-    const go = within(dialog()).getByRole("button", { name: "Generate sprite (3 icons)" });
-    expect(within(dialog()).getByText("Ready to generate with 3 icons.")).toBeInTheDocument();
+    const go = within(dialog()).getByRole("button", { name: "Build sprite (3 icons)" });
+    expect(within(dialog()).getByText("Ready to build with 3 icons.")).toBeInTheDocument();
     await userEvent.click(go);
     expect(p.onConfirm).toHaveBeenCalledWith(["left", "right", "star"]);
   });
@@ -189,7 +189,7 @@ describe("generating", () => {
     setup();
     await ready();
     await userEvent.click(within(dialog()).getByRole("button", { name: "Deselect all" }));
-    expect(within(dialog()).getByRole("button", { name: "Generate sprite (0 icons)" })).toBeDisabled();
+    expect(within(dialog()).getByRole("button", { name: "Build sprite (0 icons)" })).toBeDisabled();
     expect(within(dialog()).getByText("Tick at least one icon.")).toBeInTheDocument();
   });
 
@@ -199,7 +199,7 @@ describe("generating", () => {
     listIcons.mockResolvedValueOnce({ icons: many.slice(0, 1000), total: 1001, page: 1, limit: 1000 }).mockResolvedValueOnce({ icons: many.slice(1000), total: 1001, page: 2, limit: 1000 });
     setup({ mode: "font" });
     expect(await within(dialog()).findByRole("alert", {}, { timeout: 10000 })).toHaveTextContent("1000 icons at most");
-    expect(within(dialog()).getByRole("button", { name: /Generate font/ })).toBeDisabled();
+    expect(within(dialog()).getByRole("button", { name: /Build font/ })).toBeDisabled();
   }, 30000);
 
   it("closes with Cancel without handing anything back", async () => {

@@ -4,16 +4,21 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../api/http";
+import * as fontsApi from "../../api/fonts";
 import * as iconsApi from "../../api/icons";
 import { ToastProvider } from "../../context/ToastContext";
 import { WorkspaceContext, type WorkspaceContextValue } from "../../context/workspaceContext";
 import { DRAG_TYPE } from "../../lib/dragIcons";
+import { clearCachedBuild, peekCachedBuild } from "../../lib/fontBuildCache";
+import * as preview from "../../lib/fontPreview";
 import { READ_ONLY, makeDetail, makeFolder, makeIcon } from "../../test/fixtures";
 import * as zip from "../../utils/zipBundle";
 import IconsTab from "./IconsTab";
 
 vi.mock("../ui/SvgPreview", () => ({ default: () => null }));
 vi.mock("../../api/icons");
+vi.mock("../../api/fonts");
+vi.mock("../../lib/fontPreview", async (importOriginal) => ({ ...(await importOriginal<typeof import("../../lib/fontPreview")>()), loadPreviewFont: vi.fn(), unloadPreviewFont: vi.fn() }));
 vi.mock("../../api/projects");
 vi.mock("../../api/folders");
 vi.mock("../../utils/zipBundle", () => ({ triggerBrowserDownload: vi.fn() }));
@@ -229,7 +234,7 @@ describe("selection", () => {
     await screen.findByRole("button", { name: "Open Alpha" });
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Alpha" }));
     const bar = screen.getByRole("region", { name: "Selected icons" });
-    expect(within(bar).getAllByRole("button").map((b) => b.textContent)).toEqual(["Generate sprite", "Download", "Clear selection"]);
+    expect(within(bar).getAllByRole("button").map((b) => b.textContent)).toEqual(["Build sprite", "Download", "Clear selection"]);
     expect(screen.queryByRole("button", { name: "Add icons" })).not.toBeInTheDocument();
   });
 
@@ -351,39 +356,93 @@ describe("bulk actions", () => {
   });
 });
 
-describe("generating a sprite or a font from the selection", () => {
+describe("building a sprite or a font from the selection", () => {
   const withIcons = () => listIcons.mockResolvedValue(reply(three()));
   const state = () => JSON.parse(screen.getByTestId("where").getAttribute("data-state") as string);
+  const builtFont = (isNew = true) => ({ fontName: "feather", prefix: "feather", iconCount: 2, warnings: [], css: "x", preview: { format: "woff2" as const, base64: "AA==" }, sizes: { woff2: 100 }, codepoints: [{ id: "a", name: "Alpha", slug: "alpha", codepoint: "E001", className: "feather-alpha", isNew }] });
+  const fontProject = () => ({ project: makeDetail({ id: "p1", name: "Feather Icons", prefix: "feather", purpose: "font" }) });
 
-  it("goes straight to the Sprite page with the selected icons, and shows no popup on the way", async () => {
+  beforeEach(() => {
+    clearCachedBuild();
+    vi.mocked(preview.loadPreviewFont).mockResolvedValue(true);
+    vi.mocked(fontsApi.buildFont).mockResolvedValue(builtFont());
+  });
+
+  it("a sprite project goes straight to the Sprite page with the selected icons, and shows no popup on the way", async () => {
     withIcons();
     setup();
     await screen.findByRole("button", { name: "Open Alpha" });
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Alpha" }));
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Gamma" }));
-    await userEvent.click(screen.getByRole("button", { name: "Generate sprite" }));
+    await userEvent.click(screen.getByRole("button", { name: "Build sprite" }));
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/projects/p1/sprite"));
     expect(state()).toEqual({ iconIds: ["a", "c"] });
-    // No checklist popup in between: the page itself shows the chosen icons.
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(fontsApi.buildFont).not.toHaveBeenCalled();
+  });
+
+  it("a font project builds the font from the selection with the usual settings, then opens the Font page with the result waiting", async () => {
+    withIcons();
+    setup(fontProject());
+    await screen.findByRole("button", { name: "Open Alpha" });
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Alpha" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Beta" }));
+    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/projects/p1/font"));
+    expect(fontsApi.buildFont).toHaveBeenCalledTimes(1);
+    expect(fontsApi.buildFont).toHaveBeenCalledWith("p1", { scope: "selected", iconIds: ["a", "b"], formats: ["woff2", "woff", "ttf"], fontName: "FeatherIcons", prefix: "feather", startCodepoint: "E001", fontHeight: 1000, descent: 0, normalize: true });
+    expect(state()).toEqual({ iconIds: ["a", "b"], built: true });
+    expect(peekCachedBuild("p1")?.build.fontName).toBe("feather");
+    expect(preview.loadPreviewFont).toHaveBeenCalledWith(expect.stringMatching(/^iconfont-preview-/), "AA==");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("goes to the Font page for a font project", async () => {
+  it("stays on the Icons screen and shows the reason when the font cannot be built", async () => {
     withIcons();
-    setup({ project: makeDetail({ id: "p1", prefix: "feather", purpose: "font" }) });
-    await screen.findByRole("button", { name: "Open Alpha" });
-    await userEvent.click(screen.getByRole("checkbox", { name: "Select Beta" }));
-    await userEvent.click(screen.getByRole("button", { name: "Generate font" }));
-    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/projects/p1/font"));
-    expect(state()).toEqual({ iconIds: ["b"] });
-  });
-
-  it("is offered to read-only viewers too", async () => {
-    withIcons();
-    setup({ project: makeDetail({ id: "p1", access: READ_ONLY }) });
+    vi.mocked(fontsApi.buildFont).mockRejectedValue(new ApiError("These icons have a character outside E000 to F8FF: Alpha (F0001).", 400));
+    setup(fontProject());
     await screen.findByRole("button", { name: "Open Alpha" });
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Alpha" }));
-    expect(screen.getByRole("button", { name: "Generate sprite" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    expect(await screen.findByText(/outside E000 to F8FF/)).toBeInTheDocument();
+    expect(screen.getByTestId("where").textContent).toBe("/projects/p1");
+    expect(peekCachedBuild("p1")).toBeNull();
+    expect(screen.getByText("1 icon selected")).toBeInTheDocument();
+  });
+
+  it("shows that it is working, and blocks the other actions, while the font builds", async () => {
+    withIcons();
+    let finish: (value: ReturnType<typeof builtFont>) => void = () => undefined;
+    vi.mocked(fontsApi.buildFont).mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    setup(fontProject());
+    await screen.findByRole("button", { name: "Open Alpha" });
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Alpha" }));
+    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    expect(screen.getByRole("button", { name: "Build font" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Download" })).toBeDisabled();
+    finish(builtFont());
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/projects/p1/font"));
+  });
+
+  it("refreshes the lists when the build saved new characters on the icons, but not for a viewer", async () => {
+    withIcons();
+    const fns = setup(fontProject());
+    await screen.findByRole("button", { name: "Open Alpha" });
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Alpha" }));
+    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/projects/p1/font"));
+    expect(fns.refreshIcons).toHaveBeenCalled();
+    expect(fns.refreshProject).toHaveBeenCalled();
+  });
+
+  it("does not refresh anything for a read-only viewer, who can still build", async () => {
+    withIcons();
+    const fns = setup({ project: makeDetail({ id: "p1", prefix: "feather", purpose: "font", access: READ_ONLY }) });
+    await screen.findByRole("button", { name: "Open Alpha" });
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select Alpha" }));
+    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/projects/p1/font"));
+    expect(fns.refreshIcons).not.toHaveBeenCalled();
   });
 });
 

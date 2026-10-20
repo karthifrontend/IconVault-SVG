@@ -202,7 +202,7 @@ describe("BulkBar", () => {
     const p = setup();
     expect(screen.getByRole("region", { name: "Selected icons" })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("3 icons selected");
-    for (const [name, fn] of [["Move", p.onMove], ["Tag", p.onTag], ["Optimize", p.onOptimize], ["Generate sprite", p.onGenerate], ["Download", p.onDownload], ["Delete", p.onDelete], ["Clear selection", p.onClear]] as const) {
+    for (const [name, fn] of [["Move", p.onMove], ["Tag", p.onTag], ["Optimize", p.onOptimize], ["Build sprite", p.onGenerate], ["Download", p.onDownload], ["Delete", p.onDelete], ["Clear selection", p.onClear]] as const) {
       await userEvent.click(screen.getByRole("button", { name }));
       expect(fn).toHaveBeenCalledTimes(1);
     }
@@ -211,19 +211,25 @@ describe("BulkBar", () => {
   it("offers only Download and Clear to people who cannot edit", () => {
     setup({ canEdit: false, count: 1 });
     expect(screen.getByRole("status")).toHaveTextContent("1 icon selected");
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Generate sprite", "Download", "Clear selection"]);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Build sprite", "Download", "Clear selection"]);
   });
 
   it("puts Generate before Download, as the primary action, and names it after the project type", () => {
     setup();
     const names = screen.getAllByRole("button").map((b) => b.textContent);
-    expect(names.indexOf("Generate sprite")).toBe(names.indexOf("Download") - 1);
-    expect(screen.getByRole("button", { name: "Generate sprite" }).className).toContain("bg-primary");
+    expect(names.indexOf("Build sprite")).toBe(names.indexOf("Download") - 1);
+    expect(screen.getByRole("button", { name: "Build sprite" }).className).toContain("bg-primary");
     expect(screen.getByRole("button", { name: "Download" }).className).not.toContain("bg-primary ");
     cleanup();
     setup({ generate: "font" });
-    expect(screen.getByRole("button", { name: "Generate font" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Generate sprite" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Build font" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Build sprite" })).not.toBeInTheDocument();
+  });
+
+  it("shows the Build button as working while it builds", () => {
+    setup({ generating: true, busy: true, generate: "font" });
+    expect(screen.getByRole("button", { name: "Build font" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Build font" })).toHaveAttribute("aria-busy", "true");
   });
 
   it("disables the actions while one is running", () => {

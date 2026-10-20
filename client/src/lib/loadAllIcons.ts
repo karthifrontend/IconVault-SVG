@@ -15,11 +15,12 @@ export async function loadAllIcons(projectId: string, scope = "all"): Promise<Ic
 }
 
 // What the bulk bar hands to the Sprite or Font section through the address (router state): the selected icons, which the page then shows as "Chosen icons".
-export type BuildSelectionState = { iconIds: string[] };
+// `built` means the font was already built on the Icons screen and is waiting in lib/fontBuildCache.ts.
+export type BuildSelectionState = { iconIds: string[]; built?: boolean };
 
 export function readBuildSelection(state: unknown): BuildSelectionState | null {
   if (typeof state !== "object" || state === null) return null;
-  const { iconIds } = state as Partial<BuildSelectionState>;
+  const { iconIds, built } = state as Partial<BuildSelectionState>;
   if (!Array.isArray(iconIds) || iconIds.length === 0 || !iconIds.every((id) => typeof id === "string")) return null;
-  return { iconIds };
+  return { iconIds, built: built === true };
 }

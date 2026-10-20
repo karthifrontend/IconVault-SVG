@@ -10,6 +10,7 @@ import type { FontBuildResult, FontImportPreview, FontImportResult } from "../..
 import { ToastProvider } from "../../context/ToastContext";
 import { WorkspaceContext, type WorkspaceContextValue } from "../../context/workspaceContext";
 import * as clipboard from "../../lib/clipboard";
+import { cacheBuild, clearCachedBuild, peekCachedBuild } from "../../lib/fontBuildCache";
 import * as preview from "../../lib/fontPreview";
 import { READ_ONLY, makeDetail, makeFolder, makeIcon } from "../../test/fixtures";
 import * as zip from "../../utils/zipBundle";
@@ -217,7 +218,7 @@ describe("the codepoint mapping table", () => {
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Codepoint for Home" })).toHaveValue("E701"));
     await userEvent.click(screen.getByRole("button", { name: "Copy CSS" }));
     expect(clipboard.copyText).toHaveBeenCalledWith(expect.stringContaining("\\e701"));
-    await userEvent.click(screen.getByRole("button", { name: "Download ZIP" }));
+    await userEvent.click(screen.getByRole("button", { name: "Download font" }));
     expect(fontsApi.downloadFont).toHaveBeenCalledTimes(1);
   });
 
@@ -260,12 +261,55 @@ describe("the codepoint mapping table", () => {
   });
 });
 
+describe("a font built on the Icons screen", () => {
+  beforeEach(() => clearCachedBuild());
+
+  it("opens already built: the table and the sizes are there, and the page does not build it again", async () => {
+    cacheBuild({ projectId: "p1", build: built(), family: "iconfont-preview-77", loaded: true });
+    setup({}, { iconIds: ["a", "b"], built: true });
+    expect(await screen.findByRole("table", { name: "Stable Unicode codepoints mapping" })).toBeInTheDocument();
+    expect(screen.getByText(/WOFF2 1\.2 KB, TTF 3\.3 KB/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy CSS" })).toBeEnabled();
+    expect(screen.getByRole("option", { name: "Chosen icons (2)" })).toBeInTheDocument();
+    expect(buildFont).not.toHaveBeenCalled();
+    // The page makes sure the preview font is registered, so the glyph previews draw even if it was removed in between.
+    expect(preview.loadPreviewFont).toHaveBeenCalledWith("iconfont-preview-77", "d09GMg==");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("takes the waiting build, so it is not shown again on a later visit", async () => {
+    cacheBuild({ projectId: "p1", build: built(), family: "iconfont-preview-78", loaded: true });
+    setup({}, { iconIds: ["a", "b"], built: true });
+    await screen.findByRole("table", { name: "Stable Unicode codepoints mapping" });
+    await waitFor(() => expect(peekCachedBuild("p1")).toBeNull());
+  });
+
+  it("starts unbuilt when the waiting build belongs to another project or is gone (after a reload)", () => {
+    cacheBuild({ projectId: "other", build: built(), family: "iconfont-preview-79", loaded: true });
+    setup({}, { iconIds: ["a", "b"], built: true });
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Chosen icons (2)" })).toBeInTheDocument();
+  });
+
+  it("lets the person download it straight away as the main action", async () => {
+    cacheBuild({ projectId: "p1", build: built(), family: "iconfont-preview-80", loaded: true });
+    const blob = new Blob(["z"]);
+    vi.mocked(fontsApi.downloadFont).mockResolvedValue({ blob, filename: "FeatherIcons-font.zip" });
+    setup({}, { iconIds: ["a", "b"], built: true });
+    await userEvent.click(await screen.findByRole("button", { name: "Download font" }));
+    expect(fontsApi.downloadFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a", "b"] }));
+    await waitFor(() => expect(zip.triggerBrowserDownload).toHaveBeenCalledWith(blob, "FeatherIcons-font.zip"));
+  });
+});
+
 describe("the page layout", () => {
   it("puts the actions at the top, with Copy CSS beside Build font, and groups the controls in titled sections", () => {
     setup();
     const actions = screen.getByRole("group", { name: "Font actions" });
-    expect(within(actions).getAllByRole("button").map((b) => b.textContent)).toEqual(["Build font", "Copy CSS", "Download ZIP", "Import a font"]);
-    expect(within(actions).getByRole("button", { name: "Build font" }).className).toContain("bg-primary");
+    expect(within(actions).getAllByRole("button").map((b) => b.textContent)).toEqual(["Download font", "Copy CSS", "Build font", "Import a font"]);
+    // Download font is the main action; Build font is the secondary one.
+    expect(within(actions).getByRole("button", { name: "Download font" }).className).toContain("bg-primary");
+    expect(within(actions).getByRole("button", { name: "Build font" }).className).not.toContain("bg-primary");
     for (const title of ["Icons", "Font settings", "Target formats"]) expect(screen.getByRole("region", { name: title })).toBeInTheDocument();
     // The actions come before the sections in the page.
     expect(actions.compareDocumentPosition(screen.getByRole("region", { name: "Icons" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -329,7 +373,7 @@ describe("chosen icons and the checklist", () => {
     await within(dialog).findByText(/icons selected for the font/);
     expect(within(dialog).getByRole("checkbox", { name: /Home/ })).toBeChecked();
     await userEvent.click(within(dialog).getByRole("checkbox", { name: /Star/ }));
-    await userEvent.click(within(dialog).getByRole("button", { name: "Generate font (1 icon)" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Build font (1 icon)" }));
     await waitFor(() => expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a"] })));
     expect(screen.getByRole("option", { name: "Chosen icons (1)" })).toBeInTheDocument();
   });
@@ -369,7 +413,7 @@ describe("the built font", () => {
     const blob = new Blob(["z"]);
     vi.mocked(fontsApi.downloadFont).mockResolvedValue({ blob, filename: "FeatherIcons-font.zip" });
     await open();
-    await userEvent.click(screen.getByRole("button", { name: "Download ZIP" }));
+    await userEvent.click(screen.getByRole("button", { name: "Download font" }));
     expect(fontsApi.downloadFont).toHaveBeenCalledWith("p1", expect.objectContaining({ fontName: "FeatherIcons", formats: ["woff2", "woff", "ttf"] }));
     await waitFor(() => expect(zip.triggerBrowserDownload).toHaveBeenCalledWith(blob, "FeatherIcons-font.zip"));
   });
@@ -377,7 +421,7 @@ describe("the built font", () => {
   it("reports a failed download", async () => {
     vi.mocked(fontsApi.downloadFont).mockRejectedValue(new ApiError("Project not found.", 404));
     await open();
-    await userEvent.click(screen.getByRole("button", { name: "Download ZIP" }));
+    await userEvent.click(screen.getByRole("button", { name: "Download font" }));
     expect(await screen.findByText("Project not found.")).toBeInTheDocument();
   });
 

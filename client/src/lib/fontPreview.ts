@@ -14,9 +14,14 @@ export function base64ToBytes(base64: string): Uint8Array {
   return bytes;
 }
 
-// Resolves to true when the font is ready to draw with.
+function isRegistered(family: string): boolean {
+  return [...document.fonts].some((face) => face.family === family || face.family === `"${family}"`);
+}
+
+// Resolves to true when the font is ready to draw with. Registering the same family twice does nothing the second time, so a screen can safely make sure a font is there.
 export async function loadPreviewFont(family: string, base64: string): Promise<boolean> {
   if (typeof FontFace === "undefined" || typeof document === "undefined" || !document.fonts) return false;
+  if (isRegistered(family)) return true;
   try {
     const face = new FontFace(family, base64ToBytes(base64).buffer as ArrayBuffer);
     await face.load();

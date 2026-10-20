@@ -2,6 +2,7 @@
 import { Layers } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { buildFont } from "../../api/fonts";
 import { batchDeleteIcons, batchMoveIcons, batchOptimizeIcons, batchRestoreIcons, batchTagIcons, downloadIcons, listIcons } from "../../api/icons";
 import type { ListIconsParams, UploadSummary } from "../../api/types";
 import { useToast } from "../../context/ToastContext";
@@ -10,6 +11,9 @@ import { useDebounced } from "../../hooks/useDebounced";
 import { usePersistentChoice } from "../../hooks/usePersistentChoice";
 import { useResource } from "../../hooks/useResource";
 import { useSelection } from "../../hooks/useSelection";
+import { cacheBuild } from "../../lib/fontBuildCache";
+import { defaultFontOptions } from "../../lib/fontDefaults";
+import { loadPreviewFont, nextPreviewFamily } from "../../lib/fontPreview";
 import { pluralize, savingsPercent } from "../../lib/format";
 import { SURFACES, type Surface } from "../../lib/previewSurface";
 import { triggerBrowserDownload } from "../../utils/zipBundle";
@@ -46,6 +50,7 @@ export default function IconsTab() {
   const [dialog, setDialog] = useState<Dialog>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [building, setBuilding] = useState(false);
 
   // "Show more" only lasts while the filters stay the same.
   const filterKey = [project.id, selectedFolder, search, sort].join("|");
@@ -78,6 +83,32 @@ export default function IconsTab() {
       showToast(err instanceof Error ? err.message : failure, "error");
     } finally {
       setBusy(false);
+    }
+  }
+
+  // "Build font" / "Build sprite" on the bulk bar. A sprite project just opens the Sprite page with the selection (it builds in the browser). A font project builds the font on the server first, from the selection and the project's default font settings, and opens the Font page with the result already in place; if the build fails the reason is shown here and nothing moves.
+  async function buildSelected() {
+    const iconIds = selection.ids;
+    if (project.purpose !== "font") {
+      navigate(`/projects/${project.id}/sprite`, { state: { iconIds } });
+      return;
+    }
+    setBuilding(true);
+    try {
+      const build = await buildFont(project.id, { scope: "selected", iconIds, ...defaultFontOptions(project) });
+      const family = nextPreviewFamily();
+      const loaded = await loadPreviewFont(family, build.preview.base64);
+      cacheBuild({ projectId: project.id, build, family, loaded });
+      // New characters were saved on the icons: the totals and lists elsewhere should show them.
+      if (canEdit && build.codepoints.some((glyph) => glyph.isNew)) {
+        refreshIcons();
+        refreshProject();
+      }
+      navigate(`/projects/${project.id}/font`, { state: { iconIds, built: true } });
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not build the font.", "error");
+    } finally {
+      setBuilding(false);
     }
   }
 
@@ -180,12 +211,12 @@ export default function IconsTab() {
         <BulkBar
           count={selection.size}
           canEdit={canEdit}
-          busy={busy}
+          busy={busy || building}
+          generating={building}
           onMove={() => setDialog("move")}
           onTag={() => setDialog("tag")}
           generate={project.purpose}
-          // Go straight to the Sprite or Font page with the selection (it shows them as "Chosen icons"; Review / edit checklist there changes the choice).
-          onGenerate={() => navigate(`/projects/${project.id}/${project.purpose === "font" ? "font" : "sprite"}`, { state: { iconIds: selection.ids } })}
+          onGenerate={buildSelected}
           onOptimize={optimizeSelected}
           onDownload={downloadSelected}
           onDelete={() => setDialog("delete")}

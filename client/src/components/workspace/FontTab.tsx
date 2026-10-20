@@ -1,4 +1,4 @@
-// The Font section, laid out in groups: the actions at the top (Build font as the primary button, with Copy CSS and Download ZIP beside it), then Icons (which icons go in, with the checklist), Font settings, and Target formats; below them the result: a summary, any conversion warnings, and one "Stable Unicode codepoints mapping" table with every glyph, its character (editable), CSS entity and CSS class. The font is built on the server; for editors, new characters are saved on the icons so rebuilding later keeps every glyph on the same character. Editors can also import an existing font.
+// The Font section, laid out in groups: the actions at the top (Download font is the main action, with Copy CSS and Build font beside it), then Icons (which icons go in, with the checklist), Font settings, and Target formats; below them the result: a summary, any conversion warnings, and one "Stable Unicode codepoints mapping" table with every glyph, its character (editable), CSS entity and CSS class. The font is built on the server; for editors, new characters are saved on the icons so rebuilding later keeps every glyph on the same character. Editors can also import an existing font.
 import { Copy, Download, FileUp, Hammer, ListChecks } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { buildFont, downloadFont } from "../../api/fonts";
@@ -8,6 +8,8 @@ import { useToast } from "../../context/ToastContext";
 import { useLocation } from "react-router-dom";
 import { useWorkspace } from "../../context/workspaceContext";
 import { copyText } from "../../lib/clipboard";
+import { clearCachedBuild, peekCachedBuild } from "../../lib/fontBuildCache";
+import { defaultFontOptions } from "../../lib/fontDefaults";
 import { loadPreviewFont, nextPreviewFamily, unloadPreviewFont } from "../../lib/fontPreview";
 import { buildFolderTree, flattenFolderTree, totalIconCount } from "../../lib/folderTree";
 import { readBuildSelection } from "../../lib/loadAllIcons";
@@ -50,27 +52,36 @@ export default function FontTab() {
   const [chosen, setChosen] = useState<string[] | null>(handed?.iconIds ?? null);
   const [choosing, setChoosing] = useState(false);
   const [scope, setScope] = useState(handed ? "selected" : "all");
-  const [fontName, setFontName] = useState(() => project.name.replace(/[^a-zA-Z0-9_-]/g, "") || "IconFont");
-  const [prefix, setPrefix] = useState(project.prefix || "icon");
-  const [startCodepoint, setStartCodepoint] = useState("E001");
-  const [formats, setFormats] = useState<FontFormat[]>(["woff2", "woff", "ttf"]);
-  const [fontHeight, setFontHeight] = useState("1000");
-  const [descent, setDescent] = useState("0");
-  const [normalize, setNormalize] = useState(true);
+  // The same starting settings the Icons screen uses when it builds a font straight from a selection.
+  const [defaults] = useState(() => defaultFontOptions(project));
+  const [fontName, setFontName] = useState(defaults.fontName);
+  const [prefix, setPrefix] = useState(defaults.prefix);
+  const [startCodepoint, setStartCodepoint] = useState(defaults.startCodepoint);
+  const [formats, setFormats] = useState<FontFormat[]>(defaults.formats);
+  const [fontHeight, setFontHeight] = useState(String(defaults.fontHeight));
+  const [descent, setDescent] = useState(String(defaults.descent));
+  const [normalize, setNormalize] = useState(defaults.normalize);
   const [building, setBuilding] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ build: FontBuildResult; family: string; loaded: boolean } | null>(null);
+  // A font that was just built on the Icons screen ("Build font" on the bulk bar) is shown at once, without building it again.
+  const [result, setResult] = useState<{ build: FontBuildResult; family: string; loaded: boolean } | null>(() => (handed?.built ? peekCachedBuild(project.id) : null));
+  const adopted = handed?.built === true;
+  useEffect(() => {
+    // The page owns the build and its preview font now.
+    if (adopted) clearCachedBuild();
+  }, [adopted]);
   const [filter, setFilter] = useState("");
   const [importing, setImporting] = useState(false);
 
-  // Take the preview font out of the page again when it is replaced or the section closes.
+  // Make sure the preview font of the shown build is registered (a build handed over from the Icons screen registered it there), and take it out again when the build is replaced or the section closes.
+  const family = result?.family;
+  const previewBase64 = result?.build.preview.base64;
   useEffect(() => {
-    const family = result?.family;
-    return () => {
-      if (family) unloadPreviewFont(family);
-    };
-  }, [result?.family]);
+    if (!family || !previewBase64) return undefined;
+    void loadPreviewFont(family, previewBase64);
+    return () => unloadPreviewFont(family);
+  }, [family, previewBase64]);
 
   function options(override?: string[]): BuildFontInput | string {
     const picked = override ?? chosen;
@@ -168,14 +179,14 @@ export default function FontTab() {
             <p className="text-sm text-muted-foreground">Every icon becomes one character. Icons keep their character between builds.</p>
           </div>
           <div role="group" aria-label="Font actions" className="flex flex-wrap items-center gap-2">
-            <Button type="submit" variant="primary" icon={<Hammer aria-hidden="true" className="h-4 w-4" />} loading={building}>
-              Build font
+            <Button variant="primary" icon={<Download aria-hidden="true" className="h-4 w-4" />} onClick={download} loading={downloading}>
+              Download font
             </Button>
             <Button icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={() => built && copy(built.css, "the stylesheet")} disabled={!built}>
               Copy CSS
             </Button>
-            <Button icon={<Download aria-hidden="true" className="h-4 w-4" />} onClick={download} loading={downloading}>
-              Download ZIP
+            <Button type="submit" icon={<Hammer aria-hidden="true" className="h-4 w-4" />} loading={building}>
+              Build font
             </Button>
             {canEdit && (
               <Button icon={<FileUp aria-hidden="true" className="h-4 w-4" />} onClick={() => setImporting(true)}>

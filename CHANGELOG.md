@@ -523,6 +523,28 @@ Requested after seeing the checklist open over the Font page: the popup is not w
 ### Not tested, or open
 - The sprite page was not re-checked in the browser for this change (its test coverage is updated and passes).
 
+## 2026-10-20: Follow-up, Build font on the bulk bar and Download font as the main action (change request)
+
+Requested after the direct flow: use "Build" instead of "Generate", build first and then open the Font page, and make Download font the main action there. Client only. One commit on `main`, local only.
+
+### Changes
+| Part | Change |
+|---|---|
+| **Bulk bar** | The primary button is now **Build font** (font projects) or **Build sprite** (sprite projects), before Download. The checklist's confirm button and wording say "Build" too ("Build font (7 icons)", "Ready to build with 7 icons"). |
+| **Build, then open the page** | In a **font project**, Build font builds the font on the server from the selection, with the project's usual font settings, and only then opens the Font page, which shows the finished result straight away (sizes, the whole mapping table, Copy CSS enabled) without building it a second time. While it builds the button shows it is working and the other bulk actions are disabled. If the build fails (for example an old out-of-range character) the reason appears as a message and you stay on the Icons screen with your selection. In a **sprite project**, Build sprite opens the Sprite page, which builds in the browser as before. |
+| **Download font is the main action** | The Font page's top row is now **Download font** (blue, first), **Copy CSS**, **Build font** (secondary: rebuild after changing settings), **Import a font**. It was "Download ZIP" before. It is always available (it builds on the server from the current settings). |
+| **One set of starting settings** | The Icons screen and the Font page now share their default font settings (`lib/fontDefaults.ts`), so a font built from either place is identical. The finished build is handed to the Font page in memory for that one navigation (`lib/fontBuildCache.ts`): a reload, another project or a later visit starts from the page's own settings. |
+| **Fix found by the browser check** | The preview glyphs in the table showed as empty boxes after arriving from the Icons screen: the page's cleanup removed the preview font the Icons screen had registered, while the page still showed the build (React's development double-mount does this). Registering a preview font is now idempotent and the Font page makes sure the font of the build it shows is registered, so the previews draw. |
+
+### Validation (verified)
+- Client `npm test`: **557 of 557** (new or updated: the Build labels everywhere; the font project building with the selection and default settings then opening the Font page with state and a waiting build; the failure message and staying put; the working state; refreshing lists only for editors and when new characters were saved; sprite projects opening the Sprite page without a server build; the Font page opening already built without calling the server, taking the waiting build, ignoring one for another project or after a reload, and downloading at once; the action order with Download font as the only primary button; idempotent font registration). Types and lint clean.
+- Real browser (throwaway user, font project with 5 icons): select all, Build font: the page became `/font` with **Download font** as the blue main button, Copy CSS enabled, 5 icons with TTF 1.8 KB, WOFF 1.2 KB, WOFF2 808 B, the mapping table complete, and (after the fix) the glyph previews drawn from the built font. Test data removed; the database holds your 1 user and 2 projects.
+
+### Not tested, or open
+- The Download font button itself was not clicked in the browser for this change (the same download was checked earlier; the click is covered by tests).
+- A font project with hundreds of icons takes longer to build before the page opens; the button shows it is working, but there is no progress figure.
+- The Sprite page's top actions were not rearranged.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -532,7 +554,7 @@ Requested after seeing the checklist open over the Font page: the popup is not w
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 548 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 557 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

@@ -39,6 +39,23 @@ describe("loadPreviewFont", () => {
     expect(added).toHaveLength(1);
   });
 
+  it("registers a family only once, and reports it as ready when it already is", async () => {
+    const added: unknown[] = [];
+    const present: { family: string }[] = [];
+    Object.defineProperty(document, "fonts", { value: { add: (f: { family: string }) => { added.push(f); present.push(f); }, delete: vi.fn(), [Symbol.iterator]: () => present[Symbol.iterator]() }, configurable: true });
+    const FontFaceMock = vi.fn(function (this: { family: string; load: () => Promise<void> }, family: string) {
+      this.family = family;
+      this.load = () => Promise.resolve();
+    });
+    vi.stubGlobal("FontFace", FontFaceMock);
+    expect(await loadPreviewFont("fam", btoa("abc"))).toBe(true);
+    expect(await loadPreviewFont("fam", btoa("abc"))).toBe(true);
+    expect(added).toHaveLength(1);
+    expect(FontFaceMock).toHaveBeenCalledTimes(1);
+    expect(await loadPreviewFont("other", btoa("abc"))).toBe(true);
+    expect(added).toHaveLength(2);
+  });
+
   it("reports false when the browser has no FontFace, or the font will not load", async () => {
     expect(await loadPreviewFont("fam", btoa("abc"))).toBe(false);
     Object.defineProperty(document, "fonts", { value: { add: vi.fn(), [Symbol.iterator]: () => [][Symbol.iterator]() }, configurable: true });

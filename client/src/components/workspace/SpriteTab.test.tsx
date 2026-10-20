@@ -145,7 +145,7 @@ describe("chosen icons", () => {
     await within(dialog).findByText(/icons selected for the sprite/);
     await userEvent.click(within(dialog).getByRole("button", { name: "Deselect all" }));
     await userEvent.click(within(dialog).getByRole("checkbox", { name: /home/i }));
-    await userEvent.click(within(dialog).getByRole("button", { name: "Generate sprite (1 icon)" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Build sprite (1 icon)" }));
     expect(await screen.findByText("1 symbol")).toBeInTheDocument();
     expect(screen.getByLabelText("Icons to include")).toHaveValue("selected");
     expect(screen.getByRole("option", { name: "Chosen icons (1)" })).toBeInTheDocument();
@@ -169,7 +169,7 @@ describe("chosen icons", () => {
     expect(within(dialog).getByRole("checkbox", { name: /home/i })).toBeChecked();
     expect(within(dialog).getByRole("checkbox", { name: /star/i })).not.toBeChecked();
     await userEvent.click(within(dialog).getByRole("checkbox", { name: /dot/i }));
-    await userEvent.click(within(dialog).getByRole("button", { name: "Generate sprite (3 icons)" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Build sprite (3 icons)" }));
     expect(await screen.findByText("3 symbols")).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Chosen icons (3)" })).toBeInTheDocument();
   });

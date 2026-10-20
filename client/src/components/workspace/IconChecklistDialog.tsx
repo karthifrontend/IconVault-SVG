@@ -1,4 +1,4 @@
-// The checklist shown before a sprite or font is generated: every icon of the project with a checkbox, a search, a folder filter, a grouped or flat list, "All" and "Selected" views, select and deselect for everything shown or for one folder, and a count. It starts with the icons that were selected on the Icons screen (or all of them). Confirming hands the chosen icon ids back; nothing is built here.
+// The checklist for choosing which icons go into a sprite or font: every icon of the project with a checkbox, a search, a folder filter, a grouped or flat list, "All" and "Selected" views, select and deselect for everything shown or for one folder, and a count. It starts with the icons that were selected on the Icons screen (or all of them). Confirming hands the chosen icon ids back; nothing is built here.
 import { ChevronDown, ChevronRight, FolderOpen, Layers, Search, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { FolderWithCount, IconItem } from "../../api/types";
@@ -201,11 +201,11 @@ function Checklist({ mode, folders, icons, initialIds, onClose, onConfirm }: Omi
         </p>
       )}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
-        <p className="text-sm text-muted-foreground">{count === 0 ? "Tick at least one icon." : `Ready to generate with ${pluralize(count, "icon")}.`}</p>
+        <p className="text-sm text-muted-foreground">{count === 0 ? "Tick at least one icon." : `Ready to build with ${pluralize(count, "icon")}.`}</p>
         <div className="flex gap-2">
           <Button onClick={onClose}>Cancel</Button>
           <Button variant="primary" icon={<Sparkles aria-hidden="true" className="h-4 w-4" />} disabled={count === 0 || tooMany} onClick={() => onConfirm(icons.filter((icon) => picked.has(icon.id)).map((icon) => icon.id))}>
-            Generate {noun} ({pluralize(count, "icon")})
+            Build {noun} ({pluralize(count, "icon")})
           </Button>
         </div>
       </div>
