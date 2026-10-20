@@ -103,7 +103,7 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
           </select>
         </label>
         <MoreMenu surface={surface} onSurface={onSurface} />
-        <div role="group" aria-label="View" className="inline-flex rounded-lg border border-input bg-muted p-0.5">
+        <div role="group" aria-label="View" className="inline-flex h-9 items-center rounded-lg border border-input bg-muted p-0.5">
           {(
             [
               ["grid", "Grid view", LayoutGrid],

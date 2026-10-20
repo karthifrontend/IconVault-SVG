@@ -47,7 +47,7 @@ export default function AppHeader({ onSignIn, crumbRef, actionsRef }: AppHeaderP
           <button
             type="button"
             onClick={onSignIn}
-            className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="inline-flex h-9 items-center rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             Sign in
           </button>

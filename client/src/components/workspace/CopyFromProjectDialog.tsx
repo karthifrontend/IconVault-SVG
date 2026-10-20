@@ -113,7 +113,7 @@ function CopyForm({ targetProjectId, targetFolders, defaultFolderId, onClose, on
           <label htmlFor="copy-search" className="mb-1 block text-sm font-medium">
             Search icons
           </label>
-          <input id="copy-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} autoComplete="off" className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring" />
+          <input id="copy-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} autoComplete="off" className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring" />
         </div>
       </div>
 

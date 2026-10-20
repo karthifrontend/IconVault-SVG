@@ -71,7 +71,7 @@ export default function AdminProjectsPage() {
         <label htmlFor="admin-project-search" className="sr-only">
           Search projects
         </label>
-        <input id="admin-project-search" type="search" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Search by project, prefix, owner name or email" autoComplete="off" className="h-10 w-full max-w-md rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring" />
+        <input id="admin-project-search" type="search" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Search by project, prefix, owner name or email" autoComplete="off" className="h-9 w-full max-w-md rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring" />
       </div>
 
       {owner && (

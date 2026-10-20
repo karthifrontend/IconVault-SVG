@@ -12,7 +12,7 @@ import { PurposeBadge, VisibilityBadge } from "../projects/ProjectBadges";
 
 const pillClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    "inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
+    "inline-flex h-7 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
     isActive ? "bg-background text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
   );
 
@@ -47,14 +47,14 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
       <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr]">
         <div className="flex min-w-0 items-center gap-3">
           <ProjectAvatar name={project.name} color={project.color} />
-          <h1 title={project.name} className="min-w-0 truncate text-[20px] font-bold leading-7 tracking-tight">{project.name}</h1>
+          <h1 title={project.name} className="min-w-0 truncate text-base font-bold leading-6 tracking-tight">{project.name}</h1>
           <div className="flex shrink-0 flex-nowrap items-center gap-1.5 whitespace-nowrap">
             <VisibilityBadge visibility={project.visibility} />
             <PurposeBadge purpose={project.purpose} long />
           </div>
         </div>
 
-        <nav aria-label="Project sections" className="flex flex-wrap items-center justify-center gap-1 justify-self-center rounded-xl border border-border bg-muted p-1">
+        <nav aria-label="Project sections" className="flex min-h-9 flex-wrap items-center justify-center gap-1 justify-self-center rounded-xl border border-border bg-muted p-0.5">
           {/* Absolute paths: relative links would resolve against the current section. */}
           <NavLink to={`/projects/${project.id}`} end className={pillClass}>
             <Layers aria-hidden="true" className="h-4 w-4" />

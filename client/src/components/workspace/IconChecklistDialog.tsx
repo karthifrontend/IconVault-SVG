@@ -109,12 +109,12 @@ function Checklist({ mode, folders, icons, initialIds, onClose, onConfirm }: Omi
             Filter the checklist by icon name or tag
           </label>
           <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input id="checklist-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Filter by icon name or tag" autoComplete="off" className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring" />
+          <input id="checklist-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Filter by icon name or tag" autoComplete="off" className="h-9 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring" />
         </div>
         <label htmlFor="checklist-folder" className="sr-only">
           Folder
         </label>
-        <select id="checklist-folder" value={folderFilter} onChange={(event) => setFolderFilter(event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring">
+        <select id="checklist-folder" value={folderFilter} onChange={(event) => setFolderFilter(event.target.value)} className="h-9 rounded-lg border border-input bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring">
           <option value="all">All folders</option>
           <option value="root">Uncategorized</option>
           {folderOptions.map((folder) => (

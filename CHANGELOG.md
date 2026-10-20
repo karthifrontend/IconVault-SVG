@@ -823,6 +823,16 @@ Client only. One commit on `main`, local only.
 
 Client only. One commit on `main`, local only. In the project bar the name is exactly **20 px**, and a long name is **cut off with an ellipsis** (hover shows all of it) instead of wrapping. The Private and project-type badges always stay on the **same row** as the name. Checked in the browser with a very long name: 20 px computed size, ellipsis, name and badges on one line, no sideways scroll. Client tests: 641.
 
+## 2026-10-21: Follow-up, one control height across the whole app and a 16 px project name (change request)
+
+Client only. One commit on `main`, local only.
+
+- **Cause of the mismatch you showed:** the pill menu (Icons, Sprite, Project Settings, Trash) was 46 px high next to 36 px buttons, because its padding was added on top of its 36 px buttons.
+- **One height, 36 px, everywhere:** the pill menus (project bar and the admin tabs) are now 36 px with 28 px buttons inside, like the theme switch and the filter pills; the grid and list switch in the icon toolbar too. The default **Button** is 36 px (it was 40), as are **text boxes and dropdowns** in forms and dialogs (they were about 40), the **Sign in** button, the project and admin search boxes, and the checklist and copy-from-project filters. Small buttons stay 32 px (rows in tables and cards), and tiny inner buttons 28 px.
+- **Audit:** in the browser I measured every button, box, dropdown and group on the dashboard, a project's Icons, Font Builder, Project Settings and Trash screens and the API tokens page: nothing sits at 33 to 46 px except 36 (the one 34 px reading is the invisible dropdown inside the 36 px sort icon). The admin screens could not be measured without an admin session; their tabs and search use the same sizes.
+- **Project name:** 16 px (it was 20 px), still cut off with an ellipsis and with the badges on the same row.
+- Validation: client **641 of 641**; types and lint clean.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**

@@ -40,7 +40,7 @@ export function TextField({ label, hint, error, className, id: given, ...rest }:
   const id = given ?? generated;
   return (
     <FieldShell id={id} label={label} hint={hint} error={error}>
-      <input id={id} aria-invalid={error ? true : undefined} aria-describedby={describedBy(id, hint, error)} className={cn(CONTROL, className)} {...rest} />
+      <input id={id} aria-invalid={error ? true : undefined} aria-describedby={describedBy(id, hint, error)} className={cn(CONTROL, "h-9 py-0", className)} {...rest} />
     </FieldShell>
   );
 }
@@ -63,7 +63,7 @@ export function SelectField({ label, hint, error, hideLabel = false, className, 
   const generated = useId();
   const id = given ?? generated;
   const select = (
-    <select id={id} aria-invalid={error ? true : undefined} aria-describedby={describedBy(id, hint, error)} className={cn(CONTROL, "pr-8", className)} {...rest}>
+    <select id={id} aria-invalid={error ? true : undefined} aria-describedby={describedBy(id, hint, error)} className={cn(CONTROL, "h-9 py-0 pr-8", className)} {...rest}>
       {children}
     </select>
   );

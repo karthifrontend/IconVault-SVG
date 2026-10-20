@@ -53,7 +53,7 @@ export default function AdminPage() {
         <label htmlFor="admin-search" className="sr-only">
           Search users
         </label>
-        <input id="admin-search" type="search" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Search by name or email" autoComplete="off" className="h-10 w-full max-w-sm rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring" />
+        <input id="admin-search" type="search" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Search by name or email" autoComplete="off" className="h-9 w-full max-w-sm rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring" />
         <SegmentedGroup
           label="Sign-in"
           value={provider}
