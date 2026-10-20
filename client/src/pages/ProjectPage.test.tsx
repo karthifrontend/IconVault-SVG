@@ -296,7 +296,7 @@ describe("dropping icons on a folder", () => {
     vi.mocked(iconsApi.batchMoveIcons).mockRejectedValue(new ApiError("You can only change projects you own.", 403));
     renderPage();
     await screen.findByRole("heading", { level: 1 });
-    await drop(/Uncategorized/, ["a"]);
+    await drop(/^Uncategorized/, ["a"]);
     expect(iconsApi.batchMoveIcons).toHaveBeenCalledWith("p1", ["a"], null);
     expect(await screen.findByText("You can only change projects you own.")).toBeInTheDocument();
   });
