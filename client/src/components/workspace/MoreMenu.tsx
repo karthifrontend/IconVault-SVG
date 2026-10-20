@@ -71,7 +71,7 @@ export default function MoreMenu({ surface, onSurface }: { surface: Surface; onS
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((value) => !value)}
         onKeyDown={onTriggerKeyDown}
-        className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm font-semibold transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm font-semibold transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
       >
         <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
         More

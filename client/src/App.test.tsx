@@ -171,18 +171,18 @@ describe("signed in", () => {
     expect(screen.queryByRole("link", { name: "Classic compiler" })).not.toBeInTheDocument();
   });
 
-  it("links to API tokens for everyone and to Administration only for admins", async () => {
+  it("links to API tokens for everyone and to Manage users only for admins", async () => {
     const { unmount } = renderApp();
     await userEvent.click(screen.getByRole("button", { name: /account menu/i }));
     const menu = screen.getByRole("menu", { name: "Account" });
     expect(within(menu).getByRole("menuitem", { name: "API tokens" })).toHaveAttribute("href", "/account/tokens");
-    expect(within(menu).queryByRole("menuitem", { name: "Administration" })).not.toBeInTheDocument();
+    expect(within(menu).queryByRole("menuitem", { name: "Manage users" })).not.toBeInTheDocument();
     unmount();
 
     auth.currentUser = user({ role: "admin" });
     renderApp();
     await userEvent.click(screen.getByRole("button", { name: /account menu/i }));
-    expect(screen.getByRole("menuitem", { name: "Administration" })).toHaveAttribute("href", "/admin");
+    expect(screen.getByRole("menuitem", { name: "Manage users" })).toHaveAttribute("href", "/admin");
   });
 
   it("opens the token and admin screens from the menu and closes the menu", async () => {
@@ -193,7 +193,7 @@ describe("signed in", () => {
     expect(screen.getByRole("heading", { level: 1, name: "API tokens screen" })).toBeInTheDocument();
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /account menu/i }));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Administration" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Manage users" }));
     expect(screen.getByRole("heading", { level: 1, name: "Administration screen" })).toBeInTheDocument();
   });
 

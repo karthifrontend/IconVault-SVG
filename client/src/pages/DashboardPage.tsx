@@ -109,7 +109,7 @@ export default function DashboardPage() {
   const byType = loaded.filter((project) => purpose === "all" || project.purpose === purpose);
   const byVisibility = loaded.filter((project) => scope === "all" || project.visibility === scope);
   const renderCards = (items: ProjectSummary[]) => (
-    <ul className={cn("grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5", projects.loading && "opacity-60")}>
+    <ul className={cn("grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5", projects.loading && "opacity-60")}>
       {items.map((project) => (
         <ProjectCard key={project.id} project={project} currentUserId={currentUser?.id ?? ""} onEdit={(p) => setForm({ mode: "edit", project: p })} onDuplicate={handleDuplicate} onToggleArchive={handleToggleArchive} onDelete={setDeleting} />
       ))}
@@ -123,10 +123,10 @@ export default function DashboardPage() {
   const headerButtons = (
     <div className="flex flex-wrap items-center gap-2">
       <input ref={importRef} type="file" accept=".zip,application/zip" aria-label="Project export file" className="hidden" onChange={handleImportChosen} />
-      <Button variant="primary" icon={<Plus aria-hidden="true" className="h-4 w-4" />} onClick={() => setForm({ mode: "create" })}>
+      <Button variant="primary" className="h-9" icon={<Plus aria-hidden="true" className="h-4 w-4" />} onClick={() => setForm({ mode: "create" })}>
         New project
       </Button>
-      <Button icon={<Upload aria-hidden="true" className="h-4 w-4" />} onClick={() => importRef.current?.click()} loading={importing}>
+      <Button className="h-9" icon={<Upload aria-hidden="true" className="h-4 w-4" />} onClick={() => importRef.current?.click()} loading={importing}>
         Import project
       </Button>
     </div>
@@ -140,7 +140,7 @@ export default function DashboardPage() {
 
       {/* The second-level bar: full width, like the project bar. */}
       <div className="flex flex-wrap items-center gap-3 border-b border-border bg-background px-4 py-3 sm:px-6">
-        <div className="relative min-w-56 flex-1">
+        <div className="relative w-64 max-w-full">
           <label htmlFor="dashboard-search" className="sr-only">
             Search projects and icons
           </label>
@@ -152,7 +152,7 @@ export default function DashboardPage() {
             onChange={(event) => setSearchText(event.target.value)}
             placeholder="Search projects and icons"
             autoComplete="off"
-            className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+            className="h-9 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
           />
         </div>
 
@@ -180,7 +180,7 @@ export default function DashboardPage() {
           <label htmlFor="dashboard-status" className="sr-only">
             Status
           </label>
-          <select id="dashboard-status" value={status} onChange={(event) => setFilter("status", event.target.value, "active")} className="h-10 appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring">
+          <select id="dashboard-status" value={status} onChange={(event) => setFilter("status", event.target.value, "active")} className="h-9 appearance-none rounded-lg border border-input bg-background pl-3 pr-9 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring">
             <option value="active">Active</option>
             <option value="archived">Draft</option>
             <option value="all">Both</option>
@@ -188,7 +188,7 @@ export default function DashboardPage() {
           <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         </div>
         {/* The sort choice is a filter icon; the list of choices opens from it. */}
-        <label className="relative inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-ring" title={`Sort: ${SORT_LABELS[sort]}`}>
+        <label className="relative inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-ring" title={`Sort: ${SORT_LABELS[sort]}`}>
           <Filter aria-hidden="true" className="h-4 w-4" />
           <select aria-label="Sort by" value={sort} onChange={(event) => setFilter("sort", event.target.value, "updated")} className="absolute inset-0 h-full w-full cursor-pointer opacity-0">
             {(Object.keys(SORT_LABELS) as Array<keyof typeof SORT_LABELS>).map((value) => (
@@ -200,7 +200,7 @@ export default function DashboardPage() {
         </label>
       </div>
 
-      <div className="px-4 pb-16 pt-6 sm:px-6">
+      <div className="px-4 pb-10 pt-4 sm:px-6">
       {showIcons && (
         <section aria-labelledby="icon-results-title">
           <h2 id="icon-results-title" className="text-lg font-semibold">
@@ -252,9 +252,9 @@ export default function DashboardPage() {
             </Button>
           </div>
         ) : projects.loading && !projects.data ? (
-          <ul aria-busy="true" aria-label="Loading projects" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-            {Array.from({ length: 6 }, (_, i) => (
-              <li key={i} className="h-56 animate-pulse rounded-2xl border border-border bg-muted" />
+          <ul aria-busy="true" aria-label="Loading projects" className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {Array.from({ length: 10 }, (_, i) => (
+              <li key={i} className="h-28 animate-pulse rounded-xl border border-border bg-muted" />
             ))}
           </ul>
         ) : list.length === 0 ? (
@@ -271,7 +271,7 @@ export default function DashboardPage() {
           <>
             {scope === "all" ? (
               // Private and Public projects each get their own section.
-              <div className="space-y-8">
+              <div className="space-y-5">
                 {[
                   { key: "private", title: "Private", icon: <Lock aria-hidden="true" className="h-4 w-4" />, items: privateList },
                   { key: "public", title: "Public", icon: <Globe aria-hidden="true" className="h-4 w-4" />, items: publicList },
@@ -279,7 +279,7 @@ export default function DashboardPage() {
                   .filter((group) => group.items.length > 0)
                   .map((group) => (
                     <section key={group.key} aria-labelledby={`group-${group.key}`}>
-                      <h3 id={`group-${group.key}`} className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                      <h3 id={`group-${group.key}`} className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                         {group.icon}
                         {group.title}
                         <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium normal-case tracking-normal">{group.items.length}</span>

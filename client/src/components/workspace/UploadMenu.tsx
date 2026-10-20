@@ -82,7 +82,7 @@ export default function UploadMenu({ onSelect }: { onSelect: (kind: UploadKind) 
       <button
         type="button"
         onClick={() => onSelect("files")}
-        className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-l-lg bg-primary px-3 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-l-lg bg-primary px-3 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <Upload aria-hidden="true" className="h-4 w-4" />
         Upload icons
@@ -97,7 +97,7 @@ export default function UploadMenu({ onSelect }: { onSelect: (kind: UploadKind) 
         title="More ways to add icons"
         onClick={() => setOpen((value) => !value)}
         onKeyDown={onTriggerKeyDown}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-r-lg border-l border-primary-foreground/30 bg-primary text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-r-lg border-l border-primary-foreground/30 bg-primary text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <ChevronDown aria-hidden="true" className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
       </button>

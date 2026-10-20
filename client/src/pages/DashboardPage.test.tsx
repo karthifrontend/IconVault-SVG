@@ -92,10 +92,23 @@ describe("listing", () => {
     expect(within(card).getByText("Line icons")).toBeInTheDocument();
     expect(within(card).getByText("Public")).toBeInTheDocument();
     expect(within(card).getByText("Font")).toBeInTheDocument();
-    expect(within(card).getByText(/3 icons/)).toBeInTheDocument();
+    // The small card leaves out the icon count and the date.
+    expect(within(card).queryByText(/3 icons/)).not.toBeInTheDocument();
+    expect(within(card).queryByText(/Updated/)).not.toBeInTheDocument();
     expect(within(card).getByText("You")).toBeInTheDocument();
     expect(within(card).getByText(/Created by/)).toBeInTheDocument();
     expect(within(card).getByRole("link", { name: "Feather" })).toHaveAttribute("href", expect.stringMatching(/^\/projects\/p\d+$/));
+  });
+
+  it("keeps the description to one line that is cut off, and the card small, with the sample icons on a row of their own", async () => {
+    listProjects.mockResolvedValue(reply([makeProject({ name: "Long", description: "A very long description that would otherwise wrap over several lines of the card" })]));
+    renderPage();
+    const card = (await screen.findByRole("heading", { name: "Long" })).closest("li") as HTMLElement;
+    const text = within(card).getByText(/A very long description/);
+    expect(text).toHaveClass("truncate");
+    expect(text).toHaveAttribute("title", expect.stringContaining("A very long description"));
+    expect(card).toHaveClass("p-3");
+    expect(within(card).queryByRole("img")).not.toBeInTheDocument();
   });
 
   it("names the owner of someone else's project and shows sample icons", async () => {
@@ -104,7 +117,10 @@ describe("listing", () => {
     const card = (await screen.findByRole("heading", { name: "Shared" })).closest("li") as HTMLElement;
     expect(within(card).getByText("Grace Hopper")).toBeInTheDocument();
     expect(within(card).getByText(/Created by/)).toBeInTheDocument();
-    expect(within(card).getByRole("img", { name: "1 sample icon" })).toBeInTheDocument();
+    const samples = within(card).getByRole("img", { name: "1 sample icon" });
+    expect(samples).toBeInTheDocument();
+    // Not in the same row as the badges.
+    expect(samples.parentElement).toBe(card);
   });
 
   it("shows an empty state that offers to create the first project", async () => {

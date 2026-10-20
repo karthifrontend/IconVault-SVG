@@ -193,10 +193,10 @@ export default function FontTab() {
   // The three actions sit in the project bar (like Upload icons on the Icons screen); without a bar they show above the settings.
   const actions = (
     <div role="group" aria-label="Font actions" className="flex flex-wrap items-center gap-2">
-      <Button variant="primary" icon={<Download aria-hidden="true" className="h-4 w-4" />} onClick={download} loading={downloading} disabled={!result}>
+      <Button variant="primary" className="h-9" icon={<Download aria-hidden="true" className="h-4 w-4" />} onClick={download} loading={downloading} disabled={!result}>
         Download font
       </Button>
-      <Button icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={() => built && copy(built.css, "the stylesheet")} disabled={!built}>
+      <Button className="h-9" icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={() => built && copy(built.css, "the stylesheet")} disabled={!built}>
         Copy CSS
       </Button>
     </div>

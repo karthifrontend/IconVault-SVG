@@ -14,7 +14,7 @@ export default function ThemeToggle({ className }: { className?: string }) {
   const { preference, setPreference } = useTheme();
 
   return (
-    <div role="group" aria-label="Color theme" className={cn("inline-flex items-center rounded-lg border border-border bg-muted p-0.5", className)}>
+    <div role="group" aria-label="Color theme" className={cn("inline-flex h-9 items-center rounded-lg border border-border bg-muted p-0.5", className)}>
       {THEME_PREFERENCES.map((value) => {
         const { label, Icon } = OPTIONS[value];
         const selected = preference === value;

@@ -1,4 +1,4 @@
-// The administration screen: every user with their projects, icons and active API tokens, a search, and deleting a user (their projects can move to another user first). Only admins can open it; anyone else is sent to the dashboard.
+// The Manage users screen: every user with their projects, icons and active API tokens, a search, and deleting a user (their projects can move to another user first). Only admins can open it; anyone else is sent to the dashboard.
 import { FolderKanban, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
@@ -6,6 +6,7 @@ import { listUsers } from "../api/admin";
 import type { AdminUser } from "../api/types";
 import { UserStatCards } from "../components/admin/AdminStats";
 import { useAdminStats } from "../hooks/useAdminStats";
+import AdminCrumb from "../components/admin/AdminCrumb";
 import AdminTabs from "../components/admin/AdminTabs";
 import DeleteUserDialog from "../components/admin/DeleteUserDialog";
 import { Button } from "../components/ui/Button";
@@ -41,7 +42,8 @@ export default function AdminPage() {
 
   return (
     <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-4 pb-16 pt-[calc(57px+2rem)] outline-none">
-      <h1 className="text-2xl font-bold tracking-tight">Administration</h1>
+      <AdminCrumb page="Manage users" />
+      <h1 className="mt-1 text-2xl font-bold tracking-tight">Manage users</h1>
       <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Everyone who has signed in. Users are created by signing in with Google or Microsoft, and there are no passwords to manage. Admins are the emails in the server’s ADMIN_EMAILS setting.</p>
 
       <AdminTabs />

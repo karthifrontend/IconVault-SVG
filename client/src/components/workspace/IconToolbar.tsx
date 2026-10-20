@@ -37,7 +37,7 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
       <UploadMenu onSelect={onUpload} />
-      <Button size="sm" icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={() => onUpload("copy")}>
+      <Button size="sm" className="h-9" icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={() => onUpload("copy")}>
         From Another Project
       </Button>
     </div>
@@ -59,10 +59,10 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
             onChange={(event) => onSearch(event.target.value)}
             placeholder="Search by name or tag"
             autoComplete="off"
-            className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+            className="h-9 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
           />
         </div>
-        <div role="group" aria-label="Icon size" className="flex h-10 items-center gap-2 rounded-lg border border-input bg-background px-2">
+        <div role="group" aria-label="Icon size" className="flex h-9 items-center gap-2 rounded-lg border border-input bg-background px-2">
           <button type="button" aria-label="Smaller icons" disabled={appearance.size <= MIN_ICON_SIZE} onClick={() => onAppearance({ size: clampIconSize(appearance.size - 4) })} className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-ring">
             <Minus aria-hidden="true" className="h-4 w-4" />
           </button>
@@ -72,7 +72,7 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
           </button>
           <output className="w-10 text-right font-mono text-xs text-muted-foreground">{appearance.size}px</output>
         </div>
-        <div role="group" aria-label="Icon colour" className="flex h-10 items-center gap-2 rounded-lg border border-input bg-background px-3">
+        <div role="group" aria-label="Icon colour" className="flex h-9 items-center gap-2 rounded-lg border border-input bg-background px-3">
           {ICON_COLORS.map((color) => (
             <button key={color.value} type="button" aria-label={color.label} title={appearance.color === color.value ? `${color.label} (click again for the default colour)` : color.label} aria-pressed={appearance.color === color.value} onClick={() => onAppearance({ color: appearance.color === color.value ? "" : color.value })} className={cn(swatch, appearance.color === color.value && "ring-2 ring-primary ring-offset-2 ring-offset-background")} style={{ backgroundColor: color.value }} />
           ))}
@@ -81,18 +81,18 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
             <input type="color" value={appearance.color || "#3b82f6"} onChange={(event) => onAppearance({ color: event.target.value })} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
           </label>
         </div>
-        <div role="group" aria-label="Icon style" className="inline-flex h-10 items-center rounded-lg border border-input bg-muted p-0.5">
+        <div role="group" aria-label="Icon style" className="inline-flex h-9 items-center rounded-lg border border-input bg-muted p-0.5">
           {ICON_STYLES.map((value) => {
             const Icon = STYLE_ICONS[value];
             return (
-              <button key={value} type="button" aria-pressed={appearance.style === value} title={ICON_STYLE_HINTS[value]} onClick={() => onAppearance({ style: value })} className={cn("inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring", appearance.style === value && "bg-background text-foreground shadow-sm ring-1 ring-border")}>
+              <button key={value} type="button" aria-pressed={appearance.style === value} title={ICON_STYLE_HINTS[value]} onClick={() => onAppearance({ style: value })} className={cn("inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring", appearance.style === value && "bg-background text-foreground shadow-sm ring-1 ring-border")}>
                 <Icon aria-hidden="true" className="h-4 w-4" />
                 {ICON_STYLE_LABELS[value]}
               </button>
             );
           })}
         </div>
-        <label className="relative inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-ring" title={`Sort: ${SORT_LABELS[sort]}`}>
+        <label className="relative inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-ring" title={`Sort: ${SORT_LABELS[sort]}`}>
           <ArrowUpDown aria-hidden="true" className="h-4 w-4" />
           <select aria-label="Sort by" value={sort} onChange={(event) => onSort(event.target.value as IconSort)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0">
             {(Object.keys(SORT_LABELS) as IconSort[]).map((value) => (
@@ -117,7 +117,7 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
               title={label}
               onClick={() => onView(value)}
               className={cn(
-                "inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
+                "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
                 view === value && "bg-background text-foreground shadow-sm ring-1 ring-border",
               )}
             >

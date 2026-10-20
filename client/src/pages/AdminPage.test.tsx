@@ -206,10 +206,10 @@ describe("moving a project", () => {
 });
 
 describe("totals and the link to a user's projects", () => {
-  it("has a way back to the dashboard", async () => {
+  it("has a small breadcrumb back to the dashboard, above a Manage users title", async () => {
     renderPage();
     await screen.findByText("ada@example.com");
-    await userEvent.click(screen.getByRole("link", { name: "Back to dashboard" }));
+    await userEvent.click(within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByRole("link", { name: "Dashboard" }));
     expect(await screen.findByText("Dashboard")).toBeInTheDocument();
   });
 

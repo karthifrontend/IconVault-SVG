@@ -1,8 +1,8 @@
-// One project on the dashboard: accent avatar, name, coloured badges, a few sample icons, counts, who created it, and an actions menu. The whole card opens the project (a stretched link on the name), and the menu sits above it.
-import { Archive, ArchiveRestore, Copy, FolderOpen, Pencil, Trash2 } from "lucide-react";
+// One project on the dashboard, kept small so many fit on a screen: a small accent avatar with the name and the actions menu, a one line description (cut off with an ellipsis), the coloured badges, a row of tiny sample icons of its own, and who created it. The whole card opens the project (a stretched link on the name), and the menu sits above it.
+import { Archive, ArchiveRestore, Copy, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { ProjectSummary } from "../../api/types";
-import { formatRelative, pluralize } from "../../lib/format";
+import { pluralize } from "../../lib/format";
 import ActionMenu, { type MenuAction } from "../ui/ActionMenu";
 import Badge from "../ui/Badge";
 import SvgPreview from "../ui/SvgPreview";
@@ -34,42 +34,36 @@ export default function ProjectCard({ project, currentUserId, onEdit, onDuplicat
   }
 
   return (
-    <li className="relative flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm transition-shadow focus-within:shadow-md hover:shadow-md">
-      <div className="flex items-start gap-3">
-        <ProjectAvatar name={project.name} color={project.color} />
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-semibold">
-            <Link to={`/projects/${project.id}`} className="rounded-sm after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-              {project.name}
-            </Link>
-          </h3>
-        </div>
-        <ActionMenu label={`Actions for ${project.name}`} actions={actions} className="relative z-10 -mr-1 -mt-1" />
+    <li className="relative flex flex-col gap-2 rounded-xl border border-border bg-card p-3 text-card-foreground shadow-sm transition-shadow focus-within:shadow-md hover:shadow-md">
+      <div className="flex items-center gap-2.5">
+        <ProjectAvatar name={project.name} color={project.color} className="h-7 w-7 rounded-lg text-xs" />
+        <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">
+          <Link to={`/projects/${project.id}`} className="rounded-sm after:absolute after:inset-0 after:rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+            {project.name}
+          </Link>
+        </h3>
+        <ActionMenu label={`Actions for ${project.name}`} actions={actions} className="relative z-10 -mr-1" />
       </div>
 
-      <p className="line-clamp-2 min-h-10 text-sm text-muted-foreground">{project.description || "No description."}</p>
+      <p className="truncate pr-1 text-xs text-muted-foreground" title={project.description || undefined}>
+        {project.description || "No description."}
+      </p>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-1">
         <VisibilityBadge visibility={project.visibility} />
         <PurposeBadge purpose={project.purpose} />
         {project.isArchived && <Badge icon={<Archive aria-hidden="true" className="h-3 w-3" />}>Draft</Badge>}
       </div>
 
-      <div className="flex h-8 items-center gap-2 overflow-hidden rounded-lg bg-muted px-2" role={project.sampleIcons.length > 0 ? "img" : undefined} aria-label={project.sampleIcons.length > 0 ? `${pluralize(project.sampleIcons.length, "sample icon")}` : undefined}>
-        {project.sampleIcons.length > 0 ? (
-          project.sampleIcons.map((icon) => <SvgPreview key={icon.id} svg={icon.svg} size={20} />)
-        ) : (
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <FolderOpen aria-hidden="true" className="h-3.5 w-3.5" />
-            No icons yet
-          </span>
-        )}
-      </div>
+      {project.sampleIcons.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-hidden rounded-md bg-muted px-2 py-1" role="img" aria-label={`${pluralize(project.sampleIcons.length, "sample icon")}`}>
+          {project.sampleIcons.slice(0, 6).map((icon) => (
+            <SvgPreview key={icon.id} svg={icon.svg} size={14} />
+          ))}
+        </div>
+      )}
 
-      <p className="text-xs text-muted-foreground">
-        {pluralize(project.iconCount, "icon")} · Updated {formatRelative(project.updatedAt)}
-      </p>
-      <p className="truncate border-t border-border pt-2 text-xs text-muted-foreground">
+      <p className="truncate text-[11px] text-muted-foreground">
         Created by <span className="font-medium text-foreground">{mine ? "You" : project.owner.displayName}</span>
       </p>
     </li>

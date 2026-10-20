@@ -71,7 +71,7 @@ export default function UserMenu({ user, onSignOut }: { user: CurrentUser; onSig
         aria-controls={open ? menuId : undefined}
         aria-label={`Account menu for ${user.displayName || user.email}`}
         onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-2 text-sm text-foreground transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="flex h-9 items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-2 text-sm text-foreground transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <Avatar user={user} className="h-6 w-6" />
         <span className="hidden max-w-32 truncate font-medium sm:inline">{user.displayName || user.email}</span>
@@ -99,7 +99,7 @@ export default function UserMenu({ user, onSignOut }: { user: CurrentUser; onSig
             {user.role === "admin" && (
               <Link to="/admin" role="menuitem" onClick={() => setOpen(false)} className={menuItemClass}>
                 <Users aria-hidden="true" className="h-4 w-4" />
-                Administration
+                Manage users
               </Link>
             )}
             <button

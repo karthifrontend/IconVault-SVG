@@ -809,6 +809,16 @@ One commit on `main`, local only.
 - Demo users sign in with the "system" provider, so they count in Users but in neither the Google nor the Microsoft number.
 - Validation: server database tests for the admin routes **17 of 17** (new: the provider filter, the added counts); client **639 of 639**; types and lint clean. Not looked at in the browser this time (it needs an admin session; see the entry before).
 
+## 2026-10-21: Follow-up, compact project cards, Manage users breadcrumb, one control height (change request)
+
+Client only. One commit on `main`, local only.
+
+- **Admin screens:** "Back to dashboard" is now a small breadcrumb above the title (**Dashboard / Manage users**, **Dashboard / Manage projects**). The users screen is titled **Manage users** (it was "Administration"), and the account menu entry is **Manage users** too.
+- **Compact project cards (dashboard):** a small avatar, the name and the menu on one line; a **one line description** cut off with an ellipsis (the full text shows on hover); the badges; the sample icons on **a row of their own** (tiny, up to six); and "Created by". The icon count and the "Updated" date are gone. More space inside the card (12 px padding, 8 px between rows). **At most five cards in a row** (two on a phone, three, four, five as the screen widens). With All chosen, Private and Public sit one under the other and both are visible on one screen for a normal number of projects.
+- **Search bar:** narrower (16 rem, not stretching), with even gaps between the search, the pills, Status and the sort icon.
+- **One control height:** I measured the top bar and found 32 to 40 px controls side by side. Now every control in the top bar, the project bar, the dashboard filter bar and the icon toolbar is **36 px** (New project, Import project, Manage, the theme switch, the account button; Upload icons and its arrow, From Another Project, Download font, Copy CSS; the search, pills, Status and sort; the size, colour, style, sort, More and view controls). Checked in the browser on the dashboard and on a project page.
+- Validation: client **640 of 640**; types and lint clean.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -818,7 +828,7 @@ One commit on `main`, local only.
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 639 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 182 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 640 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 182 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.
