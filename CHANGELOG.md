@@ -322,17 +322,16 @@ Logged separately from Phases 0 to 4. Client and server. Commits on `main`: `c0d
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
 - `server/src/config/db.ts` throws at import when `MONGODB_URI` is missing (crashes instead of starting without a DB). The zip has a fix. **Resolved in Phase 0 (`63eb4c8`).**
-- `GET /api/sprites/:name` looks up bundles across all users although names are unique per owner, so a duplicate name can return 403 or another user's bundle (`server/src/routes/spriteRoutes.ts`).
+- `GET /api/sprites/:name` looks up bundles across all users although names are unique per owner, so a duplicate name can return 403 or another user's bundle (`server/src/routes/spriteRoutes.ts`). **Resolved in Phase 5: the route and the whole old library were removed.**
 - `README.md` documents `MONGO_URI` (code reads `MONGODB_URI`) and omits `SESSION_SECRET`; `README.suggested.md` is correct. **Resolved in Phase 0 (`63eb4c8`).**
-- Client lists unused dependencies: `svgo`, `svgson`, `svgstore`, `zustand`, `react-router-dom`, `react-dropzone`.
+- Client lists unused dependencies: `svgo`, `svgson`, `svgstore`, `zustand`, `react-dropzone` (`react-router-dom` has been used since Phase 4). Not removed yet.
 - `npm audit` vulnerabilities remain in both `server/` and `client/`.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- No client tests (the server now has 13, added in Phase 0). The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 398 (Phases 3 to 5) and the server 92 unit plus 100 database tests. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.
-- Fix the `GET /api/sprites/:name` ownership lookup.
 - Rotate the database password and `SESSION_SECRET` if the zip or `.env` was ever shared.
 - Add more test users or publish the Google app if others need access; configure Microsoft sign-in if wanted.
 - ~~Initialize Git~~ Done in Phase 0. Still open: add a remote and push if wanted.
-- Phase 5 onward: sprite and font builders, import and export, admin routes, API tokens and the CLI (see the Phase 2 section, Not tested, or open).
+- Phase 6 onward: admin area, project export and import, API tokens and the CLI; Phase 7 fonts; Phase 8 hardening (see the Phase 2 and Phase 5 sections, Not tested, or open).
