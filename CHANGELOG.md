@@ -565,6 +565,39 @@ Requested after the Font page review: Build font and Import a font should not si
 ### Not tested, or open
 - Importing a real sprite or font file in the browser was not repeated; the dialogs are unchanged and covered by tests.
 
+## 2026-10-20: Follow-up, project screen laid out like Icon Vault, with icon size, colour and style (change request)
+
+Requested from an Icon Vault screenshot: the four levels of menus and the folder sidebar should look the same, and the Icons screen should get size, colour and type options. Client only. One commit on `main`, local only. The archive filter on the dashboard stays as it is (you asked to keep it).
+
+### The four levels
+| Level | Change |
+|---|---|
+| **1. Project bar** | One bar holds the colour dot and name, the badges **Prefix: M**, **Icon Font Project** (or Sprite Project) and Private or Public, the section menu, and on the right the buttons. |
+| **2. Section menu** | A pill menu: **Icons** (with count), **Icon Font** (or **Sprite**), **Settings**, and a **Trash** icon (with its count when something is in it). The Settings tab is named Settings, not "Settings & Docs", because there are no docs pages here. |
+| **3. Buttons** | **Upload icons** (with its menu) and **From Another Project** now sit in the project bar on the Icons screen (the bar's right side; on other sections that space is empty). The button was called "Copy from project" before. |
+| **4. Toolbar** | Search, then the new **size**, **colour** and **style** controls, grid or list, sort and the preview background. Under it, Select all and a breadcrumb: project, then the folder, then "(n icons)". |
+
+### Sidebar
+A card titled **FOLDERS** with a **+** button for a new folder (the full-width New folder button is gone). All icons, Uncategorized and each folder keep their counts and menus; the chosen row is tinted blue like the reference. Dragging icons onto folders works as before.
+
+### Size, colour and style (new)
+| Option | What it does |
+|---|---|
+| **Size** | A slider with minus and plus buttons, 16 to 96 px, shown as "40px". Cards grow to fit. |
+| **Colour** | **Default** (the theme's text colour), seven swatches and a custom colour picker. |
+| **Style** | **Natural** (as designed), **Flat** (solid shapes in the one colour), **Wireframe** (outlines only, in the one colour). |
+
+These change only how icons are drawn on screen, in this browser (remembered per browser). They do not change the stored icons or any download or build. In Natural, the colour only affects icons that use the text colour (`currentColor`); icons with their own colours keep them. Flat and Wireframe use the one colour for everything.
+
+### Validation (verified)
+- Client `npm test`: **567 of 567** (new: the size controls and their limits, colour choices, style choices with the current one marked, the breadcrumb, the buttons going into the header slot, the header's new labels). Types and lint clean.
+- Real browser (throwaway user, font project with a stroke icon and a filled icon): the bar, pill menu, sidebar and toolbar render as designed in dark mode; Flat plus Green recoloured and filled both icons; the size slider grew the cards; the choice survives a reload; at 375 px there is no horizontal scroll. A rapid slider-then-swatch change lost the colour once (a stale value); fixed with a latest-value reference. Test data removed.
+
+### Not tested, or open
+- The reference also shows each icon's character (for example E701A) on the cards of a font project; that was not added.
+- The reference's filter button beside sort was not added (the filters here are sort and the folder list).
+- Light mode and the browser pane were checked at phone width and a wide desktop width only once each; the page width limit grew to 96 rem.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -574,7 +607,7 @@ Requested after the Font page review: Build font and Import a font should not si
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 561 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 567 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

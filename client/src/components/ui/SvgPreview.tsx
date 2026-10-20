@@ -1,5 +1,6 @@
 // Shows an icon from its SVG markup at a given size. The markup is stored already cleaned by the server (scripts, event handlers, images and external references are removed), so it is safe to place inline; inline is needed so `currentColor` icons follow the text colour and the theme.
 import { cn } from "../../lib/cn";
+import { iconStyleClass, type IconStyle } from "../../lib/iconAppearance";
 
 type SvgPreviewProps = {
   svg: string;
@@ -8,17 +9,20 @@ type SvgPreviewProps = {
   className?: string;
   // Give a label when the icon is the only thing conveying meaning; otherwise it is hidden from screen readers.
   label?: string;
+  // Preview-only restyling (the Icons screen's colour and style choices). An empty colour keeps the theme's text colour.
+  color?: string;
+  iconStyle?: IconStyle;
 };
 
-export default function SvgPreview({ svg, size = 32, className, label }: SvgPreviewProps) {
+export default function SvgPreview({ svg, size = 32, className, label, color, iconStyle = "natural" }: SvgPreviewProps) {
   return (
     <span
       role={label ? "img" : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
       // `fill-current`: shapes that do not set their own fill (SVG then paints them black) take the text colour instead, so they stay visible in dark mode. Icons with their own fill or stroke keep it.
-      className={cn("inline-flex shrink-0 items-center justify-center fill-current text-foreground [&>svg]:h-full [&>svg]:w-full", className)}
-      style={{ width: size, height: size }}
+      className={cn("inline-flex shrink-0 items-center justify-center fill-current text-foreground [&>svg]:h-full [&>svg]:w-full", iconStyleClass(iconStyle), className)}
+      style={{ width: size, height: size, ...(color ? { color } : undefined) }}
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );

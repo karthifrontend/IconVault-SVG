@@ -9,6 +9,7 @@ Keep SVG icons in projects and folders, and compile them into a single `sprite.s
 
 - Sign-in with Google or Microsoft is required. A signed-out visitor sees a landing page.
 - Projects dashboard and workspaces: folders, search, grid or table, bulk move / tag / optimize / download, trash with Undo, icon details drawer with versions, settings.
+- Each project has one bar with its name, prefix, type and visibility, a pill menu (Icons, Icon Font or Sprite, Settings, Trash) and the **Upload icons** and **From Another Project** buttons. The folder sidebar has a **+** for new folders. The Icons toolbar adds an icon **size** slider, **colour** swatches and a **style** switch (Natural, Flat, Wireframe) that only change how icons are previewed.
 - The Icons page has an **Upload icons** button with a menu: upload SVG files or ZIPs, copy from another project, import an SVG sprite (each symbol becomes an icon), import an icon font (each glyph becomes an icon), or paste SVG code.
 - Icon fonts (projects created as "font" projects): build a font from all icons or one folder as WOFF2, WOFF, TTF, EOT and/or SVG font, preview every glyph with its class and character, and download a ZIP with the fonts, CSS, SCSS, a glyph map, a specimen page and a README. Each icon keeps its character between builds. Existing TTF, OTF, WOFF, WOFF2 or SVG fonts are imported from the Icons page's Upload icons menu.
 - Move projects in and out: export a project as one ZIP (settings, folders, icons) and import it as a new private project, in the interface or with the command line.

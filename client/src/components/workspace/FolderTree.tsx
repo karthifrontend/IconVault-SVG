@@ -1,5 +1,5 @@
 // The folder list beside a project's icons: All icons, Uncategorized, and the nested folders with counts. Folders can be created, renamed, moved and deleted from a menu (for people who can edit), and accept icons dropped on them. Dragging is optional: moving also works from the bulk actions bar.
-import { ChevronDown, ChevronRight, Folder, FolderInput, FolderPlus, Inbox, Layers, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Folder, FolderInput, FolderPlus, Inbox, Layers, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import type { FolderWithCount } from "../../api/types";
 import type { FolderSelection } from "../../context/workspaceContext";
@@ -7,7 +7,7 @@ import { cn } from "../../lib/cn";
 import { getDraggedIcons, hasDraggedIcons } from "../../lib/dragIcons";
 import { buildFolderTree, totalIconCount, type FolderNode } from "../../lib/folderTree";
 import ActionMenu from "../ui/ActionMenu";
-import { Button } from "../ui/Button";
+import { IconButton } from "../ui/Button";
 import ConfirmDialog from "../ui/ConfirmDialog";
 import { FolderNameDialog, MoveFolderDialog } from "./FolderDialogs";
 
@@ -76,7 +76,7 @@ export default function FolderTree({ folders, uncategorizedCount, totalCount, se
     const open = !collapsed.has(node.id);
     return (
       <li key={node.id}>
-        <div className={cn(rowBase, isSelected ? "bg-accent" : "hover:bg-accent/60", dropTarget === node.id && "bg-primary/10 ring-2 ring-primary")} style={{ paddingLeft: `${node.depth * 14 + 4}px` }} {...dropHandlers(node.id, node.id)}>
+        <div className={cn(rowBase, isSelected ? "bg-primary/10 text-primary" : "hover:bg-accent/60", dropTarget === node.id && "bg-primary/10 ring-2 ring-primary")} style={{ paddingLeft: `${node.depth * 14 + 4}px` }} {...dropHandlers(node.id, node.id)}>
           {hasChildren ? (
             <button type="button" onClick={() => toggle(node.id)} aria-expanded={open} aria-label={`${open ? "Collapse" : "Expand"} ${node.name}`} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
               {open ? <ChevronDown aria-hidden="true" className="h-4 w-4" /> : <ChevronRight aria-hidden="true" className="h-4 w-4" />}
@@ -84,8 +84,8 @@ export default function FolderTree({ folders, uncategorizedCount, totalCount, se
           ) : (
             <span className="h-6 w-6 shrink-0" aria-hidden="true" />
           )}
-          <button type="button" onClick={() => onSelect(node.id)} aria-current={isSelected ? "true" : undefined} className={cn(buttonBase, isSelected ? "font-semibold text-foreground" : "text-foreground")}>
-            <Folder aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <button type="button" onClick={() => onSelect(node.id)} aria-current={isSelected ? "true" : undefined} className={cn(buttonBase, isSelected ? "font-semibold" : "text-foreground")}>
+            <Folder aria-hidden="true" className={cn("h-4 w-4 shrink-0", isSelected ? "text-primary" : "text-muted-foreground")} />
             <span className="truncate">{node.name}</span>
             <span className="ml-auto shrink-0 text-xs text-muted-foreground">{totalIconCount(node)}</span>
           </button>
@@ -110,23 +110,31 @@ export default function FolderTree({ folders, uncategorizedCount, totalCount, se
   const rootSelected = selected === "root";
 
   return (
-    <nav aria-label="Folders">
+    <nav aria-label="Folders" className="rounded-xl border border-border bg-card p-2">
+      <div className="mb-1 flex items-center justify-between pl-3 pr-1 pt-1">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Folders</h2>
+        {canEdit && (
+          <IconButton label="New folder" className="h-7 w-7" onClick={() => setDialog({ kind: "create", parent: null })}>
+            <Plus aria-hidden="true" className="h-4 w-4" />
+          </IconButton>
+        )}
+      </div>
       <ul>
         <li>
-          <div className={cn(rowBase, allSelected ? "bg-accent" : "hover:bg-accent/60")} style={{ paddingLeft: 4 }}>
+          <div className={cn(rowBase, allSelected ? "bg-primary/10 text-primary" : "hover:bg-accent/60")} style={{ paddingLeft: 4 }}>
             <span className="h-6 w-6 shrink-0" aria-hidden="true" />
             <button type="button" onClick={() => onSelect("all")} aria-current={allSelected ? "true" : undefined} className={cn(buttonBase, allSelected && "font-semibold")}>
-              <Layers aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <Layers aria-hidden="true" className={cn("h-4 w-4 shrink-0", allSelected ? "text-primary" : "text-muted-foreground")} />
               <span className="truncate">All icons</span>
               <span className="ml-auto shrink-0 text-xs text-muted-foreground">{totalCount}</span>
             </button>
           </div>
         </li>
         <li>
-          <div className={cn(rowBase, rootSelected ? "bg-accent" : "hover:bg-accent/60", dropTarget === "root" && "bg-primary/10 ring-2 ring-primary")} style={{ paddingLeft: 4 }} {...dropHandlers("root", null)}>
+          <div className={cn(rowBase, rootSelected ? "bg-primary/10 text-primary" : "hover:bg-accent/60", dropTarget === "root" && "bg-primary/10 ring-2 ring-primary")} style={{ paddingLeft: 4 }} {...dropHandlers("root", null)}>
             <span className="h-6 w-6 shrink-0" aria-hidden="true" />
             <button type="button" onClick={() => onSelect("root")} aria-current={rootSelected ? "true" : undefined} className={cn(buttonBase, rootSelected && "font-semibold")}>
-              <Inbox aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <Inbox aria-hidden="true" className={cn("h-4 w-4 shrink-0", rootSelected ? "text-primary" : "text-muted-foreground")} />
               <span className="truncate">Uncategorized</span>
               <span className="ml-auto shrink-0 text-xs text-muted-foreground">{uncategorizedCount}</span>
             </button>
@@ -134,12 +142,6 @@ export default function FolderTree({ folders, uncategorizedCount, totalCount, se
         </li>
         {tree.map(renderNode)}
       </ul>
-
-      {canEdit && (
-        <Button size="sm" className="mt-3 w-full" icon={<FolderPlus aria-hidden="true" className="h-4 w-4" />} onClick={() => setDialog({ kind: "create", parent: null })}>
-          New folder
-        </Button>
-      )}
 
       <FolderNameDialog
         open={dialog?.kind === "create"}

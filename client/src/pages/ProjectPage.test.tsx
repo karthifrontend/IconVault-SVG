@@ -78,7 +78,7 @@ describe("sprite or font section", () => {
     sprite();
     renderPage();
     expect(await screen.findByRole("link", { name: "Sprite" })).toHaveAttribute("href", "/projects/p1/sprite");
-    expect(screen.queryByRole("link", { name: "Font" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Icon Font" })).not.toBeInTheDocument();
   });
 
   it("sends a sprite project away from /font, and a font project away from /sprite", async () => {
@@ -130,9 +130,9 @@ describe("header", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Feather" })).toBeInTheDocument();
     expect(screen.getByText("Line icons")).toBeInTheDocument();
     expect(screen.getByText("Public")).toBeInTheDocument();
-    // The badge and the section link are both called "Font" for a font project.
-    expect(screen.getAllByText("Font")).toHaveLength(2);
-    expect(screen.getByRole("link", { name: "Font" })).toHaveAttribute("href", "/projects/p1/font");
+    expect(screen.getByText("Icon Font Project")).toBeInTheDocument();
+    expect(screen.getByText("Prefix: icon")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Icon Font" })).toHaveAttribute("href", "/projects/p1/font");
     expect(screen.queryByRole("link", { name: "Sprite" })).not.toBeInTheDocument();
     expect(screen.getByText("by Ada Lovelace")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Projects" })).toHaveAttribute("href", "/");

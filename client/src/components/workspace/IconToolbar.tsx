@@ -1,7 +1,10 @@
-// Controls above the icon list: search, sort, grid or list view, the preview background, and (for editors) the Upload icons menu. Also the "select all" checkbox.
-import { Copy, LayoutGrid, List, Search } from "lucide-react";
+// Controls above the icon list: search, the preview size / colour / style, grid or list view, sort and background, the "select all" checkbox with a breadcrumb of where you are, and (for editors) the Upload icons menu, which can be placed into the project header.
+import { Box, ChevronRight, Copy, Eye, LayoutGrid, List, Minus, Plus, Search, Square } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
+import { ICON_COLORS, ICON_STYLES, ICON_STYLE_HINTS, ICON_STYLE_LABELS, MAX_ICON_SIZE, MIN_ICON_SIZE, clampIconSize, type IconAppearance, type IconStyle } from "../../lib/iconAppearance";
+import { pluralize } from "../../lib/format";
 import { SURFACES, SURFACE_LABELS, type Surface } from "../../lib/previewSurface";
 import { Button } from "../ui/Button";
 import { SelectField } from "../ui/Fields";
@@ -19,6 +22,12 @@ type IconToolbarProps = {
   onView: (view: IconView) => void;
   surface: Surface;
   onSurface: (surface: Surface) => void;
+  appearance: IconAppearance;
+  onAppearance: (change: Partial<IconAppearance>) => void;
+  // Where you are: shown as "project › folder (n icons)".
+  location?: { project: string; folder: string; count: number };
+  // When set, the Upload icons and From Another Project buttons are placed there (the project header) instead of in this toolbar.
+  actionsHost?: HTMLElement | null;
   canAdd: boolean;
   onUpload: (kind: UploadKind) => void;
   // Select all: how many are loaded and how many are selected.
@@ -27,7 +36,9 @@ type IconToolbarProps = {
   onSelectAll: (checked: boolean) => void;
 };
 
-export default function IconToolbar({ search, onSearch, sort, onSort, view, onView, surface, onSurface, canAdd, onUpload, loaded, selected, onSelectAll }: IconToolbarProps) {
+const STYLE_ICONS: Record<IconStyle, typeof Eye> = { natural: Eye, flat: Square, wireframe: Box };
+
+export default function IconToolbar({ search, onSearch, sort, onSort, view, onView, surface, onSurface, appearance, onAppearance, location, actionsHost, canAdd, onUpload, loaded, selected, onSelectAll }: IconToolbarProps) {
   const allRef = useRef<HTMLInputElement | null>(null);
   const all = loaded > 0 && selected === loaded;
   const some = selected > 0 && selected < loaded;
@@ -36,6 +47,16 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
   useEffect(() => {
     if (allRef.current) allRef.current.indeterminate = some;
   }, [some]);
+
+  const actions = (
+    <div className="flex flex-wrap items-center gap-2">
+      <UploadMenu onSelect={onUpload} />
+      <Button size="sm" icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={() => onUpload("copy")}>
+        From Another Project
+      </Button>
+    </div>
+  );
+  const swatch = "h-5 w-5 rounded-full border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
   return (
     <div className="space-y-3">
@@ -54,6 +75,39 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
             autoComplete="off"
             className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
           />
+        </div>
+        <div role="group" aria-label="Icon size" className="flex h-10 items-center gap-2 rounded-lg border border-input bg-background px-2">
+          <button type="button" aria-label="Smaller icons" disabled={appearance.size <= MIN_ICON_SIZE} onClick={() => onAppearance({ size: clampIconSize(appearance.size - 4) })} className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-ring">
+            <Minus aria-hidden="true" className="h-4 w-4" />
+          </button>
+          <input type="range" aria-label="Icon size in pixels" min={MIN_ICON_SIZE} max={MAX_ICON_SIZE} step={2} value={appearance.size} onChange={(event) => onAppearance({ size: clampIconSize(Number(event.target.value)) })} className="w-24 accent-[hsl(var(--primary))]" />
+          <button type="button" aria-label="Larger icons" disabled={appearance.size >= MAX_ICON_SIZE} onClick={() => onAppearance({ size: clampIconSize(appearance.size + 4) })} className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-ring">
+            <Plus aria-hidden="true" className="h-4 w-4" />
+          </button>
+          <output className="w-10 text-right font-mono text-xs text-muted-foreground">{appearance.size}px</output>
+        </div>
+        <div role="group" aria-label="Icon colour" className="flex h-10 items-center gap-1.5 rounded-lg border border-input bg-background px-2">
+          <button type="button" aria-pressed={appearance.color === ""} onClick={() => onAppearance({ color: "" })} className={cn("rounded-md px-2 py-0.5 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-ring", appearance.color === "" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+            Default
+          </button>
+          {ICON_COLORS.map((color) => (
+            <button key={color.value} type="button" aria-label={color.label} title={color.label} aria-pressed={appearance.color === color.value} onClick={() => onAppearance({ color: color.value })} className={cn(swatch, appearance.color === color.value && "ring-2 ring-primary ring-offset-2 ring-offset-background")} style={{ backgroundColor: color.value }} />
+          ))}
+          <label className={cn(swatch, "relative cursor-pointer overflow-hidden has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring", appearance.color !== "" && !ICON_COLORS.some((color) => color.value === appearance.color) && "ring-2 ring-primary ring-offset-2 ring-offset-background")} style={{ background: "conic-gradient(#ef4444, #f59e0b, #10b981, #3b82f6, #8b5cf6, #ef4444)" }} title="Custom colour">
+            <span className="sr-only">Custom colour</span>
+            <input type="color" value={appearance.color || "#3b82f6"} onChange={(event) => onAppearance({ color: event.target.value })} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+          </label>
+        </div>
+        <div role="group" aria-label="Icon style" className="inline-flex h-10 items-center rounded-lg border border-input bg-muted p-0.5">
+          {ICON_STYLES.map((value) => {
+            const Icon = STYLE_ICONS[value];
+            return (
+              <button key={value} type="button" aria-pressed={appearance.style === value} title={ICON_STYLE_HINTS[value]} onClick={() => onAppearance({ style: value })} className={cn("inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring", appearance.style === value && "bg-background text-foreground shadow-sm ring-1 ring-border")}>
+                <Icon aria-hidden="true" className="h-4 w-4" />
+                {ICON_STYLE_LABELS[value]}
+              </button>
+            );
+          })}
         </div>
         <SelectField label="Sort by" hideLabel value={sort} onChange={(event) => onSort(event.target.value as IconSort)} className="h-10 w-auto">
           <option value="newest">Newest</option>
@@ -95,18 +149,27 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
-          <input ref={allRef} type="checkbox" checked={all} disabled={loaded === 0} onChange={(event) => onSelectAll(event.target.checked)} className="h-4 w-4 accent-[hsl(var(--primary))]" />
-          Select all {loaded} shown
-        </label>
-        {canAdd && (
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={() => onUpload("copy")}>
-              Copy from project
-            </Button>
-            <UploadMenu onSelect={onUpload} />
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+            <input ref={allRef} type="checkbox" checked={all} disabled={loaded === 0} onChange={(event) => onSelectAll(event.target.checked)} className="h-4 w-4 accent-[hsl(var(--primary))]" />
+            Select all {loaded} shown
+          </label>
+          {location && (
+            <nav aria-label="Breadcrumb">
+              <ol className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <li className="max-w-40 truncate">{location.project}</li>
+                <li aria-hidden="true">
+                  <ChevronRight className="h-4 w-4" />
+                </li>
+                <li aria-current="page" className="rounded-md bg-muted px-2 py-0.5 font-semibold text-foreground">
+                  {location.folder}
+                </li>
+                <li>({pluralize(location.count, "icon")})</li>
+              </ol>
+            </nav>
+          )}
+        </div>
+        {canAdd && (actionsHost ? createPortal(actions, actionsHost) : actions)}
       </div>
     </div>
   );

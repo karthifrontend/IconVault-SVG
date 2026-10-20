@@ -4,6 +4,7 @@ import { setDraggedIcons } from "../../lib/dragIcons";
 import { cn } from "../../lib/cn";
 import { folderPath } from "../../lib/folderTree";
 import { formatBytes, formatRelative } from "../../lib/format";
+import type { IconAppearance } from "../../lib/iconAppearance";
 import { iconWarnings } from "../../lib/iconInfo";
 import { surfaceClass, surfaceStyle, type Surface } from "../../lib/previewSurface";
 import SvgPreview from "../ui/SvgPreview";
@@ -13,13 +14,14 @@ type IconListProps = {
   folders: FolderItem[];
   isSelected: (id: string) => boolean;
   surface: Surface;
+  appearance: IconAppearance;
   canDrag: boolean;
   dragIds: (id: string) => string[];
   onToggle: (id: string) => void;
   onOpen: (icon: IconItem) => void;
 };
 
-export default function IconList({ icons, folders, isSelected, surface, canDrag, dragIds, onToggle, onOpen }: IconListProps) {
+export default function IconList({ icons, folders, isSelected, surface, appearance, canDrag, dragIds, onToggle, onOpen }: IconListProps) {
   return (
     // `relative` matters: the table holds visually hidden (absolutely positioned) text, which would otherwise escape this scroll box and widen the whole page on a phone.
     <div className="relative overflow-x-auto rounded-xl border border-border">
@@ -65,7 +67,7 @@ export default function IconList({ icons, folders, isSelected, surface, canDrag,
                 </td>
                 <td className="px-1 py-1.5">
                   <span className={cn("flex h-10 w-10 items-center justify-center rounded-md", surfaceClass(surface))} style={surfaceStyle(surface)}>
-                    <SvgPreview svg={icon.svg ?? ""} size={24} />
+                    <SvgPreview svg={icon.svg ?? ""} size={24} color={appearance.color} iconStyle={appearance.style} />
                   </span>
                 </td>
                 <td className="px-3 py-2">

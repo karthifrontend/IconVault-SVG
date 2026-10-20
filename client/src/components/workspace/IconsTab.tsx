@@ -7,6 +7,7 @@ import { batchDeleteIcons, batchMoveIcons, batchOptimizeIcons, batchRestoreIcons
 import type { ListIconsParams, UploadSummary } from "../../api/types";
 import { useToast } from "../../context/ToastContext";
 import { useWorkspace } from "../../context/workspaceContext";
+import { useIconAppearance } from "../../hooks/useIconAppearance";
 import { useDebounced } from "../../hooks/useDebounced";
 import { usePersistentChoice } from "../../hooks/usePersistentChoice";
 import { useResource } from "../../hooks/useResource";
@@ -14,6 +15,7 @@ import { useSelection } from "../../hooks/useSelection";
 import { cacheBuild } from "../../lib/fontBuildCache";
 import { defaultFontOptions } from "../../lib/fontDefaults";
 import { loadPreviewFont, nextPreviewFamily } from "../../lib/fontPreview";
+import { folderPath } from "../../lib/folderTree";
 import { pluralize, savingsPercent } from "../../lib/format";
 import { SURFACES, type Surface } from "../../lib/previewSurface";
 import { triggerBrowserDownload } from "../../utils/zipBundle";
@@ -40,7 +42,7 @@ const MAX_SHOWN = 1000;
 type Dialog = "add" | "paste" | "copy" | "sprite" | "font" | "move" | "tag" | "delete" | null;
 
 export default function IconsTab() {
-  const { project, folderList, selectedFolder, refreshProject, refreshFolders, refreshIcons, iconsVersion } = useWorkspace();
+  const { project, folderList, selectedFolder, refreshProject, refreshFolders, refreshIcons, iconsVersion, actionsSlot } = useWorkspace();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const canEdit = project.access.canEdit;
@@ -50,6 +52,7 @@ export default function IconsTab() {
   const [sort, setSort] = usePersistentChoice<IconSort>("iconSort", SORTS, "newest");
   const [view, setView] = usePersistentChoice<IconView>("iconView", VIEWS, "grid");
   const [surface, setSurface] = usePersistentChoice<Surface>("iconSurface", SURFACES, "theme");
+  const [appearance, setAppearance] = useIconAppearance();
   const [dialog, setDialog] = useState<Dialog>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -148,6 +151,10 @@ export default function IconsTab() {
         onView={setView}
         surface={surface}
         onSurface={setSurface}
+        appearance={appearance}
+        onAppearance={setAppearance}
+        location={{ project: project.name, folder: selectedFolder === "all" ? "All icons" : selectedFolder === "root" ? "Uncategorized" : folderPath(folderList.folders, selectedFolder), count: total }}
+        actionsHost={actionsSlot}
         canAdd={project.access.canAddIcons}
         onUpload={(kind: UploadKind) => setDialog(kind === "files" ? "add" : kind)}
         loaded={shown.length}
@@ -190,11 +197,11 @@ export default function IconsTab() {
             {view === "grid" ? (
               <ul className={`grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5 ${icons.loading ? "opacity-60" : ""}`}>
                 {shown.map((icon) => (
-                  <IconCard key={icon.id} icon={icon} selected={selection.has(icon.id)} surface={surface} canDrag={canEdit} dragIds={() => (selection.has(icon.id) ? selection.ids : [icon.id])} onToggle={() => selection.toggle(icon.id)} onOpen={() => setOpenId(icon.id)} />
+                  <IconCard key={icon.id} icon={icon} selected={selection.has(icon.id)} surface={surface} appearance={appearance} canDrag={canEdit} dragIds={() => (selection.has(icon.id) ? selection.ids : [icon.id])} onToggle={() => selection.toggle(icon.id)} onOpen={() => setOpenId(icon.id)} />
                 ))}
               </ul>
             ) : (
-              <IconList icons={shown} folders={folderList.folders} isSelected={selection.has} surface={surface} canDrag={canEdit} dragIds={(id) => (selection.has(id) ? selection.ids : [id])} onToggle={selection.toggle} onOpen={(icon) => setOpenId(icon.id)} />
+              <IconList icons={shown} folders={folderList.folders} isSelected={selection.has} surface={surface} appearance={appearance} canDrag={canEdit} dragIds={(id) => (selection.has(id) ? selection.ids : [id])} onToggle={selection.toggle} onOpen={(icon) => setOpenId(icon.id)} />
             )}
             {total > shown.length && (
               <div className="mt-4 text-center">

@@ -3,6 +3,7 @@ import { setDraggedIcons } from "../../lib/dragIcons";
 import type { IconItem } from "../../api/types";
 import { cn } from "../../lib/cn";
 import { formatBytes } from "../../lib/format";
+import type { IconAppearance } from "../../lib/iconAppearance";
 import { iconWarnings } from "../../lib/iconInfo";
 import { surfaceClass, surfaceStyle, type Surface } from "../../lib/previewSurface";
 import Badge from "../ui/Badge";
@@ -12,6 +13,7 @@ type IconCardProps = {
   icon: IconItem;
   selected: boolean;
   surface: Surface;
+  appearance: IconAppearance;
   canDrag: boolean;
   // The ids to carry when this card is dragged: the whole selection if this icon is part of it.
   dragIds: () => string[];
@@ -19,7 +21,7 @@ type IconCardProps = {
   onOpen: () => void;
 };
 
-export default function IconCard({ icon, selected, surface, canDrag, dragIds, onToggle, onOpen }: IconCardProps) {
+export default function IconCard({ icon, selected, surface, appearance, canDrag, dragIds, onToggle, onOpen }: IconCardProps) {
   const warnings = iconWarnings(icon);
   return (
     <li
@@ -36,8 +38,8 @@ export default function IconCard({ icon, selected, surface, canDrag, dragIds, on
         aria-label={`Open ${icon.name}`}
         className="flex w-full flex-col items-center gap-2 rounded-t-xl p-3 pb-1 text-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
       >
-        <span className={cn("flex h-24 w-full items-center justify-center rounded-lg", surfaceClass(surface))} style={surfaceStyle(surface)}>
-          <SvgPreview svg={icon.svg ?? ""} size={40} />
+        <span className={cn("flex w-full items-center justify-center rounded-lg", surfaceClass(surface))} style={{ ...surfaceStyle(surface), minHeight: Math.max(96, appearance.size + 32) }}>
+          <SvgPreview svg={icon.svg ?? ""} size={appearance.size} color={appearance.color} iconStyle={appearance.style} />
         </span>
         <span className="w-full truncate text-sm font-medium">{icon.name}</span>
       </button>

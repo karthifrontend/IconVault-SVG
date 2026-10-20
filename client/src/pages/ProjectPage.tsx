@@ -36,6 +36,7 @@ export default function ProjectPage() {
   const folders = { ...loadedFolders, data: loadedFolders.data?.projectId === projectId ? loadedFolders.data.list : undefined };
   const [iconsVersion, setIconsVersion] = useState(0);
   const [foldersOpen, setFoldersOpen] = useState(false);
+  const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
 
   const folderList = folders.data ?? NO_FOLDERS;
   const requested = params.get("folder");
@@ -94,12 +95,13 @@ export default function ProjectPage() {
     refreshFolders: folders.reload,
     iconsVersion,
     refreshIcons: () => setIconsVersion((value) => value + 1),
+    actionsSlot,
   };
 
   return (
     <WorkspaceContext.Provider value={context}>
-      <main id="main" tabIndex={-1} className="mx-auto max-w-7xl px-4 pb-16 pt-[calc(57px+1.5rem)] outline-none">
-        <ProjectHeader project={project.data} />
+      <main id="main" tabIndex={-1} className="mx-auto max-w-[96rem] px-4 pb-16 pt-[calc(57px+1.5rem)] outline-none">
+        <ProjectHeader project={project.data} actionsRef={setActionsSlot} />
 
         <div className="mt-6">
           {onIconsSection ? (

@@ -16,6 +16,8 @@ export type WorkspaceContextValue = {
   // Changes whenever the icon list should be fetched again (after a move, a folder delete, ...), and clears selections.
   iconsVersion: number;
   refreshIcons: () => void;
+  // Where the project header wants its action buttons (Upload icons, From Another Project). Absent outside the project page.
+  actionsSlot?: HTMLElement | null;
 };
 
 export const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);

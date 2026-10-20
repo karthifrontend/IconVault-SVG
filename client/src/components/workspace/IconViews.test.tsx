@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { DRAG_TYPE } from "../../lib/dragIcons";
+import { DEFAULT_APPEARANCE } from "../../lib/iconAppearance";
 import { makeFolder, makeIcon } from "../../test/fixtures";
 import BulkBar from "./BulkBar";
 import { MoveIconsDialog, TagIconsDialog } from "./BulkDialogs";
@@ -12,7 +13,7 @@ import IconToolbar from "./IconToolbar";
 
 describe("IconCard", () => {
   const setup = (over: Partial<React.ComponentProps<typeof IconCard>> = {}) => {
-    const props = { icon: makeIcon({ name: "Arrow Left", byteSize: 1536 }), selected: false, surface: "theme" as const, canDrag: true, dragIds: () => ["a"], onToggle: vi.fn(), onOpen: vi.fn(), ...over };
+    const props = { icon: makeIcon({ name: "Arrow Left", byteSize: 1536 }), selected: false, surface: "theme" as const, appearance: DEFAULT_APPEARANCE, canDrag: true, dragIds: () => ["a"], onToggle: vi.fn(), onOpen: vi.fn(), ...over };
     render(
       <ul>
         <IconCard {...props} />
@@ -70,7 +71,7 @@ describe("IconList", () => {
   const icons = [makeIcon({ id: "i1", name: "Left", folderId: "ar", tags: ["nav", "arrow"], byteSize: 300 }), makeIcon({ id: "i2", name: "Plain", folderId: null, hasGradient: true })];
 
   function setup() {
-    const props = { icons, folders, isSelected: (id: string) => id === "i2", surface: "theme" as const, canDrag: true, dragIds: (id: string) => [id], onToggle: vi.fn(), onOpen: vi.fn() };
+    const props = { icons, folders, isSelected: (id: string) => id === "i2", surface: "theme" as const, appearance: DEFAULT_APPEARANCE, canDrag: true, dragIds: (id: string) => [id], onToggle: vi.fn(), onOpen: vi.fn() };
     render(<IconList {...props} />);
     return props;
   }
@@ -124,6 +125,8 @@ describe("IconToolbar", () => {
       onView: vi.fn(),
       surface: "theme" as const,
       onSurface: vi.fn(),
+      appearance: DEFAULT_APPEARANCE,
+      onAppearance: vi.fn(),
       canAdd: true,
       onUpload: vi.fn(),
       loaded: 5,
@@ -154,15 +157,72 @@ describe("IconToolbar", () => {
   });
 
   it("offers uploading and copying only to people who can add", async () => {
-    const { onUpload } = setup();
+    const props = setup();
+    const onUpload = vi.mocked(props.onUpload);
     await userEvent.click(screen.getByRole("button", { name: "Upload icons" }));
     expect(onUpload).toHaveBeenLastCalledWith("files");
-    await userEvent.click(screen.getByRole("button", { name: "Copy from project" }));
+    await userEvent.click(screen.getByRole("button", { name: "From Another Project" }));
     expect(onUpload).toHaveBeenLastCalledWith("copy");
   });
 
+  it("changes the icon size with the slider and the plus and minus buttons", async () => {
+    const { onAppearance } = setup();
+    expect(screen.getByRole("group", { name: "Icon size" })).toHaveTextContent("40px");
+    await userEvent.click(screen.getByRole("button", { name: "Larger icons" }));
+    expect(onAppearance).toHaveBeenLastCalledWith({ size: 44 });
+    await userEvent.click(screen.getByRole("button", { name: "Smaller icons" }));
+    expect(onAppearance).toHaveBeenLastCalledWith({ size: 36 });
+    fireEvent.change(screen.getByRole("slider", { name: "Icon size in pixels" }), { target: { value: "64" } });
+    expect(onAppearance).toHaveBeenLastCalledWith({ size: 64 });
+  });
+
+  it("stops the size at its limits", () => {
+    setup({ appearance: { ...DEFAULT_APPEARANCE, size: 16 } });
+    expect(screen.getByRole("button", { name: "Smaller icons" })).toBeDisabled();
+    cleanup();
+    setup({ appearance: { ...DEFAULT_APPEARANCE, size: 96 } });
+    expect(screen.getByRole("button", { name: "Larger icons" })).toBeDisabled();
+  });
+
+  it("picks a colour: default, a swatch or a custom one", async () => {
+    const { onAppearance } = setup({ appearance: { ...DEFAULT_APPEARANCE, color: "#3b82f6" } });
+    const group = screen.getByRole("group", { name: "Icon colour" });
+    expect(within(group).getByRole("button", { name: "Default" })).toHaveAttribute("aria-pressed", "false");
+    expect(within(group).getByRole("button", { name: "Blue" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(within(group).getByRole("button", { name: "Default" }));
+    expect(onAppearance).toHaveBeenLastCalledWith({ color: "" });
+    await userEvent.click(within(group).getByRole("button", { name: "Red" }));
+    expect(onAppearance).toHaveBeenLastCalledWith({ color: "#ef4444" });
+    fireEvent.change(within(group).getByLabelText("Custom colour"), { target: { value: "#123456" } });
+    expect(onAppearance).toHaveBeenLastCalledWith({ color: "#123456" });
+  });
+
+  it("picks a style and marks the current one", async () => {
+    const { onAppearance } = setup({ appearance: { ...DEFAULT_APPEARANCE, style: "flat" } });
+    const group = screen.getByRole("group", { name: "Icon style" });
+    expect(within(group).getAllByRole("button").map((b) => [b.textContent, b.getAttribute("aria-pressed")])).toEqual([["Natural", "false"], ["Flat", "true"], ["Wireframe", "false"]]);
+    await userEvent.click(within(group).getByRole("button", { name: "Wireframe" }));
+    expect(onAppearance).toHaveBeenLastCalledWith({ style: "wireframe" });
+  });
+
+  it("shows where you are", () => {
+    setup({ location: { project: "Feather", folder: "Arrows", count: 3 } });
+    const crumb = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(crumb).toHaveTextContent("FeatherArrows(3 icons)");
+    expect(within(crumb).getByText("Arrows")).toHaveAttribute("aria-current", "page");
+  });
+
+  it("puts the add buttons into the header slot when there is one", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    setup({ actionsHost: host });
+    expect(within(host).getByRole("button", { name: "Upload icons" })).toBeInTheDocument();
+    expect(within(host).getByRole("button", { name: "From Another Project" })).toBeInTheDocument();
+    host.remove();
+  });
+
   it("lists every way to add icons in the Upload icons menu", async () => {
-    const { onUpload } = setup();
+    const onUpload = vi.mocked(setup().onUpload);
     const trigger = screen.getByRole("button", { name: "More ways to add icons" });
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     await userEvent.click(trigger);
@@ -215,7 +275,7 @@ describe("IconToolbar", () => {
     setup({ canAdd: false });
     expect(screen.queryByRole("button", { name: "Upload icons" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "More ways to add icons" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Copy from project" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "From Another Project" })).not.toBeInTheDocument();
   });
 
   it("select all reflects none, some and all selected, and is off when nothing is shown", async () => {
@@ -228,10 +288,10 @@ describe("IconToolbar", () => {
   });
 
   it("shows a partial selection as indeterminate and a full one as checked", () => {
-    const { unmount } = render(<IconToolbar search="" onSearch={() => {}} sort="newest" onSort={() => {}} view="grid" onView={() => {}} surface="theme" onSurface={() => {}} canAdd={false} onUpload={() => {}} loaded={4} selected={2} onSelectAll={() => {}} />);
+    const { unmount } = render(<IconToolbar search="" onSearch={() => {}} sort="newest" onSort={() => {}} view="grid" onView={() => {}} surface="theme" onSurface={() => {}} appearance={DEFAULT_APPEARANCE} onAppearance={() => {}} canAdd={false} onUpload={() => {}} loaded={4} selected={2} onSelectAll={() => {}} />);
     expect((screen.getByRole("checkbox", { name: "Select all 4 shown" }) as HTMLInputElement).indeterminate).toBe(true);
     unmount();
-    render(<IconToolbar search="" onSearch={() => {}} sort="newest" onSort={() => {}} view="grid" onView={() => {}} surface="theme" onSurface={() => {}} canAdd={false} onUpload={() => {}} loaded={4} selected={4} onSelectAll={() => {}} />);
+    render(<IconToolbar search="" onSearch={() => {}} sort="newest" onSort={() => {}} view="grid" onView={() => {}} surface="theme" onSurface={() => {}} appearance={DEFAULT_APPEARANCE} onAppearance={() => {}} canAdd={false} onUpload={() => {}} loaded={4} selected={4} onSelectAll={() => {}} />);
     expect(screen.getByRole("checkbox", { name: "Select all 4 shown" })).toBeChecked();
   });
 
