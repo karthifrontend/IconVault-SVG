@@ -184,17 +184,32 @@ describe("IconToolbar", () => {
     expect(screen.getByRole("button", { name: "Larger icons" })).toBeDisabled();
   });
 
-  it("picks a colour: default, a swatch or a custom one", async () => {
+  it("offers three swatches and a picker for more colours", async () => {
     const { onAppearance } = setup({ appearance: { ...DEFAULT_APPEARANCE, color: "#3b82f6" } });
     const group = screen.getByRole("group", { name: "Icon colour" });
-    expect(within(group).getByRole("button", { name: "Default" })).toHaveAttribute("aria-pressed", "false");
+    expect(within(group).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Blue", "Green", "Red"]);
     expect(within(group).getByRole("button", { name: "Blue" })).toHaveAttribute("aria-pressed", "true");
-    await userEvent.click(within(group).getByRole("button", { name: "Default" }));
-    expect(onAppearance).toHaveBeenLastCalledWith({ color: "" });
+    expect(within(group).getByRole("button", { name: "Red" })).toHaveAttribute("aria-pressed", "false");
     await userEvent.click(within(group).getByRole("button", { name: "Red" }));
     expect(onAppearance).toHaveBeenLastCalledWith({ color: "#ef4444" });
-    fireEvent.change(within(group).getByLabelText("Custom colour"), { target: { value: "#123456" } });
+    // The chosen swatch again goes back to the default colour.
+    await userEvent.click(within(group).getByRole("button", { name: "Blue" }));
+    expect(onAppearance).toHaveBeenLastCalledWith({ color: "" });
+    fireEvent.change(within(group).getByLabelText("More colours"), { target: { value: "#123456" } });
     expect(onAppearance).toHaveBeenLastCalledWith({ color: "#123456" });
+  });
+
+  it("shows the style names next to their icons", () => {
+    setup();
+    expect(screen.getByRole("group", { name: "Icon style" })).toHaveTextContent("NaturalFlatWireframe");
+  });
+
+  it("sorts from an icon whose menu names the current sort", async () => {
+    const { onSort } = setup();
+    expect(screen.getByTitle("Sort: Newest")).toBeInTheDocument();
+    expect(screen.queryByText("Newest", { selector: "span" })).not.toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Sort by"), "largest");
+    expect(onSort).toHaveBeenCalledWith("largest");
   });
 
   it("picks a style and marks the current one", async () => {

@@ -1,5 +1,5 @@
-// Controls above the icon list: the preview size / colour / style, sort, background and grid or list view in one row, the "select all" checkbox with the search beside it, and (for editors) the Upload icons menu, which can be placed into the project header.
-import { Box, Copy, Eye, LayoutGrid, List, Minus, Plus, Search, Square } from "lucide-react";
+// Controls above the icon list: the preview size / colour / style, sort (an icon with a menu), background and grid or list view in one row, the "select all" checkbox with the search beside it, and (for editors) the Upload icons menu, which can be placed into the project header.
+import { ArrowUpDown, Box, Copy, Eye, LayoutGrid, List, Minus, Plus, Search, Square } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
@@ -33,6 +33,7 @@ type IconToolbarProps = {
   onSelectAll: (checked: boolean) => void;
 };
 
+const SORT_LABELS: Record<IconSort, string> = { newest: "Newest", oldest: "Oldest", name: "Name A–Z", "name-desc": "Name Z–A", largest: "Largest" };
 const STYLE_ICONS: Record<IconStyle, typeof Eye> = { natural: Eye, flat: Square, wireframe: Box };
 
 export default function IconToolbar({ search, onSearch, sort, onSort, view, onView, surface, onSurface, appearance, onAppearance, actionsHost, canAdd, onUpload, loaded, selected, onSelectAll }: IconToolbarProps) {
@@ -57,7 +58,7 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 min-[1440px]:flex-nowrap">
+      <div className="flex flex-wrap items-center gap-2 min-[1366px]:flex-nowrap">
         <div role="group" aria-label="Icon size" className="flex h-10 items-center gap-2 rounded-lg border border-input bg-background px-2">
           <button type="button" aria-label="Smaller icons" disabled={appearance.size <= MIN_ICON_SIZE} onClick={() => onAppearance({ size: clampIconSize(appearance.size - 4) })} className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-ring">
             <Minus aria-hidden="true" className="h-4 w-4" />
@@ -68,15 +69,12 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
           </button>
           <output className="w-10 text-right font-mono text-xs text-muted-foreground">{appearance.size}px</output>
         </div>
-        <div role="group" aria-label="Icon colour" className="flex h-10 items-center gap-1.5 rounded-lg border border-input bg-background px-2">
-          <button type="button" aria-pressed={appearance.color === ""} onClick={() => onAppearance({ color: "" })} className={cn("rounded-md px-2 py-0.5 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-ring", appearance.color === "" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
-            Default
-          </button>
+        <div role="group" aria-label="Icon colour" className="flex h-10 items-center gap-2 rounded-lg border border-input bg-background px-3">
           {ICON_COLORS.map((color) => (
-            <button key={color.value} type="button" aria-label={color.label} title={color.label} aria-pressed={appearance.color === color.value} onClick={() => onAppearance({ color: color.value })} className={cn(swatch, appearance.color === color.value && "ring-2 ring-primary ring-offset-2 ring-offset-background")} style={{ backgroundColor: color.value }} />
+            <button key={color.value} type="button" aria-label={color.label} title={appearance.color === color.value ? `${color.label} (click again for the default colour)` : color.label} aria-pressed={appearance.color === color.value} onClick={() => onAppearance({ color: appearance.color === color.value ? "" : color.value })} className={cn(swatch, appearance.color === color.value && "ring-2 ring-primary ring-offset-2 ring-offset-background")} style={{ backgroundColor: color.value }} />
           ))}
-          <label className={cn(swatch, "relative cursor-pointer overflow-hidden has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring", appearance.color !== "" && !ICON_COLORS.some((color) => color.value === appearance.color) && "ring-2 ring-primary ring-offset-2 ring-offset-background")} style={{ background: "conic-gradient(#ef4444, #f59e0b, #10b981, #3b82f6, #8b5cf6, #ef4444)" }} title="Custom colour">
-            <span className="sr-only">Custom colour</span>
+          <label className={cn(swatch, "relative cursor-pointer overflow-hidden has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring", appearance.color !== "" && !ICON_COLORS.some((color) => color.value === appearance.color) && "ring-2 ring-primary ring-offset-2 ring-offset-background")} style={{ background: "conic-gradient(#ef4444, #f59e0b, #10b981, #3b82f6, #8b5cf6, #ef4444)" }} title="More colours">
+            <span className="sr-only">More colours</span>
             <input type="color" value={appearance.color || "#3b82f6"} onChange={(event) => onAppearance({ color: event.target.value })} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
           </label>
         </div>
@@ -84,20 +82,23 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
           {ICON_STYLES.map((value) => {
             const Icon = STYLE_ICONS[value];
             return (
-              <button key={value} type="button" aria-pressed={appearance.style === value} title={ICON_STYLE_HINTS[value]} onClick={() => onAppearance({ style: value })} className={cn("inline-flex h-9 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted-foreground transition-colors min-[1700px]:px-2.5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring", appearance.style === value && "bg-background text-foreground shadow-sm ring-1 ring-border")}>
+              <button key={value} type="button" aria-pressed={appearance.style === value} title={ICON_STYLE_HINTS[value]} onClick={() => onAppearance({ style: value })} className={cn("inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring", appearance.style === value && "bg-background text-foreground shadow-sm ring-1 ring-border")}>
                 <Icon aria-hidden="true" className="h-4 w-4" />
-                <span className="sr-only min-[1700px]:not-sr-only">{ICON_STYLE_LABELS[value]}</span>
+                {ICON_STYLE_LABELS[value]}
               </button>
             );
           })}
         </div>
-        <SelectField label="Sort by" hideLabel value={sort} onChange={(event) => onSort(event.target.value as IconSort)} className="h-10 w-auto">
-          <option value="newest">Newest</option>
-          <option value="oldest">Oldest</option>
-          <option value="name">Name A–Z</option>
-          <option value="name-desc">Name Z–A</option>
-          <option value="largest">Largest</option>
-        </SelectField>
+        <label className="relative inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-ring" title={`Sort: ${SORT_LABELS[sort]}`}>
+          <ArrowUpDown aria-hidden="true" className="h-4 w-4" />
+          <select aria-label="Sort by" value={sort} onChange={(event) => onSort(event.target.value as IconSort)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0">
+            {(Object.keys(SORT_LABELS) as IconSort[]).map((value) => (
+              <option key={value} value={value}>
+                {SORT_LABELS[value]}
+              </option>
+            ))}
+          </select>
+        </label>
         <SelectField label="Preview background" hideLabel value={surface} onChange={(event) => onSurface(event.target.value as Surface)} className="h-10 w-auto">
           {SURFACES.map((value) => (
             <option key={value} value={value}>
