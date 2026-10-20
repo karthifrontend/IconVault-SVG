@@ -100,13 +100,14 @@ export default function ProjectPage() {
 
   return (
     <WorkspaceContext.Provider value={context}>
-      <main id="main" tabIndex={-1} className="mx-auto max-w-[96rem] px-4 pb-16 pt-[calc(57px+1.5rem)] outline-none">
+      <main id="main" tabIndex={-1} className="pt-[57px] outline-none">
         <ProjectHeader project={project.data} actionsRef={setActionsSlot} />
 
-        <div className="mt-6">
+        <div>
           {onIconsSection ? (
-            <div className="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
-              <aside aria-label="Folders">
+            // Split view: the folders on the left, the icons on the right, divided by a line, using the whole width.
+            <div className="grid lg:min-h-[calc(100vh-12rem)] lg:grid-cols-[17rem_minmax(0,1fr)]">
+              <aside aria-label="Folders" className="border-b border-border p-3 lg:border-b-0 lg:border-r lg:p-4">
                 <button
                   type="button"
                   aria-expanded={foldersOpen}
@@ -198,6 +199,7 @@ export default function ProjectPage() {
               </div>
             </div>
           ) : (
+            <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6">
             <Routes>
               {/* A project is a sprite project or a font project, chosen at creation: each has only its own section. */}
               <Route path="sprite" element={project.data.purpose === "sprite" ? <SpriteTab /> : <Navigate to={`/projects/${projectId}`} replace />} />
@@ -206,6 +208,7 @@ export default function ProjectPage() {
               <Route path="settings" element={<SettingsTab />} />
               <Route path="*" element={<Navigate to={`/projects/${projectId}`} replace />} />
             </Routes>
+            </div>
           )}
         </div>
       </main>

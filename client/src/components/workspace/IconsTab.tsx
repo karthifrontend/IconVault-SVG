@@ -141,6 +141,7 @@ export default function IconsTab() {
 
   return (
     <div>
+      <div className="border-b border-border px-4 py-3 sm:px-6">
       <IconToolbar
         search={searchText}
         onSearch={setSearchText}
@@ -159,8 +160,9 @@ export default function IconsTab() {
         selected={selection.size}
         onSelectAll={(checked) => (checked ? selection.selectAll(shown.map((icon) => icon.id)) : selection.clear())}
       />
+      </div>
 
-      <div className="mt-4">
+      <div className="px-4 py-4 pb-24 sm:px-6">
         {icons.error && !icons.data ? (
           <div role="alert" className="rounded-xl border border-destructive/40 p-6 text-center">
             <p className="font-medium text-destructive">{icons.error.message}</p>

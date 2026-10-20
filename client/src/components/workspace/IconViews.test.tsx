@@ -188,11 +188,11 @@ describe("IconToolbar", () => {
   it("offers three swatches and a picker for more colours", async () => {
     const { onAppearance } = setup({ appearance: { ...DEFAULT_APPEARANCE, color: "#3b82f6" } });
     const group = screen.getByRole("group", { name: "Icon colour" });
-    expect(within(group).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Blue", "Green", "Red"]);
+    expect(within(group).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["White", "Black", "Blue"]);
     expect(within(group).getByRole("button", { name: "Blue" })).toHaveAttribute("aria-pressed", "true");
-    expect(within(group).getByRole("button", { name: "Red" })).toHaveAttribute("aria-pressed", "false");
-    await userEvent.click(within(group).getByRole("button", { name: "Red" }));
-    expect(onAppearance).toHaveBeenLastCalledWith({ color: "#ef4444" });
+    expect(within(group).getByRole("button", { name: "Black" })).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(within(group).getByRole("button", { name: "Black" }));
+    expect(onAppearance).toHaveBeenLastCalledWith({ color: "#000000" });
     // The chosen swatch again goes back to the default colour.
     await userEvent.click(within(group).getByRole("button", { name: "Blue" }));
     expect(onAppearance).toHaveBeenLastCalledWith({ color: "" });

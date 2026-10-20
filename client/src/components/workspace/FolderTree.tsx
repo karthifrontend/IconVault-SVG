@@ -127,7 +127,7 @@ export default function FolderTree({ folders, uncategorizedCount, uncategorizedN
   const rootSelected = selected === "root";
 
   return (
-    <nav aria-label="Folders" className="rounded-xl border border-border bg-card p-2">
+    <nav aria-label="Folders">
       <div className="mb-1 flex items-center justify-between pl-3 pr-1 pt-1">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Folders</h2>
         {canEdit && (

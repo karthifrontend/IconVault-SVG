@@ -41,10 +41,10 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
   );
 
   return (
-    <header>
-      {crumbSlot ? createPortal(breadcrumb, crumbSlot) : breadcrumb}
+    <header className="border-b border-border bg-background">
+      {crumbSlot ? createPortal(breadcrumb, crumbSlot) : <div className="px-4 pt-3 sm:px-6">{breadcrumb}</div>}
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-border bg-card px-4 py-3 lg:grid lg:grid-cols-[1fr_auto_1fr]">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr]">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <ProjectAvatar name={project.name} color={project.color} />
           <h1 className="max-w-64 truncate text-xl font-bold tracking-tight">{project.name}</h1>
@@ -79,13 +79,13 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
       </div>
 
       {project.isArchived && (
-        <div className="mt-3">
+        <div className="px-4 pb-3 sm:px-6">
           <Badge icon={<Archive aria-hidden="true" className="h-3 w-3" />}>Archived</Badge>
         </div>
       )}
 
       {!project.access.canEdit && (
-        <p role="note" className="mt-3 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
+        <p role="note" className="mx-4 mb-3 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground sm:mx-6">
           You are viewing this project. Only its owner can change it, but you can download icons or copy them into your own projects.
         </p>
       )}

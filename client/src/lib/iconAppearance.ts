@@ -18,11 +18,11 @@ export const MIN_ICON_SIZE = 16;
 export const MAX_ICON_SIZE = 96;
 export const DEFAULT_ICON_SIZE = 40;
 
-// "" means the default colour (the theme's text colour). Three solid swatches; any other colour comes from the picker. Choosing the selected swatch again returns to the default.
+// "" means the default colour (the theme's text colour). Three solid swatches (white, black, blue); any other colour comes from the picker. Choosing the selected swatch again returns to the default.
 export const ICON_COLORS: { value: string; label: string }[] = [
+  { value: "#ffffff", label: "White" },
+  { value: "#000000", label: "Black" },
   { value: "#3b82f6", label: "Blue" },
-  { value: "#10b981", label: "Green" },
-  { value: "#ef4444", label: "Red" },
 ];
 
 export type IconAppearance = { size: number; color: string; style: IconStyle };

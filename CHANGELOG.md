@@ -745,6 +745,14 @@ Client only. One commit on `main`, local only.
 - Validation: client **621 of 621**; types and lint clean. Real browser (throwaway user): breadcrumb in the bar, Trash card and its row on desktop and at 375 px with no sideways scroll. Test data removed.
 - Tests changed: the Font page tests now wait for the automatic build instead of clicking Build font (and new ones cover Try again and no Build font button).
 
+## 2026-10-20: Follow-up, split layout for the project screens and white, black, blue swatches (change request)
+
+Client only. One commit on `main`, local only. You also asked for the dashboard in the same style, then asked me to **revert the dashboard changes**: the dashboard and its project cards are exactly as before.
+
+- **Split layout (Icons screen):** the page uses the whole width. The project bar is a flat strip with a line under it (no rounded card), the folders sit in a left column with a vertical divider (no card around them), and the toolbar is a strip with its own line above the icons. Other sections (Font Builder, Project Settings, Trash) keep their centred widths with side padding.
+- **Colour tiles:** **White, Black, Blue** and the rainbow tile for more colours (it was Blue, Green, Red). Pressing the chosen tile again still goes back to the default colour.
+- Validation: types and lint clean; project page, dashboard and project tests pass (55). A full client run on a heavily loaded machine (load average above 500) timed out in 11 slow tests that pass when run on their own; the last complete clean run was 621 of 621 before this change. Real browser: the split layout and the new swatches looked right at 1500 px. Test data removed.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
