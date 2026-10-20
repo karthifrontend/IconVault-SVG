@@ -1,10 +1,9 @@
-// Controls above the icon list: search, the preview size / colour / style, grid or list view, sort and background, the "select all" checkbox with a breadcrumb of where you are, and (for editors) the Upload icons menu, which can be placed into the project header.
-import { Box, ChevronRight, Copy, Eye, LayoutGrid, List, Minus, Plus, Search, Square } from "lucide-react";
+// Controls above the icon list: the preview size / colour / style, sort, background and grid or list view in one row, the "select all" checkbox with the search beside it, and (for editors) the Upload icons menu, which can be placed into the project header.
+import { Box, Copy, Eye, LayoutGrid, List, Minus, Plus, Search, Square } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
 import { ICON_COLORS, ICON_STYLES, ICON_STYLE_HINTS, ICON_STYLE_LABELS, MAX_ICON_SIZE, MIN_ICON_SIZE, clampIconSize, type IconAppearance, type IconStyle } from "../../lib/iconAppearance";
-import { pluralize } from "../../lib/format";
 import { SURFACES, SURFACE_LABELS, type Surface } from "../../lib/previewSurface";
 import { Button } from "../ui/Button";
 import { SelectField } from "../ui/Fields";
@@ -24,8 +23,6 @@ type IconToolbarProps = {
   onSurface: (surface: Surface) => void;
   appearance: IconAppearance;
   onAppearance: (change: Partial<IconAppearance>) => void;
-  // Where you are: shown as "project › folder (n icons)".
-  location?: { project: string; folder: string; count: number };
   // When set, the Upload icons and From Another Project buttons are placed there (the project header) instead of in this toolbar.
   actionsHost?: HTMLElement | null;
   canAdd: boolean;
@@ -38,7 +35,7 @@ type IconToolbarProps = {
 
 const STYLE_ICONS: Record<IconStyle, typeof Eye> = { natural: Eye, flat: Square, wireframe: Box };
 
-export default function IconToolbar({ search, onSearch, sort, onSort, view, onView, surface, onSurface, appearance, onAppearance, location, actionsHost, canAdd, onUpload, loaded, selected, onSelectAll }: IconToolbarProps) {
+export default function IconToolbar({ search, onSearch, sort, onSort, view, onView, surface, onSurface, appearance, onAppearance, actionsHost, canAdd, onUpload, loaded, selected, onSelectAll }: IconToolbarProps) {
   const allRef = useRef<HTMLInputElement | null>(null);
   const all = loaded > 0 && selected === loaded;
   const some = selected > 0 && selected < loaded;
@@ -60,27 +57,12 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-48 flex-1">
-          <label htmlFor="icon-search" className="sr-only">
-            Search icons
-          </label>
-          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            id="icon-search"
-            type="search"
-            value={search}
-            onChange={(event) => onSearch(event.target.value)}
-            placeholder="Search by name or tag"
-            autoComplete="off"
-            className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
-          />
-        </div>
+      <div className="flex flex-wrap items-center gap-2 min-[1440px]:flex-nowrap">
         <div role="group" aria-label="Icon size" className="flex h-10 items-center gap-2 rounded-lg border border-input bg-background px-2">
           <button type="button" aria-label="Smaller icons" disabled={appearance.size <= MIN_ICON_SIZE} onClick={() => onAppearance({ size: clampIconSize(appearance.size - 4) })} className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-ring">
             <Minus aria-hidden="true" className="h-4 w-4" />
           </button>
-          <input type="range" aria-label="Icon size in pixels" min={MIN_ICON_SIZE} max={MAX_ICON_SIZE} step={2} value={appearance.size} onChange={(event) => onAppearance({ size: clampIconSize(Number(event.target.value)) })} className="w-24 accent-[hsl(var(--primary))]" />
+          <input type="range" aria-label="Icon size in pixels" min={MIN_ICON_SIZE} max={MAX_ICON_SIZE} step={2} value={appearance.size} onChange={(event) => onAppearance({ size: clampIconSize(Number(event.target.value)) })} className="w-20 accent-[hsl(var(--primary))]" />
           <button type="button" aria-label="Larger icons" disabled={appearance.size >= MAX_ICON_SIZE} onClick={() => onAppearance({ size: clampIconSize(appearance.size + 4) })} className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-ring">
             <Plus aria-hidden="true" className="h-4 w-4" />
           </button>
@@ -102,9 +84,9 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
           {ICON_STYLES.map((value) => {
             const Icon = STYLE_ICONS[value];
             return (
-              <button key={value} type="button" aria-pressed={appearance.style === value} title={ICON_STYLE_HINTS[value]} onClick={() => onAppearance({ style: value })} className={cn("inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring", appearance.style === value && "bg-background text-foreground shadow-sm ring-1 ring-border")}>
+              <button key={value} type="button" aria-pressed={appearance.style === value} title={ICON_STYLE_HINTS[value]} onClick={() => onAppearance({ style: value })} className={cn("inline-flex h-9 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted-foreground transition-colors min-[1700px]:px-2.5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring", appearance.style === value && "bg-background text-foreground shadow-sm ring-1 ring-border")}>
                 <Icon aria-hidden="true" className="h-4 w-4" />
-                {ICON_STYLE_LABELS[value]}
+                <span className="sr-only min-[1700px]:not-sr-only">{ICON_STYLE_LABELS[value]}</span>
               </button>
             );
           })}
@@ -149,25 +131,26 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
           <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
             <input ref={allRef} type="checkbox" checked={all} disabled={loaded === 0} onChange={(event) => onSelectAll(event.target.checked)} className="h-4 w-4 accent-[hsl(var(--primary))]" />
             Select all {loaded} shown
           </label>
-          {location && (
-            <nav aria-label="Breadcrumb">
-              <ol className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <li className="max-w-40 truncate">{location.project}</li>
-                <li aria-hidden="true">
-                  <ChevronRight className="h-4 w-4" />
-                </li>
-                <li aria-current="page" className="rounded-md bg-muted px-2 py-0.5 font-semibold text-foreground">
-                  {location.folder}
-                </li>
-                <li>({pluralize(location.count, "icon")})</li>
-              </ol>
-            </nav>
-          )}
+          <div className="relative min-w-48 flex-1 sm:max-w-md">
+            <label htmlFor="icon-search" className="sr-only">
+              Search icons
+            </label>
+            <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              id="icon-search"
+              type="search"
+              value={search}
+              onChange={(event) => onSearch(event.target.value)}
+              placeholder="Search by name or tag"
+              autoComplete="off"
+              className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+            />
+          </div>
         </div>
         {canAdd && (actionsHost ? createPortal(actions, actionsHost) : actions)}
       </div>

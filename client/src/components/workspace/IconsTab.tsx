@@ -15,7 +15,6 @@ import { useSelection } from "../../hooks/useSelection";
 import { cacheBuild } from "../../lib/fontBuildCache";
 import { defaultFontOptions } from "../../lib/fontDefaults";
 import { loadPreviewFont, nextPreviewFamily } from "../../lib/fontPreview";
-import { folderPath } from "../../lib/folderTree";
 import { pluralize, savingsPercent } from "../../lib/format";
 import { SURFACES, type Surface } from "../../lib/previewSurface";
 import { triggerBrowserDownload } from "../../utils/zipBundle";
@@ -153,7 +152,6 @@ export default function IconsTab() {
         onSurface={setSurface}
         appearance={appearance}
         onAppearance={setAppearance}
-        location={{ project: project.name, folder: selectedFolder === "all" ? "All icons" : selectedFolder === "root" ? "Uncategorized" : folderPath(folderList.folders, selectedFolder), count: total }}
         actionsHost={actionsSlot}
         canAdd={project.access.canAddIcons}
         onUpload={(kind: UploadKind) => setDialog(kind === "files" ? "add" : kind)}

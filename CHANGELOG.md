@@ -607,6 +607,14 @@ Requested because icon size is now one project-wide setting in the Icons toolbar
 - Also removed from the details panel: its own **Preview background** switch. The panel uses the background chosen in the Icons toolbar (saved in the browser), like the size.
 - Open: to see an icon at an exact size such as 128 px you now use the toolbar slider (maximum 96 px).
 
+## 2026-10-20: Follow-up, toolbar in one row and search beside Select all (change request)
+
+Requested after seeing the toolbar. Client only. One commit on `main`, local only.
+
+- The breadcrumb (project, folder, count) is removed. **Search** takes its place, beside **Select all**.
+- Size, colour, style, sort, background and grid or list are now in one row (on screens at least 1440 px wide; the style buttons then show icons only, with their names from 1700 px; narrower screens wrap and a phone stacks them).
+- Validation: client tests, types and lint (see the count in Known issues). Checked in the browser at 1500 px: one row, no sideways scroll.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**

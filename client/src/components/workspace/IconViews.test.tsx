@@ -205,11 +205,12 @@ describe("IconToolbar", () => {
     expect(onAppearance).toHaveBeenLastCalledWith({ style: "wireframe" });
   });
 
-  it("shows where you are", () => {
-    setup({ location: { project: "Feather", folder: "Arrows", count: 3 } });
-    const crumb = screen.getByRole("navigation", { name: "Breadcrumb" });
-    expect(crumb).toHaveTextContent("FeatherArrows(3 icons)");
-    expect(within(crumb).getByText("Arrows")).toHaveAttribute("aria-current", "page");
+  it("has no breadcrumb, and puts search beside select all", () => {
+    setup();
+    expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).not.toBeInTheDocument();
+    const selectAll = screen.getByLabelText(/Select all/);
+    const search = screen.getByRole("searchbox", { name: "Search icons" });
+    expect(selectAll.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("puts the add buttons into the header slot when there is one", () => {
