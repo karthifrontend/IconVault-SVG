@@ -240,6 +240,43 @@ Logged separately from Phases 0 to 2. Client only; the server is untouched in th
 
 ---
 
+## 2026-10-20: Phase 4, dashboard and project workspace (Icon Vault integration)
+
+Logged separately from Phases 0 to 3. Client only; the server is untouched. Signed-in users now land on a projects dashboard and open project workspaces; the pre-redesign compiler is kept at `/classic` (a "Classic compiler" link in the header, hidden on phone widths) until Phase 5 rebuilds it inside projects. Seven commits on `main` (`d638596`, `b6ed613`, `3523632`, `91084ee`, `49ca45b`, `2e3d216`, `e0ea761`, plus this entry), local only.
+
+### Changes
+| Commit | Change |
+|---|---|
+| `d638596` | Shared building blocks: dialog (centred or side drawer), confirm dialog, buttons, form fields, tabs, action menu, badges, toasts with Undo, safe inline SVG preview, `useResource`, debounce, selection and persistent-choice hooks |
+| `b6ed613` | **Projects dashboard** (`/`): cards with icon previews, filters (mine / public, purpose, active / archived, sort; kept in the address), search that also finds icons across projects and copies them into one of your projects, create, edit, duplicate, archive, delete |
+| `3523632` | **Project workspace** (`/projects/:id/*`): header with Icons, Trash and Settings sections, read-only note for projects you can only view, folder tree (nested, create, rename, delete, drag icons onto folders, collapsible on phones; selected folder kept in the address) |
+| `91084ee` | Building blocks for browsing and adding icons: icon card and table rows, toolbar, bulk bar, upload (files, ZIP, paste; duplicate handling; batches of 100), copy-from-project |
+| `49ca45b` | **Icons section** (search, sort, grid or table, "Show more" up to 1000, select, move, tag, optimize, download, move to trash with Undo) and the **icon drawer** (sizes and backgrounds, copy SVG / React / Vue, download, optimize, edit name, folder, tags and codepoint, edit code, version history and restore, font-conversion warnings) |
+| `2e3d216` | **Trash** (list, restore one or all with a note when an id or codepoint was taken meanwhile, delete for good, empty trash, each with confirmation) and **Settings** (details, edit, archive or unarchive, delete project) |
+| `e0ea761` | Routing: `BrowserRouter`; `/` dashboard, `/projects/:id/*` workspace, `/classic` legacy compiler, anything else redirects to `/`; brand link is a router link |
+
+### Changes in behaviour you will notice
+- After signing in you see **Projects**, not the old compiler. The old compiler and its library panel are at **/classic** and still work (verified loading), but they are separate from the new projects until Phase 5.
+- Public projects owned by others are read-only for you: you can view, download and copy icons, not change them. Trash and Settings changes are for the owner (and admins).
+- Preferences remembered in the browser: grid or table, sort order, preview background, theme.
+- Bundle size: JavaScript 506.8 kB to 661.0 kB (192 kB gzip), CSS 65.2 kB to 73.9 kB.
+
+### Validation (verified)
+- `npm test` in `client/`: **367 of 367** pass (25 files), including new tests for every screen above (loading, empty, error and retry states, permissions, bulk actions and Undo, drawer edits, trash, settings, routing).
+- `npx tsc -b`: passes. `npm run build`: succeeds. `npm run lint`: **31 problems, the same as the baseline**; all new files lint clean.
+- In the browser pane with a throwaway test user (deleted afterwards; database back to 1 real user): dashboard; opening a project; icon grid in light and dark and at phone width (375px, no sideways scroll); opening the drawer and renaming an icon (confirmed on the server, list refreshed, focus returned); selecting icons and the bulk bar; move to trash with confirmation, counts updating and the Undo toast; Trash listing and restoring one icon; Settings with the danger zone; `/classic` loading the old compiler.
+
+### Not tested, or open
+- **Real Google or Microsoft sign-in** was not re-run (the test session was injected). Please sign in once in your own browser, as agreed.
+- Not exercised in the browser: upload and paste dialogs, copy-from-project, folder create, rename and drag-and-drop, tag and move dialogs, optimize, drawer code editing and version restore, empty trash, edit project, archive and delete project. They are covered by component tests only.
+- Drag and drop and the 1000-icon limit were tested with simulated events, not real ones; large projects (hundreds of icons) were not tried for speed.
+- No screen reader, Firefox or Safari testing; tablet widths not checked.
+- Small known rough edges: the search placeholder is cut off on phone widths; on phones the "Classic compiler" link is hidden; the legacy compiler stays light in dark mode.
+- Test runs were slow and timed out while the computer was heavily loaded (load average above 200 from system processes); they pass on a quiet machine.
+
+### Next
+- Phase 5: bring the compiler into projects (Sprite tab using the existing in-browser engine), import a sprite with a conflict dialog, retire the old library routes and clear the old test bundles.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -257,4 +294,4 @@ Logged separately from Phases 0 to 2. Client only; the server is untouched in th
 - Rotate the database password and `SESSION_SECRET` if the zip or `.env` was ever shared.
 - Add more test users or publish the Google app if others need access; configure Microsoft sign-in if wanted.
 - ~~Initialize Git~~ Done in Phase 0. Still open: add a remote and push if wanted.
-- Phase 3 onward: client work, sprite and font builders, import and export, admin routes, API tokens and the CLI (see the Phase 2 section, Not tested, or open).
+- Phase 5 onward: sprite and font builders, import and export, admin routes, API tokens and the CLI (see the Phase 2 section, Not tested, or open).

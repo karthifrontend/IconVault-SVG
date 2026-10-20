@@ -13,6 +13,7 @@ Compile individual SVG icons into a single `sprite.svg` (`<symbol>` + `<use>`), 
 - Live demo with colour/gradient controls and copy-paste snippets for HTML, React, Vue, Angular, Svelte and Next.js.
 - Sign-in with Google or Microsoft is required to use the app. A signed-out visitor sees a landing page.
 - Library: save bundles, create new versions, rename, delete, and mark bundles public or private.
+- Projects dashboard and workspaces: folders, search, grid or table, bulk move / tag / optimize / download, trash with Undo, icon details drawer with versions, settings. The earlier compiler screen is available at `/classic` until it is rebuilt inside projects.
 - Colour theme: light, dark or follow the system (switch in the header; the choice is remembered). The pre-redesign compiler screens stay light until the new workspace replaces them.
 
 ## Prerequisites
