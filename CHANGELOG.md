@@ -451,4 +451,4 @@ The Phase 7 entry said the `npm audit` findings on the server "came with the fon
 - Rotate the database password and `SESSION_SECRET` if the zip or `.env` was ever shared.
 - Add more test users or publish the Google app if others need access; configure Microsoft sign-in if wanted.
 - ~~Initialize Git~~ Done in Phase 0. Still open: add a remote and push if wanted.
-- Phase 8 hardening (see the Not tested, or open lists of Phases 2, 5, 6 and 7).
+- All eight planned phases are done. What is left is in the Not tested, or open lists (above all Phase 8): a real sign-in with your `ADMIN_EMAILS`, a VoiceOver pass, choosing production rate limits and `CORS_ORIGINS`, adding a Git remote, and rotating the database password and `SESSION_SECRET` if they were ever shared.
