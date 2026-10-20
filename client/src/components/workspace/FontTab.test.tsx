@@ -171,6 +171,95 @@ describe("building", () => {
   });
 });
 
+describe("the codepoint mapping table", () => {
+  const rebuilt = (codepoint: string) => built({ codepoints: [{ id: "a", name: "Home", slug: "home", codepoint, className: "fth-home", isNew: false }, { id: "b", name: "Star", slug: "star", codepoint: "E002", className: "fth-star", isNew: false }] });
+  const open = async (over: Partial<WorkspaceContextValue> = {}) => {
+    const fns = setup(over);
+    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await screen.findByRole("table", { name: "Stable Unicode codepoints mapping" });
+    return fns;
+  };
+
+  it("lists every glyph of the build with its character and CSS entity", async () => {
+    await open();
+    const table = screen.getByRole("table", { name: "Stable Unicode codepoints mapping" });
+    expect(within(table).getByRole("textbox", { name: "Codepoint for Home" })).toHaveValue("E001");
+    expect(within(table).getByText("\\e001")).toBeInTheDocument();
+    expect(within(table).getByText("\\e002")).toBeInTheDocument();
+  });
+
+  it("saves a new character on the icon, rebuilds with the same options, and shows the new value in the table, the grid and the stylesheet", async () => {
+    vi.mocked(iconsApi.updateIcon).mockResolvedValue(makeIcon({ id: "a", codepoint: "E701" }) as never);
+    const fns = await open();
+    buildFont.mockClear();
+    buildFont.mockResolvedValue(rebuilt("E701"));
+    const home = screen.getByRole("textbox", { name: "Codepoint for Home" });
+    await userEvent.clear(home);
+    await userEvent.type(home, "e701{Enter}");
+    await waitFor(() => expect(iconsApi.updateIcon).toHaveBeenCalledWith("a", { codepoint: "E701" }));
+    await waitFor(() => expect(buildFont).toHaveBeenCalledTimes(1));
+    expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ fontName: "FeatherIcons", formats: ["woff2", "woff", "ttf"] }));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Codepoint for Home" })).toHaveValue("E701"));
+    expect(screen.getByText("\\e701")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy class fth-home" }).closest("li")).toHaveTextContent("E701");
+    expect(await screen.findByText("Home now uses U+E701. Rebuilding the font.")).toBeInTheDocument();
+    expect(fns.refreshIcons).toHaveBeenCalled();
+  });
+
+  it("downloads and copies the rebuilt output, not the old one", async () => {
+    vi.mocked(iconsApi.updateIcon).mockResolvedValue(makeIcon({ id: "a" }) as never);
+    vi.mocked(fontsApi.downloadFont).mockResolvedValue({ blob: new Blob(["z"]), filename: "x.zip" });
+    await open();
+    buildFont.mockResolvedValue({ ...rebuilt("E701"), css: ".fth-home:before { content: \"\\e701\"; }" });
+    const home = screen.getByRole("textbox", { name: "Codepoint for Home" });
+    await userEvent.clear(home);
+    await userEvent.type(home, "E701{Enter}");
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Codepoint for Home" })).toHaveValue("E701"));
+    await userEvent.click(screen.getByRole("button", { name: "Copy CSS" }));
+    expect(clipboard.copyText).toHaveBeenCalledWith(expect.stringContaining("\\e701"));
+    await userEvent.click(screen.getByRole("button", { name: "Download ZIP" }));
+    expect(fontsApi.downloadFont).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the server's reason beside the box when another icon already has the character, and does not rebuild", async () => {
+    vi.mocked(iconsApi.updateIcon).mockRejectedValue(new ApiError('Codepoint E002 is already used by "Star".', 409));
+    await open();
+    buildFont.mockClear();
+    const home = screen.getByRole("textbox", { name: "Codepoint for Home" });
+    await userEvent.clear(home);
+    await userEvent.type(home, "E002{Enter}");
+    expect(await screen.findByText(/already used by "Star"/)).toBeInTheDocument();
+    expect(buildFont).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox", { name: "Codepoint for Home" })).toHaveValue("E002");
+  });
+
+  it("does not send an invalid value to the server", async () => {
+    await open();
+    const home = screen.getByRole("textbox", { name: "Codepoint for Home" });
+    await userEvent.clear(home);
+    await userEvent.type(home, "0041{Enter}");
+    expect(await screen.findByRole("alert")).toHaveTextContent("E000 to F8FF");
+    expect(iconsApi.updateIcon).not.toHaveBeenCalled();
+  });
+
+  it("clears a character with an empty box", async () => {
+    vi.mocked(iconsApi.updateIcon).mockResolvedValue(makeIcon({ id: "a" }) as never);
+    await open();
+    const home = screen.getByRole("textbox", { name: "Codepoint for Home" });
+    await userEvent.clear(home);
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(iconsApi.updateIcon).toHaveBeenCalledWith("a", { codepoint: null }));
+    expect(await screen.findByText("Cleared the character of Home. Rebuilding the font.")).toBeInTheDocument();
+  });
+
+  it("is read-only for people who cannot edit the project", async () => {
+    await open({ project: makeDetail({ id: "p1", purpose: "font", access: READ_ONLY }) });
+    const table = screen.getByRole("table", { name: "Stable Unicode codepoints mapping" });
+    expect(within(table).queryByRole("textbox")).not.toBeInTheDocument();
+    expect(within(table).getByText("U+E001")).toBeInTheDocument();
+  });
+});
+
 describe("chosen icons", () => {
   it("builds by itself with the icons handed over by the checklist", async () => {
     setup({}, { iconIds: ["a", "b"], autoBuild: true });

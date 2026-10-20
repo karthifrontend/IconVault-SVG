@@ -3,7 +3,8 @@ import { Copy, Download, FileUp, Hammer, ListChecks } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { buildFont, downloadFont } from "../../api/fonts";
-import type { BuildFontInput, FontBuildResult, FontFormat } from "../../api/types";
+import { updateIcon } from "../../api/icons";
+import type { BuildFontInput, FontBuildResult, FontCodepoint, FontFormat } from "../../api/types";
 import { useToast } from "../../context/ToastContext";
 import { useWorkspace } from "../../context/workspaceContext";
 import { copyText } from "../../lib/clipboard";
@@ -14,6 +15,7 @@ import { glyphChar, loadPreviewFont, nextPreviewFamily, unloadPreviewFont } from
 import { triggerBrowserDownload } from "../../utils/zipBundle";
 import { Button } from "../ui/Button";
 import { SelectField, TextField } from "../ui/Fields";
+import CodepointTable from "./CodepointTable";
 import IconChecklistDialog from "./IconChecklistDialog";
 import ImportFontDialog from "./ImportFontDialog";
 
@@ -134,6 +136,14 @@ export default function FontTab() {
     } finally {
       setDownloading(false);
     }
+  }
+
+  // Saves a new character on the icon, then rebuilds with the same options so the preview, the stylesheet and the download all use it. Rejects with the server's reason (for example that another icon has that character) so the table can show it next to the box.
+  async function saveCodepoint(glyph: FontCodepoint, codepoint: string | null) {
+    await updateIcon(glyph.id, { codepoint });
+    refreshIcons();
+    showToast(codepoint ? `${glyph.name} now uses U+${codepoint}. Rebuilding the font.` : `Cleared the character of ${glyph.name}. Rebuilding the font.`, "success");
+    await runBuild();
   }
 
   async function copy(text: string, what: string) {
@@ -281,6 +291,14 @@ export default function FontTab() {
             </ul>
             {shown.length === 0 && <p className="mt-2 text-sm text-muted-foreground">No characters match “{filter}”.</p>}
             {shown.length > 300 && <p className="mt-2 text-sm text-muted-foreground">Showing the first 300 of {shown.length}. Use the filter to find others.</p>}
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold">Stable Unicode codepoints mapping</h3>
+            <p className="mt-0.5 text-sm text-muted-foreground">Each icon keeps its character when the font is rebuilt, so CSS you already published keeps working.{canEdit ? " Change a value (E000 to F8FF) and the font is rebuilt with it." : ""}</p>
+            <div className="mt-2">
+              <CodepointTable glyphs={shown.slice(0, 300)} family={result?.loaded ? result.family : null} canEdit={canEdit} busy={building} onSave={saveCodepoint} />
+            </div>
           </div>
         </section>
       )}

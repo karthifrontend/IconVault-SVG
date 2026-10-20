@@ -1,6 +1,6 @@
 // Request body schemas (zod) for projects, folders and icons. A failed parse throws a ZodError, which the error handler turns into a 400. Unknown keys are rejected so a typo or a forbidden field (such as changing a project's purpose) never passes silently.
 import { z } from "zod";
-import { isPrivateUseCodepoint } from "./codepoint.js";
+import { isFontCodepoint } from "./codepoint.js";
 
 export const objectId = z.string().regex(/^[a-f\d]{24}$/i, "must be a valid id");
 
@@ -13,8 +13,8 @@ const tags = z.array(tag).max(50);
 export const codepointSchema = z
   .string()
   .trim()
-  .regex(/^[0-9a-fA-F]{4,6}$/, "must be 4-6 hex digits")
-  .refine(isPrivateUseCodepoint, "must be in a Unicode Private Use Area (E000-F8FF)")
+  .regex(/^[0-9a-fA-F]{4}$/, "must be 4 hex digits")
+  .refine(isFontCodepoint, "must be between E000 and F8FF (the Private Use Area)")
   .transform((value) => value.toUpperCase());
 const nullableId = objectId.nullable();
 

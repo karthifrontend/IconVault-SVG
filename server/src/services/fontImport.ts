@@ -3,7 +3,7 @@ import { JSDOM } from "jsdom";
 import opentype from "opentype.js";
 import wawoff2 from "wawoff2";
 import { BadRequestError } from "../lib/errors.js";
-import { isPrivateUseCodepoint } from "../lib/codepoint.js";
+import { isFontCodepoint } from "../lib/codepoint.js";
 import Icon from "../models/Icon.js";
 import type { Types } from "mongoose";
 import { importSvg, serializeIcon, type Strategy } from "./iconService.js";
@@ -145,9 +145,9 @@ function readSvgFont(buffer: Buffer, mapping: Map<string, string>): GlyphRead {
   return { glyphs, total, truncated: total > glyphs.length, kind: "svg" };
 }
 
-// Glyphs whose character is in a Private Use Area, which is where icon fonts keep their icons.
+// Glyphs whose character is in the basic Private Use Area (E000 to F8FF), which is where icon fonts keep their icons.
 export function privateUseOnly(glyphs: Glyph[]): Glyph[] {
-  return glyphs.filter((glyph) => glyph.codepoint !== null && isPrivateUseCodepoint(glyph.codepoint));
+  return glyphs.filter((glyph) => glyph.codepoint !== null && isFontCodepoint(glyph.codepoint));
 }
 
 export type GlyphImportSummary = {
@@ -170,7 +170,7 @@ export async function importGlyphs(projectId: Types.ObjectId, glyphs: Glyph[], o
         continue;
       }
       let icon = outcome.icon;
-      if (glyph.codepoint && isPrivateUseCodepoint(glyph.codepoint)) {
+      if (glyph.codepoint && isFontCodepoint(glyph.codepoint)) {
         const taken = await Icon.exists({ projectId, codepoint: glyph.codepoint, deletedAt: null, _id: { $ne: icon._id } });
         if (taken) {
           summary.codepointsDropped += 1;

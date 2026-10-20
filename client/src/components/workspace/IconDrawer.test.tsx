@@ -136,11 +136,11 @@ describe("details", () => {
     const field = screen.getByLabelText("Font codepoint");
     await userEvent.clear(field);
     await userEvent.type(field, "0041");
-    expect(screen.getByText(/private-use value/)).toBeInTheDocument();
+    expect(screen.getByText(/E000 to F8FF so it cannot replace/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
     await userEvent.clear(field);
     await userEvent.type(field, "xyz");
-    expect(screen.getByText(/4 to 6 hex digits/)).toBeInTheDocument();
+    expect(screen.getByText(/exactly 4 hex digits/)).toBeInTheDocument();
     await userEvent.clear(field);
     expect(screen.getByRole("button", { name: "Save changes" })).toBeEnabled();
   });

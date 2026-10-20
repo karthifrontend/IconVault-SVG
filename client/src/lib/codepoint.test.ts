@@ -1,20 +1,23 @@
 // Tests for the codepoint rule and the clipboard helper.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { copyText } from "./clipboard";
-import { codepointProblem, isPrivateUseCodepoint } from "./codepoint";
+import { codepointProblem, isFontCodepoint } from "./codepoint";
 
 describe("codepoints", () => {
-  it("accepts only the private use areas", () => {
-    for (const ok of ["E000", "e001", "F8FF", "F0000", "FFFFD", "100000", "10FFFD"]) expect(isPrivateUseCodepoint(ok), ok).toBe(true);
-    for (const bad of ["0041", "DFFF", "F900", "FFFFE", "110000", "ZZZZ", "E0", ""]) expect(isPrivateUseCodepoint(bad), bad).toBe(false);
+  it("accepts exactly four hex digits from E000 to F8FF", () => {
+    for (const ok of ["E000", "e001", "F8FF", "E701"]) expect(isFontCodepoint(ok), ok).toBe(true);
+    // Supplementary planes are valid Unicode but the font cannot hold them.
+    for (const bad of ["0041", "DFFF", "F900", "F0000", "FFFFD", "100000", "10FFFD", "ZZZZ", "E0", "E0001", ""]) expect(isFontCodepoint(bad), bad).toBe(false);
   });
 
   it("explains what is wrong, and treats blank as clearing", () => {
     expect(codepointProblem("")).toBeNull();
     expect(codepointProblem("  ")).toBeNull();
     expect(codepointProblem("E001")).toBeNull();
-    expect(codepointProblem("xyz")).toMatch(/hex digits/);
-    expect(codepointProblem("0041")).toMatch(/private-use/);
+    expect(codepointProblem("xyz")).toMatch(/4 hex digits/);
+    expect(codepointProblem("E00001")).toMatch(/4 hex digits/);
+    expect(codepointProblem("0041")).toMatch(/E000 to F8FF/);
+    expect(codepointProblem("F0001")).toMatch(/4 hex digits/);
   });
 });
 

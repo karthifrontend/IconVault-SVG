@@ -457,6 +457,31 @@ Requested after Phase 8: when icons are selected there was only a Download butto
 - Reloading the Sprite or Font page keeps the choice (the browser keeps the address state), opening the section from the project tabs does not.
 - The CLI has no equivalent (it already builds a whole project or folder with `sprite`).
 
+## 2026-10-20: Follow-up, editable codepoint mapping and a fix for codepoints that did not reach the font (change request)
+
+Requested after reviewing the Icon Vault screen "Stable Unicode Codepoints Mapping": that table was not in this project's Font section (codepoints could only be changed one icon at a time in the icon drawer), and in Icon Vault an edited hex value did not show up in the output. Server and client. One commit on `main`, local only.
+
+### What was wrong
+Checked against the real font engine: an edited value from E000 to F8FF **does** reach the CSS, the glyph map and the font file. A value above FFFF (the two supplementary Private Use planes, which the old rule accepted) does not: the CSS said `\f0001` while the font file put the glyph on the wrong character. That is the same symptom you saw (the value looks saved but the output disagrees), so the rule was wrong rather than the saving.
+
+### Changes
+| Part | Change |
+|---|---|
+| **One rule for a font character** | Exactly **four hex digits from E000 to F8FF**, everywhere: the icon edit API, the icon drawer (field limited to 4 characters, new hint), the table below, the archive import and the font import (a glyph on another character simply loses its character and is counted). The old messages said "E000-F8FF" while the checks allowed more. |
+| **Build guard** | If an icon still has an old value outside the range (it could only have been set before this rule), the build stops with a message that names the icons ("star (F0001) ... change or clear it in the icon's details") instead of producing CSS and a font that disagree. |
+| **Mapping table** | New "Stable Unicode codepoints mapping" table under the built font, like the Icon Vault screen: **Preview, Icon name, Slug, Assigned hex codepoint (U+ box), CSS entity** (`\e701`). Editors type a new value (hex only, capitals, 4 characters) and press Enter or leave the box: it is saved on the icon, then **the font is rebuilt with the same options**, so the preview glyph, the character grid, the copied CSS and the downloaded ZIP all use it. Empty box = clear (the icon gets the next free character on the next build). Escape puts the saved value back. A value outside the range is refused in the box without asking the server; a clash with another icon shows the server's reason beside the box ("Codepoint E701 is already used by ...") and changes nothing. Viewers see the table as plain text. Swapping two characters takes three edits (clear one first), because every character is unique. |
+
+### Validation (verified)
+- Server `npm test`: **136 of 136** (new: the font-character rule). `npm run test:db`: **160 of 160** (new, reading the font file back with a font parser): an edited character appears in the build, the CSS, the glyph map **and the font file itself**, and the glyph is no longer on its old character; a clash is refused and the output stays as it was; a swap in steps works; clearing gives the next free character; values outside E000 to F8FF are refused (400) and an old out-of-range value stops the build with a clear message naming the icon; only editors can change a character.
+- Client `npm test`: **539 of 539** (new: the table, and the full edit-then-rebuild flow in the Font section including download and copy using the rebuilt output, clash message, invalid input, clearing, Escape, read-only and busy states). Types and lint clean.
+- Real browser (dark theme, throwaway user): built a 3-icon font (E001 to E003); typed `e701` for add-square and pressed Enter: the grid card, the table and the CSS entity (`\e701`) updated, the WOFF2 size changed (it was rebuilt) and the glyph still drew from the rebuilt font; typing E701 for another icon showed "Codepoint E701 is already used by "add-square"." beside a red box and changed nothing else. axe on this page, error state included, light and dark: no violations. Test data removed; the database holds your 1 user and 2 projects.
+
+### Not tested, or open
+- The table has no per-row "reset to automatic" button other than clearing the box.
+- Editing is one icon at a time with a rebuild each time; a project with hundreds of icons rebuilds a bit slower after each edit.
+- The Icon Vault project itself was not changed (it is a separate project); the same rule and the same read-back test would apply there.
+- Not tried: a screen reader on the table, and editing when the project has icons filtered out of the build (the table shows only the icons in the current build).
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -466,7 +491,7 @@ Requested after Phase 8: when icons are selected there was only a Download butto
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 517 (Phases 3 to 8 and the follow-up), the server 135 unit plus 152 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 539 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

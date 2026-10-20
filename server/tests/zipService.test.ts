@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { strToU8, unzipSync, zipSync } from "fflate";
-import { isPrivateUseCodepoint } from "../src/lib/codepoint.js";
+import { isFontCodepoint, isPrivateUseCodepoint } from "../src/lib/codepoint.js";
 import { ZIP_LIMITS, buildZip, readSvgsFromZip } from "../src/services/zipService.js";
 
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h1v1z"/></svg>';
@@ -61,5 +61,12 @@ describe("isPrivateUseCodepoint", () => {
   it("accepts the Private Use Areas only", () => {
     for (const ok of ["E000", "e001", "F8FF", "F0000", "FFFFD", "100000", "10FFFD"]) assert.equal(isPrivateUseCodepoint(ok), true, ok);
     for (const bad of ["0041", "DFFF", "F900", "FFFFE", "10FFFE", "110000", "ZZZZ", "E0", "", "E00000A"]) assert.equal(isPrivateUseCodepoint(bad), false, bad);
+  });
+});
+
+describe("isFontCodepoint", () => {
+  it("accepts exactly four hex digits from E000 to F8FF, because the font cannot hold anything else", () => {
+    for (const ok of ["E000", "e001", "F8FF", "E701"]) assert.equal(isFontCodepoint(ok), true, ok);
+    for (const bad of ["0041", "DFFF", "F900", "F0000", "FFFFD", "100000", "10FFFD", "E0", "E0001", "ZZZZ", ""]) assert.equal(isFontCodepoint(bad), false, bad);
   });
 });

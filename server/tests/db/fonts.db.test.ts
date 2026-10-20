@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { unzipSync } from "fflate";
+import opentype from "opentype.js";
 import Icon from "../../src/models/Icon.js";
 import { SVG, hasDatabase, startHarness, type TestUser } from "./harness.js";
 
@@ -138,6 +139,105 @@ describe("icon fonts (HTTP, throwaway database)", { skip: hasDatabase ? false : 
       }
       const gone = await build(owner.token, p.id, { scope: "folder", folderId: "a".repeat(24) });
       assert.equal(gone.status, 400);
+    });
+  });
+
+  describe("editing a codepoint changes the output", () => {
+    const setup = async () => {
+      const p = await makeProject(owner.token);
+      await upload(owner.token, p.id, { star: STAR, box: BOX, dot: CIRCLE });
+      await build(owner.token, p.id);
+      const byslug = async (slug: string) => (await Icon.findOne({ projectId: p.id, slug }))?._id;
+      return { p, byslug };
+    };
+    // The characters the font file itself holds, read back with a font parser.
+    const fontMap = async (projectId: string) => {
+      const r = await h.call(owner.token, "POST", `/api/projects/${projectId}/font/download`, { formats: ["ttf"], fontName: "Edit" });
+      const files = unzipSync(new Uint8Array(await r.raw.arrayBuffer()));
+      const ttf = Buffer.from(files["Edit.ttf"] as Uint8Array);
+      const font = opentype.parse(ttf.buffer.slice(ttf.byteOffset, ttf.byteOffset + ttf.byteLength));
+      const map: Record<string, string[]> = {};
+      for (let i = 0; i < font.glyphs.length; i += 1) {
+        const g = font.glyphs.get(i);
+        if (g.name && g.name !== ".notdef") map[g.name] = g.unicodes.map((u) => u.toString(16).toUpperCase());
+      }
+      return { map, json: JSON.parse(Buffer.from(files["Edit.json"] as Uint8Array).toString("utf8")), css: Buffer.from(files["Edit.css"] as Uint8Array).toString("utf8") };
+    };
+
+    it("shows up in the build, the CSS, the glyph map and the font file itself", async () => {
+      const { p, byslug } = await setup();
+      const edit = await h.call(owner.token, "PATCH", `/api/icons/${await byslug("star")}`, { codepoint: "e701" });
+      assert.equal(edit.status, 200, JSON.stringify(edit.body));
+      assert.equal(edit.body.codepoint, "E701");
+
+      const r = await build(owner.token, p.id);
+      assert.deepEqual(r.body.codepoints.map((c: { slug: string; codepoint: string; isNew: boolean }) => [c.slug, c.codepoint, c.isNew]), [["box", "E001", false], ["dot", "E002", false], ["star", "E701", false]]);
+      assert.match(r.body.css, /\.icon-star:before\s*\{\s*content: "\\e701"/);
+
+      const out = await fontMap(p.id);
+      assert.deepEqual(out.map.star, ["E701"], "the font file must hold the glyph on the edited character");
+      assert.deepEqual(out.map.box, ["E001"]);
+      assert.equal(out.json.star, 0xe701);
+      assert.match(out.css, /\.icon-star:before\s*\{\s*content: "\\e701"/);
+    });
+
+    it("moves the glyph off its old character", async () => {
+      const { p, byslug } = await setup();
+      await h.call(owner.token, "PATCH", `/api/icons/${await byslug("dot")}`, { codepoint: "F000" });
+      const out = await fontMap(p.id);
+      assert.deepEqual(out.map.dot, ["F000"]);
+      assert.equal(Object.values(out.map).flat().includes("E002"), false, "nothing is left on the old character");
+    });
+
+    it("refuses a character another icon already has, and leaves the output as it was", async () => {
+      const { p, byslug } = await setup();
+      const clash = await h.call(owner.token, "PATCH", `/api/icons/${await byslug("star")}`, { codepoint: "E001" });
+      assert.equal(clash.status, 409);
+      assert.match(clash.body.error, /already used by/);
+      const out = await fontMap(p.id);
+      assert.deepEqual([out.map.box, out.map.dot, out.map.star], [["E001"], ["E002"], ["E003"]]);
+    });
+
+    it("swaps two characters in two steps, and the font follows", async () => {
+      const { p, byslug } = await setup();
+      const [box, dot] = [await byslug("box"), await byslug("dot")];
+      assert.equal((await h.call(owner.token, "PATCH", `/api/icons/${box}`, { codepoint: null })).status, 200);
+      assert.equal((await h.call(owner.token, "PATCH", `/api/icons/${dot}`, { codepoint: "E001" })).status, 200);
+      assert.equal((await h.call(owner.token, "PATCH", `/api/icons/${box}`, { codepoint: "E002" })).status, 200);
+      const out = await fontMap(p.id);
+      assert.deepEqual([out.map.box, out.map.dot], [["E002"], ["E001"]]);
+    });
+
+    it("clearing a character gives the icon the next free one on the next build", async () => {
+      const { p, byslug } = await setup();
+      await h.call(owner.token, "PATCH", `/api/icons/${await byslug("box")}`, { codepoint: null });
+      const r = await build(owner.token, p.id);
+      const box = r.body.codepoints.find((c: { slug: string }) => c.slug === "box");
+      assert.deepEqual({ codepoint: box.codepoint, isNew: box.isNew }, { codepoint: "E001", isNew: true });
+    });
+
+    it("accepts only four hex digits from E000 to F8FF, because the font cannot hold anything else", async () => {
+      const { p, byslug } = await setup();
+      const star = await byslug("star");
+      for (const bad of ["0041", "DFFF", "F900", "F0001", "100000", "E0", "E7011", "zzzz"]) {
+        assert.equal((await h.call(owner.token, "PATCH", `/api/icons/${star}`, { codepoint: bad })).status, 400, bad);
+      }
+      assert.deepEqual((await build(owner.token, p.id)).body.codepoints.map((c: { codepoint: string }) => c.codepoint), ["E001", "E002", "E003"]);
+    });
+
+    it("refuses to build an icon that still has an old out-of-range character, and names it", async () => {
+      const { p, byslug } = await setup();
+      await Icon.updateOne({ _id: await byslug("star") }, { $set: { codepoint: "F0001" } });
+      const r = await build(owner.token, p.id);
+      assert.equal(r.status, 400);
+      assert.match(r.body.error, /star \(F0001\)/);
+      assert.match(r.body.error, /outside E000 to F8FF/);
+    });
+
+    it("only editors can change a character", async () => {
+      const { p, byslug } = await setup();
+      await h.call(owner.token, "PATCH", `/api/projects/${p.id}`, { visibility: "public" });
+      assert.equal((await h.call(other.token, "PATCH", `/api/icons/${await byslug("star")}`, { codepoint: "E701" })).status, 403);
     });
   });
 

@@ -273,7 +273,7 @@ function DetailsTab({ icon, canEdit, folders, saved, onSaved }: { icon: IconDeta
             ))}
           </SelectField>
           <TextField label="Tags" value={tagText} autoComplete="off" hint="Separated by commas." onChange={(event) => setTagText(event.target.value)} />
-          <TextField label="Font codepoint" value={codepoint} autoComplete="off" spellCheck={false} className="font-mono" hint="Optional. For example E001. Kept the same every time a font is built." error={problem ?? undefined} onChange={(event) => setCodepoint(event.target.value)} />
+          <TextField label="Font codepoint" value={codepoint} autoComplete="off" spellCheck={false} maxLength={4} className="font-mono" hint="Optional: 4 hex digits from E000 to F8FF, for example E001. Kept the same every time a font is built." error={problem ?? undefined} onChange={(event) => setCodepoint(event.target.value)} />
           {error && (
             <p role="alert" className="text-sm font-medium text-destructive">
               {error}

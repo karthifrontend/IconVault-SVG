@@ -54,7 +54,7 @@ export const iconSchema = new Schema(
       default: 0,
       min: 0,
     },
-    // Icon-font codepoint as 4-6 upper-case hex digits (e.g. "E001"). Stays stable across font rebuilds.
+    // Icon-font codepoint as 4 upper-case hex digits between E000 and F8FF (e.g. "E001"). Stays stable across font rebuilds.
     codepoint: {
       type: String,
       uppercase: true,

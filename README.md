@@ -123,7 +123,7 @@ Every route needs `Authorization: Bearer <session token>`. Errors are `{ "error"
 | POST | `/api/projects/:projectId/font/download` | The same build as a ZIP |
 | POST | `/api/projects/:projectId/icons/import-font` | Multipart: `font` (TTF, OTF, WOFF, WOFF2 or SVG font, up to 8 MB), optional `mapping` (CSS or JSON that names the characters), `folderId`, `strategy`, `optimize`, `privateUseOnly` (default true), `dryRun` (only report what is in the font) |
 
-At most 1000 icons per font. Strokes, gradients and text do not convert cleanly to a font and are listed as warnings. Nothing is stored on the server: each build runs in a temporary folder.
+At most 1000 icons per font. An icon's character is four hex digits from E000 to F8FF (the Private Use Area); the Font section's "Stable Unicode codepoints mapping" table lets editors change it, and the font is rebuilt with the new value. Strokes, gradients and text do not convert cleanly to a font and are listed as warnings. Nothing is stored on the server: each build runs in a temporary folder.
 
 ### Admin and API tokens
 

@@ -4,6 +4,7 @@ import { FontAssetType, OtherAssetType, generateFonts } from "fantasticon";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { isFontCodepoint } from "../lib/codepoint.js";
 import { BadRequestError, ConflictError } from "../lib/errors.js";
 import type { BuildFontInput } from "../lib/validation.js";
 import Icon from "../models/Icon.js";
@@ -112,6 +113,11 @@ export function safeFontName(name: string): string {
 
 // Builds the font in a temporary folder. When `persist` is true the codepoints that were newly assigned are saved on the icons.
 export async function buildFont(projectId: Id, icons: FontIcon[], input: BuildFontInput, persist: boolean): Promise<FontBuild> {
+  // A character outside E000 to F8FF would be written to the wrong place in the font, so the CSS and the font would disagree. Such values can only exist from before this rule; say which icons to fix instead of building something wrong.
+  const outside = icons.filter((icon) => icon.codepoint && !isFontCodepoint(icon.codepoint));
+  if (outside.length > 0) {
+    throw new BadRequestError(`These icons have a character outside E000 to F8FF, which the font cannot hold: ${outside.slice(0, 5).map((icon) => `${icon.name} (${icon.codepoint})`).join(", ")}${outside.length > 5 ? `, and ${outside.length - 5} more` : ""}. Change or clear it in the icon's details.`);
+  }
   const inProject = await Icon.find({ projectId, deletedAt: null, codepoint: { $type: "string" }, _id: { $nin: icons.map((icon) => icon.id) } }).select({ codepoint: 1 }).lean();
   const plan = planCodepoints(icons, input.startCodepoint, inProject.map((row) => parseInt(row.codepoint as string, 16)));
 
