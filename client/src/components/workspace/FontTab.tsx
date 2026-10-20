@@ -232,17 +232,18 @@ export default function FontTab() {
             </div>
             <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
               {shown.slice(0, 300).map((glyph) => (
-                <li key={glyph.id}>
-                  <button type="button" onClick={() => copy(glyph.className, `the class ${glyph.className}`)} aria-label={`Copy class ${glyph.className}`} className="flex w-full flex-col items-center gap-1 rounded-xl border border-border p-3 text-center hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">
+                <li key={glyph.id} className="rounded-xl border border-border">
+                  <button type="button" onClick={() => copy(glyph.className, `the class ${glyph.className}`)} aria-label={`Copy class ${glyph.className}`} className="flex w-full flex-col items-center gap-1 rounded-t-xl p-3 pb-1 text-center hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring">
                     <span aria-hidden="true" className="flex h-10 items-center text-3xl leading-none" style={result?.loaded ? { fontFamily: `"${result.family}"` } : undefined}>
                       {result?.loaded ? glyphChar(glyph.codepoint) : "▢"}
                     </span>
                     <span className="w-full truncate text-xs font-medium">{glyph.className}</span>
-                    <span className="font-mono text-[11px] text-muted-foreground">
-                      {glyph.codepoint}
-                      {glyph.isNew && <span className="ml-1 rounded bg-primary/10 px-1 text-primary">new</span>}
-                    </span>
                   </button>
+                  {/* Outside the button so its visible text matches its accessible name. */}
+                  <p className="px-3 pb-3 text-center font-mono text-[11px] text-muted-foreground">
+                    {glyph.codepoint}
+                    {glyph.isNew && <span className="ml-1 rounded bg-primary/10 px-1 text-primary">new</span>}
+                  </p>
                 </li>
               ))}
             </ul>

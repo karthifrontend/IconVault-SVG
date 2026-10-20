@@ -21,7 +21,8 @@ type IconListProps = {
 
 export default function IconList({ icons, folders, isSelected, surface, canDrag, dragIds, onToggle, onOpen }: IconListProps) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-border">
+    // `relative` matters: the table holds visually hidden (absolutely positioned) text, which would otherwise escape this scroll box and widen the whole page on a phone.
+    <div className="relative overflow-x-auto rounded-xl border border-border">
       <table className="w-full min-w-xl text-left text-sm">
         <caption className="sr-only">Icons</caption>
         <thead className="bg-muted text-xs text-muted-foreground">

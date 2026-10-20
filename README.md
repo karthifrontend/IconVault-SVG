@@ -41,6 +41,9 @@ cd ../client && npm install
 | `MS_TENANT_ID` | For Microsoft sign-in | Azure tenant id. |
 | `ADMIN_EMAILS` | For admin features | Comma-separated emails of admins (case-insensitive). Read on every request and never stored; edit and restart to change. An email counts only if the provider verified it (always true for Google); for Microsoft work accounts only when `MS_TENANT_ID` is your own tenant id, not `common`. |
 | `PORT` | No | Defaults to `5000`. |
+| `CORS_ORIGINS` | Recommended in production | Comma-separated list of exact origins allowed to call the API from a browser, for example `https://app.example.com`. When unset every origin is allowed (convenient in development). Requests without an `Origin` header (the command line, scripts) are never affected. |
+| `TRUST_PROXY` | Behind a proxy | Number of reverse proxies in front of the server (for example `1`), so rate limits use the real client address. Leave unset when the server is reached directly. |
+| `RATE_LIMIT_DISABLED` | No | Set to `1` to turn rate limiting off (the test suites do this). |
 
 ### Client environment (`client/.env`)
 
@@ -168,6 +171,14 @@ Scripts live in `server/src/scripts/` (`backup-db.ts`, `drop-legacy-sprites.ts`)
 - `npm run backup:db` (in `server/`) dumps every collection to `backups/<timestamp>/` at the project root as MongoDB Extended JSON. The folder is git-ignored because it contains user emails and icon data.
 - `npm run cutover:drop-legacy` (in `server/`) removes the old `sprites` and `sprite_versions` collections. It only lists what would go unless you add `-- --confirm`; it was run once at the Phase 5 cutover.
 
+## Security notes
+
+- Sign-in uses Google or Microsoft only; there are no passwords. Sessions are signed tokens kept in the browser's local storage, so a script injected into the page could read one: the interface never inserts untrusted markup (uploaded SVGs are cleaned on the server and shown through a safe inline preview).
+- Responses carry `nosniff`, frame, referrer and permissions headers, and nothing under `/api` is cached. Downloads add a restrictive content policy.
+- Rate limits (per address for sign-in, 30 attempts per 15 minutes, and 1200 requests per minute overall; per credential for builds, imports, exports and uploads, 40 per minute). They live in this process, so behind several servers use a shared store instead.
+- Uploaded SVGs, ZIPs, fonts and export archives are validated and size-limited; SVGs are cleaned again whatever their source. API tokens are stored as hashes and never carry admin rights.
+- `npm audit` reports 0 vulnerabilities for `server/` and `client/` at the time of Phase 8; run it again before each release.
+
 ## Checks
 
 | Command | Where | What it does |
@@ -178,4 +189,4 @@ Scripts live in `server/src/scripts/` (`backup-db.ts`, `drop-legacy-sprites.ts`)
 | `npm run build` | `server/` and `client/` | Production build |
 | `npm test` | `client/` | Component, theme, contrast and API-client tests (Vitest and Testing Library). No server needed |
 | `npm test` | `cli/` | Command line tests against a mock of the API. No server or network needed |
-| `npm run lint` | `client/` | ESLint. Currently reports 5 known problems (in `AuthContext`, `ToastContext` and `previewPng`); see CHANGELOG.md |
+| `npm run lint` | `client/` | ESLint. Currently clean |

@@ -21,9 +21,8 @@ function Avatar({ user, className }: { user: CurrentUser; className?: string }) 
     return <img src={user.picture} alt="" referrerPolicy="no-referrer" className={cn("rounded-full object-cover", className)} />;
   }
   return (
-    <span aria-hidden="true" className={cn("flex items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground", className)}>
-      {initialsOf(user.displayName, user.email)}
-    </span>
+    // The initials are drawn by CSS (data-initials) rather than written as text, so they are not part of the button's visible text and its accessible name can match the visible name.
+    <span aria-hidden="true" data-initials={initialsOf(user.displayName, user.email)} className={cn("flex items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground after:content-[attr(data-initials)]", className)} />
   );
 }
 

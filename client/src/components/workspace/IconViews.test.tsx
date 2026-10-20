@@ -78,6 +78,8 @@ describe("IconList", () => {
   it("is a table with named columns and one row per icon", () => {
     setup();
     expect(screen.getByRole("table", { name: "Icons" })).toBeInTheDocument();
+    // The scroll box must be positioned, or the table's hidden text widens the page on a phone.
+    expect(screen.getByRole("table", { name: "Icons" }).parentElement).toHaveClass("relative", "overflow-x-auto");
     expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Select", "Preview", "Name", "Folder", "Size", "Tags", "Updated"]);
     expect(screen.getAllByRole("row")).toHaveLength(3);
   });

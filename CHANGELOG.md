@@ -393,16 +393,58 @@ Logged separately from Phases 0 to 6. Server and client; the command line is unc
 ### Next
 - Phase 8: hardening: accessibility pass, responsive check across the screens, security review (including the new dependencies), and the cleanups listed in the open items above.
 
+## 2026-10-20: Phase 8, hardening: dependencies, security, accessibility, responsive (Icon Vault integration)
+
+Logged separately from Phases 0 to 7. Server and client. Commits on `main`: `8.1` (audit fixes and server hardening), `8.2` (lint and automated accessibility tests), plus the final commit with the fixes found by the browser checks and this entry. Local only. **You still set `ADMIN_EMAILS` yourself; your `.env` was not touched.**
+
+### Correction to Phase 7
+The Phase 7 entry said the `npm audit` findings on the server "came with the font tooling". That was wrong. They were in Express's own dependencies (`proxy-addr`, `qs`), and the client's in `axios`, `react-router-dom`, an unused `svgo` and a build tool. The font libraries were not involved.
+
+### Changes
+| Part | Change |
+|---|---|
+| **Dependencies** | `npm audit fix` (no forced upgrades) on both packages; removed unused client packages `svgo`, `svgson`, `svgstore`, `zustand`, `react-dropzone` and the unused dev tool `ts-node-dev` (its dependency tree held the last remaining findings). **`npm audit`: 0 vulnerabilities in `server/` and `client/`** (was 2 and 5 in production dependencies, plus 3 in dev tooling). `axe-core` added as a dev dependency for the accessibility tests. |
+| **Server headers and CORS** | Every response gets `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, a restrictive `Permissions-Policy` and `Cross-Origin-Opener-Policy`; `/api` answers are `Cache-Control: no-store`; the `X-Powered-By` header is gone. New optional `CORS_ORIGINS` (comma-separated exact origins); when it is not set every origin is allowed as before. |
+| **Rate limits** | In-memory, no dependency: sign-in attempts (30 per 15 minutes per address, on the Google and Microsoft sign-in calls only), all API requests (1200 per minute per address), and expensive operations (40 per minute per credential: font build and download, project export, import and sprite, uploads, font import, copy, batch download and optimize). A refused request gets `429`, a clear message and `Retry-After`. New `TRUST_PROXY` (for use behind a reverse proxy) and `RATE_LIMIT_DISABLED=1`. |
+| **WOFF2 guard** | A WOFF2 file declares its unpacked size in its header; it is now checked before unpacking, so a tiny file cannot make the server allocate gigabytes. An SVG font with a "billion laughs" entity payload is tested to be harmless. |
+| **Lint** | **Zero problems** (was 31 at the Phase 0 baseline, 5 after Phase 5). The two context hooks keep a documented exception for the fast-refresh rule. |
+| **Accessibility, found by running axe in the real browser** | (1) Voice-control naming: the icon card, the font glyph button, the Trash "Delete forever" button and the account menu had accessible names that did not contain their visible text. The extra visible text (size, badges, character code) moved outside the button or is drawn by CSS, and the Trash label is now "Delete forever: <name>". (2) **Horizontal scrolling on phones**: the admin table and the icon table view scrolled the whole page sideways, because the tables' screen-reader-only text escaped their scroll box. The scroll boxes are now positioned containers. |
+| **Switching projects** | Found by the browser run: going straight from one project to another showed the previous project's data for a moment, and the new sprite/font section guard could redirect using it. The page now trusts only data that belongs to the address (project and folders). |
+
+### Tests added
+- Server `tests/hardening.test.ts` (headers, CORS allow-list, limiter windows and keys, sign-in and general limits on the real app, off switch), WOFF2 and entity tests in `tests/fonts.test.ts`.
+- Client `src/pages/a11y.test.tsx`: axe over the landing page, header and account menu, dashboard and its dialog, the icons grid, table, selection, drawer, add-icons dialogs, read-only project, Trash, Settings, Sprite, Font (before and after a build) and their dialogs, Administration with the delete dialog, API tokens with its dialogs. It includes a self-check that axe really reports a missing button name, image alt and input label, and a check that the custom labels contain their visible text. Regression tests for the project switch and the scroll boxes.
+
+### Validation (verified)
+- Server `npm test`: **135 of 135**; `npm run test:db`: **152 of 152**; CLI: **29 of 29**; client: **481 of 481**; `tsc` and both builds pass; lint clean; `npm audit` 0 and 0.
+- **Real browser, axe 4.14 including colour contrast**, eight screens (dashboard, project icons, Sprite, Trash, Settings, Font, API tokens, Administration) in **light and dark**: no violations. Open states in light and dark (account menu, new project, icon drawer, add icons, import sprite, built font, import font, delete user, new token, empty-trash confirm): no violations. One contrast report on the inactive section tabs right after switching to dark did not repeat; it was a colour transition caught mid-way.
+- **Responsive** at 375 px (phone) and 768 px (tablet) on all eight screens plus the icon table view: no horizontal scrolling after the fix (the admin and icon tables scrolled sideways before it).
+- **Keyboard**: opening the icon drawer moves focus into it, Escape closes it and focus returns to the card that opened it.
+- All throwaway users, tokens and projects were removed; the database holds your 1 user and 2 projects.
+
+### Not tested, or open
+- **Real Google or Microsoft sign-in** and your real `ADMIN_EMAILS`, as in every phase.
+- **No screen reader, no Firefox or Safari testing.** axe finds a large share of problems but not whether the experience makes sense when spoken. Worth one pass with VoiceOver on the main flow (sign in, open a project, upload, open an icon, build a sprite).
+- Keyboard use was checked for the drawer only; other flows rely on native controls and the automated checks. Drag and drop of icons onto folders has no keyboard equivalent (use Move in the bulk bar instead).
+- Rate limits are per process and in memory. Behind several servers, or after a restart, counters are not shared. Choose real limits for your traffic before going live.
+- `CORS_ORIGINS` is not set in development, so every origin is allowed; set it in production. Sessions are kept in local storage (see the README's security notes); moving them to secure cookies would be a larger change.
+- Dependency audits are a snapshot: `npm audit` was clean on 2026-10-20 and needs repeating.
+- Items still open from earlier phases: stroke-to-outline conversion for fonts, selecting icons for a font in the grid (API supports it), font commands in the CLI, build history, a fixed `Compiler` feature gap (framework snippets for sprites), and importing fonts from other tools beyond the tested formats.
+
+### Next
+- A real sign-in and `ADMIN_EMAILS` check in your own browser, then a manual VoiceOver pass.
+- Decide what to do with the open items above; none blocks use.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
 - `server/src/config/db.ts` throws at import when `MONGODB_URI` is missing (crashes instead of starting without a DB). The zip has a fix. **Resolved in Phase 0 (`63eb4c8`).**
 - `GET /api/sprites/:name` looks up bundles across all users although names are unique per owner, so a duplicate name can return 403 or another user's bundle (`server/src/routes/spriteRoutes.ts`). **Resolved in Phase 5: the route and the whole old library were removed.**
 - `README.md` documents `MONGO_URI` (code reads `MONGODB_URI`) and omits `SESSION_SECRET`; `README.suggested.md` is correct. **Resolved in Phase 0 (`63eb4c8`).**
-- Client lists unused dependencies: `svgo`, `svgson`, `svgstore`, `zustand`, `react-dropzone` (`react-router-dom` has been used since Phase 4). Not removed yet.
-- `npm audit` vulnerabilities remain in both `server/` and `client/`.
+- ~~Client lists unused dependencies~~ Removed in Phase 8.
+- ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 461 (Phases 3 to 7), the server 122 unit plus 152 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 481 (Phases 3 to 8), the server 135 unit plus 152 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

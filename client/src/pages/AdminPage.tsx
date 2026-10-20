@@ -60,7 +60,8 @@ export default function AdminPage() {
           <p role="status" className="mt-4 text-sm text-muted-foreground">
             {pluralize(total, "user")}
           </p>
-          <div className={`mt-2 overflow-x-auto rounded-xl border border-border ${users.loading ? "opacity-60" : ""}`}>
+          {/* `relative` keeps the table's visually hidden text inside this scroll box (see IconList). */}
+          <div className={`relative mt-2 overflow-x-auto rounded-xl border border-border ${users.loading ? "opacity-60" : ""}`}>
             <table className="w-full min-w-3xl text-left text-sm">
               <caption className="sr-only">Users</caption>
               <thead className="bg-muted text-xs text-muted-foreground">

@@ -1,5 +1,5 @@
 // Accessibility checks (axe) over every main screen and dialog, rendered with realistic data. This catches missing labels, bad roles, broken ARIA, duplicate ids, empty buttons and links, and heading problems. It does not replace trying the screens with a keyboard and a screen reader.
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -62,6 +62,30 @@ beforeEach(() => {
   vi.mocked(adminApi.listUsers).mockResolvedValue({ users: [{ id: "u1", displayName: "Ada Lovelace", email: "ada@example.com", provider: "google", picture: null, createdAt: "2026-10-01T10:00:00.000Z", lastLoginAt: "2026-10-19T10:00:00.000Z", projectCount: 2, iconCount: 9, activeTokens: 1, isAdmin: true, isSelf: true }, { id: "u2", displayName: "Bob", email: "bob@example.com", provider: "microsoft", picture: null, createdAt: "2026-10-01T10:00:00.000Z", lastLoginAt: null, projectCount: 1, iconCount: 2, activeTokens: 0, isAdmin: false, isSelf: false }], total: 2, page: 1, limit: 25 });
   vi.mocked(tokensApi.listTokens).mockResolvedValue({ tokens: [{ id: "t1", name: "CI", prefix: "isv_AbCd", createdAt: "2026-10-01T10:00:00.000Z", lastUsedAt: null, revokedAt: null }, { id: "t2", name: "Old", prefix: "isv_ZzZz", createdAt: "2026-10-01T10:00:00.000Z", lastUsedAt: "2026-10-05T10:00:00.000Z", revokedAt: "2026-10-10T10:00:00.000Z" }], maxActive: 10 });
   vi.mocked(fontsApi.buildFont).mockResolvedValue({ fontName: "Feather", prefix: "fth", iconCount: 2, warnings: [{ icon: "Home", message: "Uses strokes." }], css: "@font-face{}", preview: { format: "woff2", base64: "AA==" }, sizes: { woff2: 1000 }, codepoints: [{ id: "i1", name: "Home", slug: "home", codepoint: "E001", className: "fth-home", isNew: true }, { id: "i2", name: "Star", slug: "star", codepoint: "E002", className: "fth-star", isNew: false }] });
+});
+
+// Voice-control users say what they see on a button, so its accessible name must contain its visible text (WCAG 2.5.3). axe runs this rule in a real browser; here it is checked directly for the controls that have a custom label.
+describe("labels contain the visible text", () => {
+  it("icon cards, table rows, the trash buttons and the account menu", async () => {
+    project("/projects/p1");
+    const card = (await screen.findByRole("button", { name: "Open Home" }, { timeout: 8000 })) as HTMLElement;
+    expect(card.textContent).toBe("Home");
+    cleanup();
+    project("/projects/p1/trash");
+    const forever = await screen.findByRole("button", { name: /Delete forever: Gone/ }, { timeout: 8000 });
+    expect(forever.textContent).toBe("Delete forever");
+    expect(forever.getAttribute("aria-label")).toContain(forever.textContent as string);
+    cleanup();
+    render(
+      <ThemeProvider>
+        <MemoryRouter>
+          <AppHeader onSignIn={() => undefined} />
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+    const menu = screen.getByRole("button", { name: /account menu/i });
+    expect(menu.getAttribute("aria-label")).toContain(menu.textContent?.trim() as string);
+  });
 });
 
 describe("the checker itself", () => {

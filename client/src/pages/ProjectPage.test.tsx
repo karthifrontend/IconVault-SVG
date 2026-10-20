@@ -1,7 +1,7 @@
 // Tests for the project workspace page: loading and failures, the header and section links, the read-only note, folder selection kept in the address, folder actions, dropping icons, and the small-screen folder toggle.
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { Link, MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as foldersApi from "../api/folders";
 import { ApiError } from "../api/http";
@@ -92,6 +92,35 @@ describe("sprite or font section", () => {
     renderPage("/projects/p1/sprite");
     await screen.findByRole("heading", { level: 1, name: "Feather" });
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/projects/p1"));
+  });
+});
+
+describe("moving from one project to another", () => {
+  it("never lets the previous project decide what the next one shows", async () => {
+    const detail = (id: string, purpose: "sprite" | "font") => makeDetail({ id, name: id === "p1" ? "First" : "Second", purpose });
+    let release: (() => void) | undefined;
+    getProject.mockImplementation((id: string) => (id === "p1" ? Promise.resolve(detail("p1", "sprite")) : new Promise((resolve) => { release = () => resolve(detail("p2", "font")); })));
+    render(
+      <MemoryRouter initialEntries={["/projects/p1"]}>
+        <ToastProvider>
+          <Link to="/projects/p2/font">Go to the second</Link>
+          <Routes>
+            <Route path="/projects/:projectId/*" element={<ProjectPage />} />
+          </Routes>
+          <Where />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole("heading", { level: 1, name: "First" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("link", { name: "Go to the second" }));
+    // While the second project loads, nothing of the first is shown and no redirect happens.
+    expect(await screen.findByRole("status", { name: "Loading project" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1, name: "First" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("where").textContent).toBe("/projects/p2/font");
+    release?.();
+    expect(await screen.findByRole("heading", { level: 1, name: "Second" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Build font" })).toBeInTheDocument();
+    expect(screen.getByTestId("where").textContent).toBe("/projects/p2/font");
   });
 });
 

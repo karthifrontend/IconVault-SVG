@@ -18,7 +18,7 @@ function freePort(): Promise<number> {
   });
 }
 
-async function waitForServer(url: string, attempts = 60): Promise<void> {
+async function waitForServer(url: string, attempts = 240): Promise<void> {
   for (let i = 0; i < attempts; i += 1) {
     try {
       const res = await fetch(url);

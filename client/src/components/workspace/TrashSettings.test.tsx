@@ -110,7 +110,7 @@ describe("Trash", () => {
   it("asks before deleting one icon for good", async () => {
     vi.mocked(iconsApi.deleteIcon).mockResolvedValue({});
     const fns = setup(<TrashTab />);
-    await userEvent.click(await screen.findByRole("button", { name: "Delete Alpha forever" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Delete forever: Alpha" }));
     const dialog = screen.getByRole("dialog", { name: "Delete “Alpha” forever?" });
     expect(iconsApi.deleteIcon).not.toHaveBeenCalled();
     await userEvent.click(within(dialog).getByRole("button", { name: "Delete forever" }));

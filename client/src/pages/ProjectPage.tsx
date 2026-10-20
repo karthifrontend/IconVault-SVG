@@ -29,8 +29,11 @@ export default function ProjectPage() {
   const location = useLocation();
   const { showToast } = useToast();
 
-  const project = useResource(`project:${projectId}`, () => getProject(projectId));
-  const folders = useResource(`folders:${projectId}`, () => listFolders(projectId));
+  const loadedProject = useResource(`project:${projectId}`, () => getProject(projectId));
+  // Moving straight from one project to another keeps the previous project's data around until the new one arrives. Only data that belongs to the address is trusted, so the old project can never decide what the new one shows (for example which section it redirects to).
+  const project = { ...loadedProject, data: loadedProject.data?.id === projectId ? loadedProject.data : undefined };
+  const loadedFolders = useResource(`folders:${projectId}`, async () => ({ projectId, list: await listFolders(projectId) }));
+  const folders = { ...loadedFolders, data: loadedFolders.data?.projectId === projectId ? loadedFolders.data.list : undefined };
   const [iconsVersion, setIconsVersion] = useState(0);
   const [foldersOpen, setFoldersOpen] = useState(false);
 

@@ -113,7 +113,7 @@ export default function TrashTab() {
                 <Button size="sm" onClick={() => restoreOne(icon)} disabled={busy} aria-label={`Restore ${icon.name}`}>
                   Restore
                 </Button>
-                <Button size="sm" variant="destructive" onClick={() => setPending({ kind: "one", icon })} disabled={busy} aria-label={`Delete ${icon.name} forever`}>
+                <Button size="sm" variant="destructive" onClick={() => setPending({ kind: "one", icon })} disabled={busy} aria-label={`Delete forever: ${icon.name}`}>
                   Delete forever
                 </Button>
               </li>

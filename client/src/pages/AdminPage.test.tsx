@@ -69,6 +69,12 @@ describe("the user list", () => {
     expect(screen.getByText("3 users")).toBeInTheDocument();
   });
 
+  it("keeps the table's hidden text inside its scroll box, so a phone does not scroll sideways", async () => {
+    renderPage();
+    const table = await screen.findByRole("table", { name: "Users" });
+    expect(table.parentElement).toHaveClass("relative", "overflow-x-auto");
+  });
+
   it("does not offer to delete yourself", async () => {
     renderPage();
     await screen.findByText("ada@example.com");

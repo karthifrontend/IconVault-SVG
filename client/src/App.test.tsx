@@ -215,14 +215,15 @@ describe("signed in", () => {
 
   it("shows initials when there is no picture and the picture when there is", () => {
     const { unmount } = renderApp();
-    expect(screen.getByText("AL")).toBeInTheDocument();
+    // Initials are drawn by CSS from data-initials, so they are not text on the page.
+    expect(document.querySelector("[data-initials='AL']")).not.toBeNull();
     unmount();
     auth.currentUser = user({ picture: "https://example.com/ada.png" });
     const { container } = renderApp();
     const img = container.querySelector("img");
     expect(img).toHaveAttribute("src", "https://example.com/ada.png");
     expect(img).toHaveAttribute("alt", "");
-    expect(screen.queryByText("AL")).not.toBeInTheDocument();
+    expect(document.querySelector("[data-initials]")).toBeNull();
   });
 
   it("opens the menu with focus on Sign out, and Escape closes it and returns focus to the button", async () => {

@@ -79,10 +79,14 @@ describe("building", () => {
     expect(buildFont).toHaveBeenCalledWith("p1", { scope: "all", formats: ["woff2", "woff", "ttf"], fontName: "FeatherIcons", prefix: "fth", startCodepoint: "E001", fontHeight: 1000, descent: 0, normalize: true });
     expect(await screen.findByText("2 icons")).toBeInTheDocument();
     expect(screen.getByText(/WOFF2 1\.2 KB, TTF 3\.3 KB/)).toBeInTheDocument();
-    const home = screen.getByRole("button", { name: "Copy class fth-home" });
+    const home = screen.getByRole("button", { name: "Copy class fth-home" }).closest("li") as HTMLElement;
     expect(within(home).getByText("E001")).toBeInTheDocument();
     expect(within(home).getByText("new")).toBeInTheDocument();
-    expect(within(screen.getByRole("button", { name: "Copy class fth-star" })).queryByText("new")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("button", { name: "Copy class fth-star" }).closest("li") as HTMLElement).queryByText("new")).not.toBeInTheDocument();
+    // The button's visible text is only the class name, so voice control can say it.
+    const text = screen.getByRole("button", { name: "Copy class fth-home" }).textContent ?? "";
+    expect(text.endsWith("fth-home")).toBe(true);
+    expect(text).not.toContain("E001");
     expect(preview.loadPreviewFont).toHaveBeenCalledWith(expect.stringMatching(/^iconfont-preview-/), "d09GMg==");
   });
 

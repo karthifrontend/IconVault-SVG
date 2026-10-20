@@ -34,12 +34,15 @@ export default function IconCard({ icon, selected, surface, canDrag, dragIds, on
         type="button"
         onClick={onOpen}
         aria-label={`Open ${icon.name}`}
-        className="flex w-full flex-col items-center gap-2 rounded-xl p-3 text-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+        className="flex w-full flex-col items-center gap-2 rounded-t-xl p-3 pb-1 text-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
       >
         <span className={cn("flex h-24 w-full items-center justify-center rounded-lg", surfaceClass(surface))} style={surfaceStyle(surface)}>
           <SvgPreview svg={icon.svg ?? ""} size={40} />
         </span>
         <span className="w-full truncate text-sm font-medium">{icon.name}</span>
+      </button>
+      {/* Outside the button, so its visible text is just the name and matches its accessible name ("Open <name>"). */}
+      <div className="flex flex-col items-center gap-2 px-3 pb-3 text-center">
         <span className="text-xs text-muted-foreground">{formatBytes(icon.byteSize)}</span>
         {warnings.length > 0 && (
           <span className="flex flex-wrap justify-center gap-1" title="These will not convert cleanly to an icon font.">
@@ -50,7 +53,7 @@ export default function IconCard({ icon, selected, surface, canDrag, dragIds, on
             ))}
           </span>
         )}
-      </button>
+      </div>
     </li>
   );
 }
