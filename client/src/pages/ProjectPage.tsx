@@ -11,6 +11,7 @@ import { Button } from "../components/ui/Button";
 import FolderTree from "../components/workspace/FolderTree";
 import IconsTab from "../components/workspace/IconsTab";
 import ProjectHeader from "../components/workspace/ProjectHeader";
+import SpriteTab from "../components/workspace/SpriteTab";
 import SettingsTab from "../components/workspace/SettingsTab";
 import TrashTab from "../components/workspace/TrashTab";
 import { WorkspaceContext, type FolderSelection, type WorkspaceContextValue } from "../context/workspaceContext";
@@ -164,6 +165,7 @@ export default function ProjectPage() {
             </div>
           ) : (
             <Routes>
+              <Route path="sprite" element={<SpriteTab />} />
               <Route path="trash" element={<TrashTab />} />
               <Route path="settings" element={<SettingsTab />} />
               <Route path="*" element={<Navigate to={`/projects/${projectId}`} replace />} />

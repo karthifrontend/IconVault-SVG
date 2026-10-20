@@ -47,6 +47,9 @@ export default function ProjectHeader({ project }: { project: ProjectDetail }) {
           Icons
           <span className="rounded-full bg-muted px-1.5 text-xs text-muted-foreground">{project.iconCount}</span>
         </NavLink>
+        <NavLink to={`/projects/${project.id}/sprite`} className={tabClass}>
+          Sprite
+        </NavLink>
         <NavLink to={`/projects/${project.id}/trash`} className={tabClass}>
           Trash
           {project.trashCount > 0 && <span className="rounded-full bg-muted px-1.5 text-xs text-muted-foreground">{project.trashCount}</span>}
