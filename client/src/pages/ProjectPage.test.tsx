@@ -119,7 +119,7 @@ describe("moving from one project to another", () => {
     expect(screen.getByTestId("where").textContent).toBe("/projects/p2/font");
     release?.();
     expect(await screen.findByRole("heading", { level: 1, name: "Second" })).toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: "Build font" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Download font" })).toBeInTheDocument();
     expect(screen.getByTestId("where").textContent).toBe("/projects/p2/font");
   });
 });
@@ -142,7 +142,8 @@ describe("header", () => {
 
     const nav = screen.getByRole("navigation", { name: "Project sections" });
     expect(within(nav).getByRole("link", { name: /Icons/ })).toHaveTextContent("7");
-    expect(within(nav).getByRole("link", { name: /Trash/ })).toHaveTextContent("2");
+    // The Trash tab is an icon with no count.
+    expect(within(nav).getByRole("link", { name: "Trash" })).toHaveTextContent(/^Trash$/);
     expect(within(nav).getByRole("link", { name: "Project Settings" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: /Icons/ })).toHaveAttribute("aria-current", "page");
   });

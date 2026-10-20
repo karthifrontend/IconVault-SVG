@@ -1,4 +1,4 @@
-// The Trash section: icons moved to the trash can be restored (one or all) or deleted for good, and the trash can be emptied. Only editors see it; restoring may rename an icon or drop its codepoint when those were taken meanwhile, and says so.
+// The Trash section, in the same card layout and width as Project Settings: icons moved to the trash can be restored (one or all) or deleted for good, and the trash can be emptied. Only editors see it; restoring may rename an icon or drop its codepoint when those were taken meanwhile, and says so.
 import { RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { batchRestoreIcons, deleteIcon, emptyTrash, listIcons, restoreIcon } from "../../api/icons";
@@ -57,12 +57,16 @@ export default function TrashTab() {
     }, "Could not restore the icons.");
 
   if (!canEdit) {
-    return <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Only the owner can see this project’s trash.</p>;
+    return <p className="mx-auto max-w-5xl rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Only the owner can see this project’s trash.</p>;
   }
 
   return (
-    <div>
-      <p className="text-sm text-muted-foreground">Icons in the trash are hidden from the project but can be brought back until you delete them for good.</p>
+    <div className="mx-auto max-w-5xl">
+      <section aria-labelledby="trash-heading" className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+      <h2 id="trash-heading" className="text-lg font-bold">
+        Trash
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">Icons in the trash are hidden from the project but can be brought back until you delete them for good.</p>
 
       {trash.error && !trash.data ? (
         <div role="alert" className="mt-4 rounded-xl border border-destructive/40 p-6 text-center">
@@ -78,7 +82,7 @@ export default function TrashTab() {
           ))}
         </ul>
       ) : icons.length === 0 ? (
-        <div className="mt-4 rounded-2xl border border-dashed border-border p-10 text-center">
+        <div className="mt-4 rounded-xl border border-dashed border-border p-10 text-center">
           <Trash2 aria-hidden="true" className="mx-auto h-8 w-8 text-muted-foreground" />
           <p className="mt-2 text-base font-semibold">The trash is empty.</p>
         </div>
@@ -103,7 +107,7 @@ export default function TrashTab() {
                 <span className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
                   <SvgPreview svg={icon.svg ?? ""} size={24} />
                 </span>
-                <span className="min-w-0 flex-1">
+                <span className="min-w-40 flex-1">
                   <span className="block truncate text-sm font-medium">{icon.name}</span>
                   <span className="block text-xs text-muted-foreground">
                     {formatBytes(icon.byteSize)}
@@ -121,6 +125,7 @@ export default function TrashTab() {
           </ul>
         </>
       )}
+      </section>
 
       <ConfirmDialog
         open={pending !== null}

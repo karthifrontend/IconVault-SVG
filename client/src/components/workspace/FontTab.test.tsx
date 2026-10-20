@@ -42,8 +42,8 @@ const built = (over: Partial<FontBuildResult> = {}): FontBuildResult => ({
 function setup(over: Partial<WorkspaceContextValue> = {}, state?: unknown) {
   const fns = { selectFolder: vi.fn(), refreshProject: vi.fn(), refreshFolders: vi.fn(), refreshIcons: vi.fn() };
   const value: WorkspaceContextValue = {
-    project: makeDetail({ id: "p1", name: "Feather Icons", prefix: "fth", purpose: "font" }),
-    folderList: { folders: [makeFolder({ id: "ui", name: "UI" })], uncategorizedCount: 0 },
+    project: makeDetail({ id: "p1", name: "Feather Icons", prefix: "fth", purpose: "font", iconCount: 2 }),
+    folderList: { folders: [makeFolder({ id: "ui", name: "UI", iconCount: 3 })], uncategorizedCount: 0 },
     selectedFolder: "all",
     iconsVersion: 0,
     ...fns,
@@ -61,7 +61,12 @@ function setup(over: Partial<WorkspaceContextValue> = {}, state?: unknown) {
   return fns;
 }
 
+// The font builds by itself on this page. Tests wait for that (a short delay), or switch it off to look at the page before any build.
+const builtAutomatically = () => waitFor(() => expect(buildFont).toHaveBeenCalled());
+
 beforeEach(() => {
+  fontAutoBuild.enabled = true;
+  fontAutoBuild.delayMs = 30;
   vi.resetAllMocks();
   vi.mocked(clipboard.copyText).mockResolvedValue(true);
   vi.mocked(preview.loadPreviewFont).mockResolvedValue(true);
@@ -82,7 +87,7 @@ describe("building", () => {
 
   it("sends the options, then shows the count, sizes and every character", async () => {
     setup();
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await builtAutomatically();
     expect(buildFont).toHaveBeenCalledWith("p1", { scope: "all", formats: ["woff2", "woff", "ttf"], fontName: "FeatherIcons", prefix: "fth", baseClass: "", startCodepoint: "E001", fontHeight: 1000, descent: 0, normalize: true });
     expect(await screen.findByText("2 icons")).toBeInTheDocument();
     expect(screen.getByText(/WOFF2 1\.2 KB, TTF 3\.3 KB/)).toBeInTheDocument();
@@ -111,33 +116,29 @@ describe("building", () => {
     await userEvent.clear(screen.getByLabelText("Font height"));
     await userEvent.type(screen.getByLabelText("Font height"), "1200");
     await userEvent.click(screen.getByLabelText("Normalize glyph bounds to height"));
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
-    expect(buildFont).toHaveBeenCalledWith("p1", { scope: "folder", folderId: "ui", formats: ["woff2", "ttf", "eot"], fontName: "Mine", prefix: "fth", baseClass: "fth", startCodepoint: "E100", fontHeight: 1200, descent: 0, normalize: false });
+    await waitFor(() => expect(buildFont).toHaveBeenLastCalledWith("p1", { scope: "folder", folderId: "ui", formats: ["woff2", "ttf", "eot"], fontName: "Mine", prefix: "fth", baseClass: "fth", startCodepoint: "E100", fontHeight: 1200, descent: 0, normalize: false }));
   });
 
-  it("checks the options before asking the server", async () => {
+  it("waits, without a message, while an option is not valid, and builds once it is", async () => {
     setup();
-    const build = () => userEvent.click(screen.getByRole("button", { name: "Build font" }));
-    await userEvent.clear(screen.getByLabelText("Font name"));
-    await build();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Enter a font name.");
-    await userEvent.type(screen.getByLabelText("Font name"), "X");
+    await builtAutomatically();
+    buildFont.mockClear();
     await userEvent.clear(screen.getByLabelText("Starting codepoint (hex)"));
     await userEvent.type(screen.getByLabelText("Starting codepoint (hex)"), "zz");
-    await build();
-    expect(screen.getByRole("alert")).toHaveTextContent("4 hex digits");
+    for (const format of ["WOFF2", "WOFF", "TTF"]) await userEvent.click(screen.getByLabelText(format));
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    expect(buildFont).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     await userEvent.clear(screen.getByLabelText("Starting codepoint (hex)"));
     await userEvent.type(screen.getByLabelText("Starting codepoint (hex)"), "E001");
-    for (const format of ["WOFF2", "WOFF", "TTF"]) await userEvent.click(screen.getByLabelText(format));
-    await build();
-    expect(screen.getByRole("alert")).toHaveTextContent("at least one format");
-    expect(buildFont).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByLabelText("TTF"));
+    await waitFor(() => expect(buildFont).toHaveBeenLastCalledWith("p1", expect.objectContaining({ formats: ["ttf"], startCodepoint: "E001" })));
   });
 
   it("shows the server's reason when the build fails", async () => {
     buildFont.mockRejectedValue(new ApiError("There are no icons to put in the font.", 400));
     setup();
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await builtAutomatically();
     expect(await screen.findByRole("alert")).toHaveTextContent("There are no icons to put in the font.");
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
@@ -145,7 +146,7 @@ describe("building", () => {
   it("lists conversion warnings", async () => {
     buildFont.mockResolvedValue(built({ warnings: [{ icon: "Line", message: "Uses strokes." }] }));
     setup();
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await builtAutomatically();
     expect(await screen.findByText(/1 icon warning/)).toBeInTheDocument();
     expect(screen.getByText("Uses strokes.", { exact: false })).toBeInTheDocument();
   });
@@ -153,21 +154,21 @@ describe("building", () => {
   it("says when the browser could not load the preview font", async () => {
     vi.mocked(preview.loadPreviewFont).mockResolvedValue(false);
     setup();
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await builtAutomatically();
     expect(await screen.findByRole("note")).toHaveTextContent("could not load the preview font");
   });
 
   it("refreshes the icon lists when new characters were saved, but not for a viewer", async () => {
     const fns = setup();
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await builtAutomatically();
     await screen.findByText("2 icons");
     expect(fns.refreshIcons).toHaveBeenCalled();
   });
 
   it("does not refresh anything for a read-only viewer, and explains that characters are not saved", async () => {
-    const fns = setup({ project: makeDetail({ id: "p1", purpose: "font", access: READ_ONLY }) });
+    const fns = setup({ project: makeDetail({ id: "p1", purpose: "font", iconCount: 2, access: READ_ONLY }) });
     expect(screen.getByText(/characters are not saved/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await builtAutomatically();
     await screen.findByText("2 icons");
     expect(fns.refreshIcons).not.toHaveBeenCalled();
   });
@@ -177,7 +178,7 @@ describe("the codepoint mapping table", () => {
   const rebuilt = (codepoint: string) => built({ codepoints: [{ id: "a", name: "Home", slug: "home", codepoint, className: "fth-home", isNew: false }, { id: "b", name: "Star", slug: "star", codepoint: "E002", className: "fth-star", isNew: false }] });
   const open = async (over: Partial<WorkspaceContextValue> = {}) => {
     const fns = setup(over);
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await builtAutomatically();
     await screen.findByRole("table", { name: "Stable Unicode codepoints mapping" });
     return fns;
   };
@@ -255,7 +256,7 @@ describe("the codepoint mapping table", () => {
   });
 
   it("is read-only for people who cannot edit the project", async () => {
-    await open({ project: makeDetail({ id: "p1", purpose: "font", access: READ_ONLY }) });
+    await open({ project: makeDetail({ id: "p1", purpose: "font", iconCount: 2, access: READ_ONLY }) });
     const table = screen.getByRole("table", { name: "Stable Unicode codepoints mapping" });
     expect(within(table).queryByRole("textbox")).not.toBeInTheDocument();
     expect(within(table).getByText("U+E001")).toBeInTheDocument();
@@ -307,12 +308,11 @@ describe("the page layout", () => {
   it("puts the actions at the top, with Copy CSS beside Build font, and groups the controls in titled sections", () => {
     setup();
     const actions = screen.getByRole("group", { name: "Font actions" });
-    expect(within(actions).getAllByRole("button").map((b) => b.textContent)).toEqual(["Download font", "Copy CSS", "Build font"]);
-    // Download font is the main (filled) action; Build font is the outlined primary button.
-    expect(within(actions).getByRole("button", { name: "Download font" }).className).toContain("bg-primary");
-    const buildButton = within(actions).getByRole("button", { name: "Build font" });
-    expect(buildButton.className).toContain("border-primary");
-    expect(buildButton.className.split(" ")).not.toContain("bg-primary");
+    // There is no Build font button: the font builds by itself.
+    expect(within(actions).getAllByRole("button").map((b) => b.textContent)).toEqual(["Download font", "Copy CSS"]);
+    expect(screen.queryByRole("button", { name: "Build font" })).not.toBeInTheDocument();
+    // Download font is the main (filled) action.
+    expect(within(actions).getByRole("button", { name: "Download font" }).className.split(" ")).toContain("bg-primary");
     for (const title of ["1. Scope selection", "2. Font & CSS settings", "3. Font metrics & normalization"]) expect(screen.getByRole("region", { name: title })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Target formats" })).toBeInTheDocument();
     // The actions come before the columns in the page.
@@ -324,7 +324,7 @@ describe("the page layout", () => {
     const download = screen.getByRole("button", { name: "Download font" });
     expect(download).toBeDisabled();
     expect(screen.queryByText(/Build the font first/)).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await builtAutomatically();
     await screen.findByText("2 icons");
     expect(download).toBeEnabled();
     expect(fontsApi.downloadFont).not.toHaveBeenCalled();
@@ -341,14 +341,14 @@ describe("the page layout", () => {
     document.body.appendChild(slot);
     setup({ actionsSlot: slot });
     expect(within(slot).getByRole("group", { name: "Font actions" })).toBeInTheDocument();
-    expect(within(slot).getByRole("button", { name: "Build font" })).toBeInTheDocument();
+    expect(within(slot).getByRole("button", { name: "Download font" })).toBeInTheDocument();
     slot.remove();
   });
 
   it("has Copy CSS switched off until there is a build", async () => {
     setup();
     expect(screen.getByRole("button", { name: "Copy CSS" })).toBeDisabled();
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await builtAutomatically();
     await screen.findByText("2 icons");
     expect(screen.getByRole("button", { name: "Copy CSS" })).toBeEnabled();
   });
@@ -372,16 +372,20 @@ describe("the page layout", () => {
     expect(screen.queryByText("Advanced")).not.toBeInTheDocument();
   });
 
-  it("asks for a folder before building a folder scope, and rejects a bad base class", async () => {
+  it("does not build a folder scope before a folder is chosen, nor with a bad base class", async () => {
     setup();
+    await builtAutomatically();
+    buildFont.mockClear();
     await userEvent.click(screen.getByRole("radio", { name: "Selected folder" }));
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Choose a folder.");
-    await userEvent.click(screen.getByRole("radio", { name: "Whole project (0 icons)" }));
-    await userEvent.type(screen.getByLabelText("Base class"), "9bad");
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("base class must start with a letter");
+    await new Promise((resolve) => setTimeout(resolve, 120));
     expect(buildFont).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("radio", { name: /^Whole project/ }));
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    buildFont.mockClear();
+    await userEvent.type(screen.getByLabelText("Base class"), "9bad");
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    expect(buildFont).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("opens the checklist when Selected icons is picked with nothing chosen yet", async () => {
@@ -394,7 +398,7 @@ describe("the page layout", () => {
   it("copies a class with the base class in front when there is one", async () => {
     buildFont.mockResolvedValue(built({ baseClass: "fth" }));
     setup();
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await builtAutomatically();
     await userEvent.click(await screen.findByRole("button", { name: "Copy class fth-home" }));
     expect(clipboard.copyText).toHaveBeenCalledWith("fth fth-home");
   });
@@ -411,17 +415,17 @@ describe("the page layout", () => {
 describe("chosen icons and the checklist", () => {
   const list = () => vi.mocked(iconsApi.listIcons).mockResolvedValue({ icons: [makeIcon({ id: "a", name: "Home", slug: "home" }), makeIcon({ id: "b", name: "Star", slug: "star" })], total: 2, page: 1, limit: 1000 });
 
-  it("arrives from the bulk bar on the page itself: no popup, the icons shown as chosen, nothing built yet", () => {
+  it("arrives from the bulk bar on the page itself: no popup, the icons shown as chosen, and built from them", async () => {
     setup({}, { iconIds: ["a", "b"] });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Selected icons (2)" })).toBeChecked();
-    expect(within(screen.getByRole("region", { name: "1. Scope selection" })).getByText("2 / 0")).toBeInTheDocument();
-    expect(buildFont).not.toHaveBeenCalled();
+    expect(within(screen.getByRole("region", { name: "1. Scope selection" })).getByText("2 / 2")).toBeInTheDocument();
+    await waitFor(() => expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a", "b"] })));
   });
 
   it("builds with exactly the chosen icons when Build font is pressed", async () => {
     setup({}, { iconIds: ["a", "b"] });
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await builtAutomatically();
     expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a", "b"] }));
     expect(await within(await screen.findByRole("region", { name: "Built font" })).findByText("2 icons")).toBeInTheDocument();
   });
@@ -463,7 +467,7 @@ describe("chosen icons and the checklist", () => {
 describe("the built font", () => {
   async function open() {
     setup();
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await builtAutomatically();
     await screen.findByText("2 icons");
   }
 
@@ -495,7 +499,7 @@ describe("the built font", () => {
   it("filters a long list of characters", async () => {
     buildFont.mockResolvedValue(built({ codepoints: Array.from({ length: 12 }, (_, i) => ({ id: `i${i}`, name: `N${i}`, slug: `n${i}`, codepoint: (0xe001 + i).toString(16).toUpperCase(), className: `fth-n${i}`, isNew: false })), iconCount: 12 }));
     setup();
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await builtAutomatically();
     await userEvent.type(await screen.findByLabelText("Filter characters"), "n11");
     expect(screen.getAllByRole("button", { name: /^Copy class/ })).toHaveLength(1);
     await userEvent.clear(screen.getByLabelText("Filter characters"));
@@ -505,7 +509,7 @@ describe("the built font", () => {
 
   it("takes the old preview font out of the page when a new build replaces it", async () => {
     await open();
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await userEvent.type(screen.getByLabelText("Base class"), "x");
     await waitFor(() => expect(preview.unloadPreviewFont).toHaveBeenCalled());
   });
 });
@@ -533,13 +537,15 @@ describe("building automatically", () => {
   it("builds again, once, a moment after a setting changes", async () => {
     setup(withIcons());
     await screen.findByText("2 icons");
-    expect(buildFont).toHaveBeenCalledTimes(1);
+    const opening = buildFont.mock.calls.length;
     await userEvent.type(screen.getByLabelText("Base class"), "fth");
-    await waitFor(() => expect(buildFont).toHaveBeenCalledTimes(2));
-    expect(buildFont).toHaveBeenLastCalledWith("p1", expect.objectContaining({ baseClass: "fth" }));
-    // Nothing more happens on its own.
-    await new Promise((resolve) => setTimeout(resolve, 80));
-    expect(buildFont).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(buildFont).toHaveBeenLastCalledWith("p1", expect.objectContaining({ baseClass: "fth" })));
+    // Once the last change has been built, nothing more happens on its own.
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const settled = buildFont.mock.calls.length;
+    expect(settled).toBeGreaterThan(opening);
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    expect(buildFont).toHaveBeenCalledTimes(settled);
   });
 
   it("waits while the settings are not valid, and does not complain about it", async () => {
@@ -568,10 +574,13 @@ describe("building automatically", () => {
     expect(screen.getByRole("button", { name: "Download font" })).toBeEnabled();
   });
 
-  it("still rebuilds on demand with Build font", async () => {
+  it("offers Try again when a build failed, and builds on it", async () => {
+    buildFont.mockRejectedValueOnce(new ApiError("Could not build.", 500));
     setup(withIcons());
-    await screen.findByText("2 icons");
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
-    await waitFor(() => expect(buildFont).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not build.");
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("2 icons")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download font" })).toBeEnabled();
   });
 });

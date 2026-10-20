@@ -1,7 +1,10 @@
-// Top of a project, in one bar: where you are (a centred Dashboard / project breadcrumb), the project's name with its type and visibility (each in its own colour), the sections as a pill menu (Icons, Icon Font or Sprite, Settings, Trash), and a slot on the right where the Icons screen places Upload icons and From Another Project. Under the bar: an Archived badge when it is archived, and a note when it is read-only for you.
+// Top of a project, in one bar: where you are (a Dashboard / project breadcrumb, placed in the top bar), the project's name with its type and visibility (each in its own colour), the sections as a pill menu (Icons, Icon Font or Sprite, Settings, Trash), and a slot on the right where the Icons screen places Upload icons and From Another Project. Under the bar: an Archived badge when it is archived, and a note when it is read-only for you.
 import { Archive, Settings, Trash2, Type, Layers, Shapes } from "lucide-react";
+import { useContext } from "react";
+import { createPortal } from "react-dom";
 import { Link, NavLink } from "react-router-dom";
 import type { ProjectDetail } from "../../api/types";
+import { HeaderSlotContext } from "../../context/headerSlotContext";
 import { cn } from "../../lib/cn";
 import Badge from "../ui/Badge";
 import ProjectAvatar from "../projects/ProjectAvatar";
@@ -17,16 +20,17 @@ const countClass = "rounded-full bg-muted px-1.5 text-xs font-medium text-muted-
 
 export default function ProjectHeader({ project, actionsRef }: { project: ProjectDetail; actionsRef?: (node: HTMLDivElement | null) => void }) {
   const isFont = project.purpose === "font";
-  return (
-    <header>
-      <nav aria-label="Breadcrumb" className="flex justify-center">
+  const crumbSlot = useContext(HeaderSlotContext);
+  // The breadcrumb lives in the top bar; without one (no bar around this screen) it is shown here.
+  const breadcrumb = (
+      <nav aria-label="Breadcrumb" className="flex min-w-0 justify-center">
         <ol className="inline-flex max-w-full items-center gap-2 rounded-xl border border-border bg-card px-4 py-1.5 text-sm">
-          <li>
+          <li className="hidden sm:block">
             <Link to="/" className="rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
               Dashboard
             </Link>
           </li>
-          <li aria-hidden="true" className="text-muted-foreground">
+          <li aria-hidden="true" className="hidden text-muted-foreground sm:block">
             /
           </li>
           <li aria-current="page" className="min-w-0 truncate font-semibold">
@@ -34,6 +38,11 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
           </li>
         </ol>
       </nav>
+  );
+
+  return (
+    <header>
+      {crumbSlot ? createPortal(breadcrumb, crumbSlot) : breadcrumb}
 
       <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-border bg-card px-4 py-3 lg:grid lg:grid-cols-[1fr_auto_1fr]">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
@@ -63,7 +72,6 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
           <NavLink to={`/projects/${project.id}/trash`} className={pillClass}>
             <Trash2 aria-hidden="true" className="h-4 w-4" />
             <span className="sr-only">Trash</span>
-            {project.trashCount > 0 && <span className={countClass}>{project.trashCount}</span>}
           </NavLink>
         </nav>
 

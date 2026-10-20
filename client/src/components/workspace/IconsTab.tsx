@@ -189,9 +189,6 @@ export default function IconsTab() {
           </div>
         ) : (
           <>
-            <p role="status" className="mb-2 text-sm text-muted-foreground">
-              Showing {shown.length} of {pluralize(total, "icon")}
-            </p>
             {view === "grid" ? (
               <ul className={`grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5 ${icons.loading ? "opacity-60" : ""}`}>
                 {shown.map((icon) => (

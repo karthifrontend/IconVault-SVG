@@ -13,6 +13,7 @@ import AppHeader from "../components/shell/AppHeader";
 import ManageMenu from "../components/shell/ManageMenu";
 import { ThemeProvider } from "../context/ThemeProvider";
 import { ToastProvider } from "../context/ToastContext";
+import { fontAutoBuild } from "../lib/fontAutoBuild";
 import { accessibilityViolations } from "../test/axe";
 import { READ_ONLY, makeDetail, makeFolder, makeIcon, makeProject } from "../test/fixtures";
 import AccountTokensPage from "./AccountTokensPage";
@@ -235,13 +236,21 @@ describe("project workspace", () => {
   });
 
   it("font section and a built font", async () => {
-    vi.mocked(projectsApi.getProject).mockResolvedValue(makeDetail({ id: "p1", name: "Feather", purpose: "font" }));
+    vi.mocked(projectsApi.getProject).mockResolvedValue(makeDetail({ id: "p1", name: "Feather", purpose: "font", iconCount: 2 }));
     project("/projects/p1/font");
-    await screen.findByRole("button", { name: "Build font" });
+    await screen.findByRole("button", { name: "Download font" });
     await clean();
-    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
-    await screen.findByRole("button", { name: "Copy class fth-home" });
-    await clean();
+    // The font builds by itself; wait for the finished table.
+    fontAutoBuild.enabled = true;
+    fontAutoBuild.delayMs = 10;
+    try {
+      await userEvent.type(await screen.findByLabelText("Base class"), "x");
+      await screen.findByRole("button", { name: "Copy class fth-home" }, { timeout: 8000 });
+      await clean();
+    } finally {
+      fontAutoBuild.enabled = false;
+      fontAutoBuild.delayMs = 700;
+    }
   });
 });
 

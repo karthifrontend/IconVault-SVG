@@ -1,4 +1,4 @@
-// Top bar for every screen: brand, the Manage menu (admins only), the colour theme switch, and either a Sign in button or the user menu. It is fixed and 57px tall; pages leave that much room at the top.
+// Top bar for every screen: brand, an empty middle where a screen can place its breadcrumb, the Manage menu (admins only), the colour theme switch, and either a Sign in button or the user menu. It is fixed and 57px tall; pages leave that much room at the top.
 import { LayoutGrid } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -9,9 +9,11 @@ import UserMenu from "./UserMenu";
 
 type AppHeaderProps = {
   onSignIn: () => void;
+  // Receives the element where a screen can place its breadcrumb (see HeaderSlotContext).
+  crumbRef?: (node: HTMLDivElement | null) => void;
 };
 
-export default function AppHeader({ onSignIn }: AppHeaderProps) {
+export default function AppHeader({ onSignIn, crumbRef }: AppHeaderProps) {
   const { currentUser, logout } = useAuth();
 
   async function handleSignOut() {
@@ -26,9 +28,12 @@ export default function AppHeader({ onSignIn }: AppHeaderProps) {
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <LayoutGrid aria-hidden="true" className="h-4 w-4" />
           </span>
-          <span className="truncate font-bold tracking-tight text-foreground">SVG Sprite Compiler</span>
+          <span className="hidden truncate font-bold tracking-tight text-foreground sm:inline">SVG Sprite Compiler</span>
         </Link>
       </div>
+
+      {/* Middle of the bar: a screen can place its breadcrumb here. */}
+      <div ref={crumbRef} className="mx-3 flex min-w-0 flex-1 justify-center empty:hidden" />
 
       <div className="flex shrink-0 items-center gap-3">
         {currentUser?.role === "admin" && <ManageMenu />}

@@ -1,5 +1,5 @@
-// The Font section, laid out like Icon Vault's: the actions at the top (they sit in the project bar: Build font, the outlined button, rebuilds on demand; Download font, the main action, and Copy CSS switch on once a font is built, which now happens automatically), then three columns: 1. Scope selection (whole project, a folder or the chosen icons, with the icon checklist) and the target formats, 2. Font and CSS settings (name, prefix, base class, starting codepoint), 3. Font metrics and normalization. Below them the result (a summary, conversion warnings and the "Stable Unicode codepoints mapping" table with every glyph, its character (editable), CSS entity and CSS class) and the font build history. The font builds by itself when the page opens and shortly after any setting changes (Build font rebuilds on demand), on the server; for editors, new characters are saved on the icons so rebuilding later keeps every glyph on the same character.
-import { CheckSquare, Copy, Download, Hammer } from "lucide-react";
+// The Font section, laid out like Icon Vault's: the actions at the top (they sit in the project bar: Download font, the main action, and Copy CSS switch on once a font is built, which happens automatically), then three columns: 1. Scope selection (whole project, a folder or the chosen icons, with the icon checklist) and the target formats, 2. Font and CSS settings (name, prefix, base class, starting codepoint), 3. Font metrics and normalization. Below them the result (a summary, conversion warnings and the "Stable Unicode codepoints mapping" table with every glyph, its character (editable), CSS entity and CSS class) and the font build history. The font builds by itself on the server when the page opens and shortly after any setting changes (there is no Build font button; a failed build offers Try again); for editors, new characters are saved on the icons so rebuilding later keeps every glyph on the same character.
+import { CheckSquare, Copy, Download } from "lucide-react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { buildFont, downloadFont } from "../../api/fonts";
@@ -199,9 +199,6 @@ export default function FontTab() {
       <Button icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={() => built && copy(built.css, "the stylesheet")} disabled={!built}>
         Copy CSS
       </Button>
-      <Button variant="outline-primary" icon={<Hammer aria-hidden="true" className="h-4 w-4" />} onClick={() => void runBuild()} loading={building}>
-        Build font
-      </Button>
     </div>
   );
 
@@ -211,7 +208,10 @@ export default function FontTab() {
       <form onSubmit={(event) => event.preventDefault()} className="space-y-4">
         {error && (
           <p role="alert" className="text-sm font-medium text-destructive">
-            {error}
+            {error}{" "}
+            <button type="button" className="underline" onClick={() => void runBuild()} disabled={building}>
+              Try again
+            </button>
           </p>
         )}
         {!canEdit && <p className="text-xs text-muted-foreground">You can build and download this font. The characters are not saved on the project because you cannot change it.</p>}

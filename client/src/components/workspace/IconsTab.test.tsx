@@ -78,7 +78,7 @@ describe("showing icons", () => {
     setup();
     expect(screen.getByLabelText("Loading icons")).toHaveAttribute("aria-busy", "true");
     expect(await screen.findByRole("button", { name: "Open Alpha" })).toBeInTheDocument();
-    expect(screen.getByText("Showing 3 of 3 icons")).toBeInTheDocument();
+    expect(screen.queryByText(/^Showing \d+ of/)).not.toBeInTheDocument();
     expect(within(card("Gamma")).getByText("Stroke")).toBeInTheDocument();
   });
 
@@ -184,7 +184,7 @@ describe("show more", () => {
     listIcons.mockResolvedValue(reply(three(), 450));
     setup();
     await screen.findByRole("button", { name: "Open Alpha" });
-    expect(screen.getByText("Showing 3 of 450 icons")).toBeInTheDocument();
+    expect(screen.queryByText(/^Showing \d+ of/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Alpha" }));
     await userEvent.click(screen.getByRole("button", { name: "Show more" }));
     await waitFor(() => expect(listIcons).toHaveBeenLastCalledWith("p1", expect.objectContaining({ limit: 400 })));

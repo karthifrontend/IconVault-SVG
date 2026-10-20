@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import LoginModal from "./components/LoginModal";
 import AppHeader from "./components/shell/AppHeader";
+import { HeaderSlotContext } from "./context/headerSlotContext";
 import { useAuth } from "./context/AuthContext";
 import { useToast } from "./context/ToastContext";
 import AccountTokensPage from "./pages/AccountTokensPage";
@@ -64,6 +65,7 @@ function App() {
     }
   }, [initializing, showToast]);
 
+  const [crumbSlot, setCrumbSlot] = useState<HTMLElement | null>(null);
   const openLogin = () => setShowLoginModal(true);
 
   return (
@@ -81,8 +83,8 @@ function App() {
           <span>Loading…</span>
         </div>
       ) : currentUser ? (
-        <>
-          <AppHeader onSignIn={openLogin} />
+        <HeaderSlotContext.Provider value={crumbSlot}>
+          <AppHeader onSignIn={openLogin} crumbRef={setCrumbSlot} />
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/projects/:projectId/*" element={<ProjectPage />} />
@@ -91,7 +93,7 @@ function App() {
             <Route path="/admin/projects" element={<AdminProjectsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </>
+        </HeaderSlotContext.Provider>
       ) : (
         <>
           <AppHeader onSignIn={openLogin} />

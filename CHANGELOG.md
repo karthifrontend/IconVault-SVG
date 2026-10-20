@@ -734,6 +734,17 @@ One commit on `main`, local only.
 - The Manage button and Manage Projects were not seen in the browser: that needs a signed-in admin, and the admin list is your `ADMIN_EMAILS` setting, which I do not change. They are covered by tests (including real HTTP tests for the list and search). Sign in as an admin and look at the top bar.
 - Settings changes made while a font build is waiting are not combined; each change just restarts the 0.7 second wait.
 
+## 2026-10-20: Follow-up, no Build font button, breadcrumb in the top bar, Trash page like Settings (change request)
+
+Client only. One commit on `main`, local only.
+
+- **No Build font button:** the font builds by itself (see the entry before), so the button is gone; the page's actions are **Download font** and **Copy CSS**. If a build fails the message has a **Try again** link, and changing any setting builds again.
+- **Breadcrumb in the top bar:** "Dashboard / <project>" is now in the middle of the top bar on project pages instead of a separate pill under it. On a phone only the project name shows there (the logo still goes to the dashboard).
+- **Trash tab:** an icon with no count any more. The **Trash page** now has the same width and card as Project Settings (a "Trash" heading, the explanation, then the list); on a phone the buttons wrap under the icon name.
+- **"Showing 7 of 7 icons"** line removed from the Icons screen (Show more and the 1000 icon note stay).
+- Validation: client **621 of 621**; types and lint clean. Real browser (throwaway user): breadcrumb in the bar, Trash card and its row on desktop and at 375 px with no sideways scroll. Test data removed.
+- Tests changed: the Font page tests now wait for the automatic build instead of clicking Build font (and new ones cover Try again and no Build font button).
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
