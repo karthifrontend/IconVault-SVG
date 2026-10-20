@@ -108,7 +108,13 @@ export async function listProjects(actor: SignedInActor, query: ListProjectsQuer
   if (query.purpose !== "all") and.push({ purpose: query.purpose });
   if (query.search) {
     const pattern = new RegExp(escapeRegExp(query.search), "i");
-    and.push({ $or: [{ name: pattern }, { description: pattern }, { prefix: pattern }] });
+    const fields: Record<string, unknown>[] = [{ name: pattern }, { description: pattern }, { prefix: pattern }];
+    // Admins also find projects by their owner's name or email.
+    if (actor.isAdmin) {
+      const owners = await User.find({ $or: [{ displayName: pattern }, { email: pattern }] }, { _id: 1 }).limit(200).lean();
+      if (owners.length > 0) fields.push({ ownerId: { $in: owners.map((owner) => owner._id) } });
+    }
+    and.push({ $or: fields });
   }
   if (and.length > 0) filter.$and = and;
 

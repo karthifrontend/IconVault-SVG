@@ -2,6 +2,10 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
+import { fontAutoBuild } from '../lib/fontAutoBuild'
+
+// Most tests build the font by hand and count the calls, so the automatic build is off unless a test turns it on.
+fontAutoBuild.enabled = false
 
 afterEach(() => {
   cleanup()

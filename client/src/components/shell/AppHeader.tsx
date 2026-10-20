@@ -1,9 +1,10 @@
-// Top bar for every screen: brand, the colour theme switch, and either a Sign in button or the user menu. It is fixed and 57px tall; pages leave that much room at the top.
+// Top bar for every screen: brand, the Manage menu (admins only), the colour theme switch, and either a Sign in button or the user menu. It is fixed and 57px tall; pages leave that much room at the top.
 import { LayoutGrid } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { reloadPage } from "../../lib/navigation";
 import ThemeToggle from "../ui/ThemeToggle";
+import ManageMenu from "./ManageMenu";
 import UserMenu from "./UserMenu";
 
 type AppHeaderProps = {
@@ -30,6 +31,7 @@ export default function AppHeader({ onSignIn }: AppHeaderProps) {
       </div>
 
       <div className="flex shrink-0 items-center gap-3">
+        {currentUser?.role === "admin" && <ManageMenu />}
         <ThemeToggle />
         {currentUser ? (
           <UserMenu user={currentUser} onSignOut={handleSignOut} />

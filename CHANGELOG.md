@@ -703,6 +703,37 @@ One commit on `main`, local only.
 - **Version numbers:** every kept package gets a version (v1, v2, ...) per project. The history shows it as a badge ("v3"), in the button names ("Download Feather v3 from ...") and in the file name of a download from the history (`Feather-font-v3.zip`). Numbers are never reused: after deleting the newest, or when the 20 build limit drops the oldest, the next one still continues the count. The count lives on the project (`fontBuildCount`, not shown anywhere else). A package downloaded straight from the Font page keeps its plain name (`<font>-font.zip`).
 - Validation: server database tests **173 of 173** (new: versions in order, never reused after a delete or the 20 limit, each project counts on its own); client **594 of 594** (new: Download font off until built with its hint, the outlined Build font, version badges and names). The slow accessibility lookup for the icon grid got a longer timeout because it failed twice under load. Types and lint clean. Not checked in the browser this time.
 
+## 2026-10-20: Follow-up, Font Builder in the bar and built automatically, Project Settings like Icon Vault, Manage menu for admins (change request)
+
+One commit on `main`, local only.
+
+### Font Builder
+- The left block ("Icon font", the sentence under it, and the "Build the font first" hint) is gone. **Download font**, **Copy CSS** and **Build font** now sit in the project bar on the right, like Upload icons on the Icons screen.
+- **The font builds by itself** (your question about automating it): when the page opens, and 0.7 seconds after the last change to any setting, scope, format or checklist choice. Download font and Copy CSS are ready as soon as the first build finishes. **Build font** stays as a manual rebuild. Nothing is built while the settings are not valid yet (for example an empty font name) or when no icon is covered; a font handed over from the Icons screen is not built a second time; only the newest build's answer is used when changes come quickly.
+- Side effect to know: for people who can edit, a build saves new characters on icons that had none, so just opening the page can now assign them (they would have been assigned by the first Build font anyway, and they never change afterwards).
+
+### Project Settings (like Icon Vault)
+- One card with **Save settings** at the top right (the primary action, switched on only after a change), the owner, the project type (shown, with "Permanent (cannot be changed)"), name, description, prefix, accent colour and Private or Public cards. The old "Edit details" dialog is not used here any more (the dashboard still has it).
+- A card to **Export entire project**, a card of **Integration guide & snippets** with copy buttons (sprite use and the CLI command for sprite projects; stylesheet and React use for font projects), and the danger zone (archive, transfer for admins, delete) as before.
+- Read-only people see the same fields, disabled, with "Only the owner can change these settings."
+
+### Admin: Manage menu
+- Checked against Icon Vault: its Manage menu has Manage Projects and Manage Users. We already had a Users screen (Administration) but no project screen, and you reached it only from the account menu.
+- New **Manage** button in the top bar (admins only) with **Manage Projects** and **Manage Users**. New screen **Manage projects** (`/admin/projects`): every project, private and archived too, with owner name and email, badges, icons and last change; search that also matches the owner's name or email; **Open**, **Transfer** (existing dialog) and **Delete** (with confirmation) per project. Users and Projects are tabs on both admin screens.
+- Not copied from Icon Vault: adding or editing users and switching accounts (sign-in is Google or Microsoft here and admins come from `ADMIN_EMAILS`), and bulk transfer or delete of several projects at once.
+
+### Fix found on the way
+- Packages kept in the font history before version numbers existed had none (two of your gg-private downloads). They are numbered oldest first the first time the history is opened, and new ones carry on after them. A test covers it.
+
+### Validation (verified)
+- Server unit **136 of 136**; database **175 of 175** (new: admins list everyone's projects and search by owner, other users cannot; legacy builds numbered).
+- Client **621 of 621** (new: automatic build cases, actions in the bar, no heading, the settings card and snippets, Manage Projects, the Manage menu and its keyboard use, and the admin screens' accessibility checks). Types and lint clean.
+- Real browser (throwaway non-admin user): the Font Builder page opened already built with the actions in the bar and no left block; Project Settings looked like the Icon Vault card and Save settings renamed the project everywhere; the Manage button is not shown to a non-admin. Test data removed.
+
+### Not tested, or open
+- The Manage button and Manage Projects were not seen in the browser: that needs a signed-in admin, and the admin list is your `ADMIN_EMAILS` setting, which I do not change. They are covered by tests (including real HTTP tests for the list and search). Sign in as an admin and look at the top bar.
+- Settings changes made while a font build is waiting are not combined; each change just restarts the 0.7 second wait.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -712,7 +743,7 @@ One commit on `main`, local only.
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 594 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 173 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 621 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 175 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

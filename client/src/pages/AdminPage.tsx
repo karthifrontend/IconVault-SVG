@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { listUsers } from "../api/admin";
 import type { AdminUser } from "../api/types";
+import AdminTabs from "../components/admin/AdminTabs";
 import DeleteUserDialog from "../components/admin/DeleteUserDialog";
 import { Button } from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
@@ -36,6 +37,8 @@ export default function AdminPage() {
     <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-4 pb-16 pt-[calc(57px+2rem)] outline-none">
       <h1 className="text-2xl font-bold tracking-tight">Administration</h1>
       <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Everyone who has signed in. Users are created by signing in with Google or Microsoft, and there are no passwords to manage. Admins are the emails in the server’s ADMIN_EMAILS setting.</p>
+
+      <AdminTabs />
 
       <div className="mt-6">
         <label htmlFor="admin-search" className="sr-only">

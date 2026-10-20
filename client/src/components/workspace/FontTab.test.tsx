@@ -2,7 +2,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as fontsApi from "../../api/fonts";
 import * as iconsApi from "../../api/icons";
 import { ApiError } from "../../api/http";
@@ -11,6 +11,7 @@ import { ToastProvider } from "../../context/ToastContext";
 import { WorkspaceContext, type WorkspaceContextValue } from "../../context/workspaceContext";
 import * as clipboard from "../../lib/clipboard";
 import { cacheBuild, clearCachedBuild, peekCachedBuild } from "../../lib/fontBuildCache";
+import { fontAutoBuild } from "../../lib/fontAutoBuild";
 import * as preview from "../../lib/fontPreview";
 import { READ_ONLY, makeDetail, makeFolder, makeIcon } from "../../test/fixtures";
 import * as zip from "../../utils/zipBundle";
@@ -318,16 +319,30 @@ describe("the page layout", () => {
     expect(actions.compareDocumentPosition(screen.getByRole("region", { name: "1. Scope selection" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("keeps Download font off until the font is built, and says why", async () => {
+  it("keeps Download font off until the font is built", async () => {
     setup();
     const download = screen.getByRole("button", { name: "Download font" });
     expect(download).toBeDisabled();
-    expect(download).toHaveAccessibleDescription("Build the font first; then Download font is ready.");
+    expect(screen.queryByText(/Build the font first/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Build font" }));
     await screen.findByText("2 icons");
     expect(download).toBeEnabled();
-    expect(screen.queryByText(/Build the font first/)).not.toBeInTheDocument();
     expect(fontsApi.downloadFont).not.toHaveBeenCalled();
+  });
+
+  it("has no heading or intro text on the left of the actions", () => {
+    setup();
+    expect(screen.queryByRole("heading", { name: "Icon font" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Every icon becomes one character/)).not.toBeInTheDocument();
+  });
+
+  it("puts the actions into the project bar when there is one", () => {
+    const slot = document.createElement("div");
+    document.body.appendChild(slot);
+    setup({ actionsSlot: slot });
+    expect(within(slot).getByRole("group", { name: "Font actions" })).toBeInTheDocument();
+    expect(within(slot).getByRole("button", { name: "Build font" })).toBeInTheDocument();
+    slot.remove();
   });
 
   it("has Copy CSS switched off until there is a build", async () => {
@@ -492,5 +507,71 @@ describe("the built font", () => {
     await open();
     await userEvent.click(screen.getByRole("button", { name: "Build font" }));
     await waitFor(() => expect(preview.unloadPreviewFont).toHaveBeenCalled());
+  });
+});
+
+describe("building automatically", () => {
+  const withIcons = (over = {}) => ({ project: makeDetail({ id: "p1", name: "Feather Icons", prefix: "fth", purpose: "font", iconCount: 2 }), ...over });
+
+  beforeEach(() => {
+    fontAutoBuild.enabled = true;
+    fontAutoBuild.delayMs = 20;
+  });
+  afterEach(() => {
+    fontAutoBuild.enabled = false;
+    fontAutoBuild.delayMs = 700;
+  });
+
+  it("builds when the page opens, so Download font is ready without pressing Build font", async () => {
+    setup(withIcons());
+    await waitFor(() => expect(buildFont).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("2 icons")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download font" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Copy CSS" })).toBeEnabled();
+  });
+
+  it("builds again, once, a moment after a setting changes", async () => {
+    setup(withIcons());
+    await screen.findByText("2 icons");
+    expect(buildFont).toHaveBeenCalledTimes(1);
+    await userEvent.type(screen.getByLabelText("Base class"), "fth");
+    await waitFor(() => expect(buildFont).toHaveBeenCalledTimes(2));
+    expect(buildFont).toHaveBeenLastCalledWith("p1", expect.objectContaining({ baseClass: "fth" }));
+    // Nothing more happens on its own.
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(buildFont).toHaveBeenCalledTimes(2);
+  });
+
+  it("waits while the settings are not valid, and does not complain about it", async () => {
+    setup(withIcons());
+    await screen.findByText("2 icons");
+    await userEvent.clear(screen.getByLabelText("Font name"));
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(buildFont).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Font name"), "Fixed");
+    await waitFor(() => expect(buildFont).toHaveBeenCalledTimes(2));
+  });
+
+  it("does not build a project that has no icons", async () => {
+    setup(withIcons({ project: makeDetail({ id: "p1", purpose: "font", iconCount: 0 }) }));
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(buildFont).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Download font" })).toBeDisabled();
+  });
+
+  it("does not build again a finished font handed over from the Icons screen", async () => {
+    cacheBuild({ projectId: "p1", build: built(), family: "iconfont-preview-handover", loaded: true });
+    setup(withIcons(), { iconIds: ["a", "b"], built: true });
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(buildFont).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Download font" })).toBeEnabled();
+  });
+
+  it("still rebuilds on demand with Build font", async () => {
+    setup(withIcons());
+    await screen.findByText("2 icons");
+    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await waitFor(() => expect(buildFont).toHaveBeenCalledTimes(2));
   });
 });

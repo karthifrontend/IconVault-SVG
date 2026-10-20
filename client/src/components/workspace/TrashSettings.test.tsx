@@ -9,6 +9,7 @@ import * as projectsApi from "../../api/projects";
 import { ToastProvider } from "../../context/ToastContext";
 import { WorkspaceContext, type WorkspaceContextValue } from "../../context/workspaceContext";
 import { READ_ONLY, makeDetail, makeIcon } from "../../test/fixtures";
+import * as clipboard from "../../lib/clipboard";
 import * as zip from "../../utils/zipBundle";
 import SettingsTab from "./SettingsTab";
 import TrashTab from "./TrashTab";
@@ -19,6 +20,7 @@ vi.mock("../../utils/zipBundle", () => ({ triggerBrowserDownload: vi.fn() }));
 vi.mock("../admin/TransferProjectDialog", () => ({ default: ({ open }: { open: boolean }) => (open ? <div role="dialog" aria-label="Transfer ownership" /> : null) }));
 vi.mock("../../api/icons");
 vi.mock("../../api/projects");
+vi.mock("../../lib/clipboard");
 
 const listIcons = vi.mocked(iconsApi.listIcons);
 const trashed = (id: string, name: string) => makeIcon({ id, name, deletedAt: "2026-10-18T10:00:00.000Z" });
@@ -143,27 +145,71 @@ describe("Trash", () => {
 });
 
 describe("Settings", () => {
-  it("shows the project's details", () => {
-    setup(<SettingsTab />, { project: makeDetail({ id: "p1", name: "Feather", prefix: "fth", purpose: "font", visibility: "public", owner: { id: "u1", displayName: "Ada Lovelace" } }) });
-    expect(screen.getByText("Feather")).toBeInTheDocument();
-    expect(screen.getByText("fth")).toBeInTheDocument();
-    expect(screen.getByText("Icon font")).toBeInTheDocument();
-    expect(screen.getByText("Public (others can view and copy)")).toBeInTheDocument();
-    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+  it("shows the project's settings in a form, with the type fixed and the owner named", () => {
+    setup(<SettingsTab />, { project: makeDetail({ id: "p1", name: "Feather", prefix: "fth", description: "Line icons", purpose: "font", visibility: "public", owner: { id: "u1", displayName: "Ada Lovelace", email: "ada@example.com" } }) });
+    expect(screen.getByRole("heading", { name: "Project settings" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Project name")).toHaveValue("Feather");
+    expect(screen.getByLabelText("Description")).toHaveValue("Line icons");
+    expect(screen.getByLabelText(/CSS \/ symbol prefix/)).toHaveValue("fth");
+    expect(screen.getByRole("radio", { name: /Public project/ })).toBeChecked();
+    expect(screen.getByText("Icon font project")).toBeInTheDocument();
+    expect(screen.getByText(/Permanent \(cannot be changed\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Ada Lovelace \(ada@example.com\)/)).toBeInTheDocument();
   });
 
-  it("edits the details and refreshes the project", async () => {
+  it("has Save settings at the top, before the fields, switched on only after a change", async () => {
+    setup(<SettingsTab />);
+    const save = screen.getByRole("button", { name: "Save settings" });
+    expect(save).toBeDisabled();
+    expect(save.className).toContain("bg-primary");
+    expect(save.compareDocumentPosition(screen.getByLabelText("Project name")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await userEvent.type(screen.getByLabelText("Project name"), "!");
+    expect(save).toBeEnabled();
+  });
+
+  it("saves the changed settings and refreshes the project", async () => {
     vi.mocked(projectsApi.updateProject).mockResolvedValue(makeDetail({ id: "p1", name: "Feather 2" }));
     const fns = setup(<SettingsTab />);
-    await userEvent.click(screen.getByRole("button", { name: "Edit details" }));
-    const dialog = screen.getByRole("dialog", { name: "Edit project" });
-    const name = within(dialog).getByLabelText(/^Name/);
+    const name = screen.getByLabelText("Project name");
     await userEvent.clear(name);
     await userEvent.type(name, "Feather 2");
-    await userEvent.click(within(dialog).getByRole("button", { name: /Save/ }));
-    await waitFor(() => expect(projectsApi.updateProject).toHaveBeenCalledWith("p1", expect.objectContaining({ name: "Feather 2" })));
+    await userEvent.click(screen.getByRole("radio", { name: /Public project/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Save settings" }));
+    await waitFor(() => expect(projectsApi.updateProject).toHaveBeenCalledWith("p1", expect.objectContaining({ name: "Feather 2", visibility: "public" })));
     expect(await screen.findByText("Saved “Feather 2”.")).toBeInTheDocument();
     expect(fns.refreshProject).toHaveBeenCalled();
+  });
+
+  it("checks the name and prefix before saving", async () => {
+    setup(<SettingsTab />);
+    await userEvent.clear(screen.getByLabelText("Project name"));
+    await userEvent.click(screen.getByRole("button", { name: "Save settings" }));
+    expect(await screen.findByText("Enter a name.")).toBeInTheDocument();
+    expect(projectsApi.updateProject).not.toHaveBeenCalled();
+  });
+
+  it("shows the reason when saving fails", async () => {
+    vi.mocked(projectsApi.updateProject).mockRejectedValue(new ApiError("Could not save.", 500));
+    setup(<SettingsTab />);
+    await userEvent.type(screen.getByLabelText("Project name"), "!");
+    await userEvent.click(screen.getByRole("button", { name: "Save settings" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not save.");
+  });
+
+  it("gives the usage snippets for the project type, with a copy button", async () => {
+    vi.mocked(clipboard.copyText).mockResolvedValue(true);
+    setup(<SettingsTab />, { project: makeDetail({ id: "p1", name: "Feather", prefix: "fth", purpose: "sprite" }) });
+    expect(screen.getByRole("heading", { name: /Integration guide/ })).toBeInTheDocument();
+    expect(screen.getByText(/sprite.svg#fth-home/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Copy: SVG sprite inline usage" }));
+    expect(clipboard.copyText).toHaveBeenCalledWith(expect.stringContaining('href="sprite.svg#fth-home"'));
+    expect(await screen.findByText("Copied svg sprite inline usage.")).toBeInTheDocument();
+  });
+
+  it("gives font snippets for a font project", () => {
+    setup(<SettingsTab />, { project: makeDetail({ id: "p1", name: "Feather Icons", prefix: "fth", purpose: "font" }) });
+    expect(screen.getByText(/FeatherIcons\.css/)).toBeInTheDocument();
+    expect(screen.getByText(/<i className="fth-home"/)).toBeInTheDocument();
   });
 
   it("archives and unarchives", async () => {
@@ -239,6 +285,7 @@ describe("Settings", () => {
   it("is read-only for viewers", () => {
     setup(<SettingsTab />, { project: makeDetail({ id: "p1", access: READ_ONLY }) });
     expect(screen.getByText("Only the owner can change these settings.")).toBeInTheDocument();
-    for (const name of ["Edit details", "Archive project", "Delete project"]) expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Project name")).toBeDisabled();
+    for (const name of ["Save settings", "Archive project", "Delete project"]) expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
   });
 });

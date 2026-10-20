@@ -7,6 +7,7 @@ import AppHeader from "./components/shell/AppHeader";
 import { useAuth } from "./context/AuthContext";
 import { useToast } from "./context/ToastContext";
 import AccountTokensPage from "./pages/AccountTokensPage";
+import AdminProjectsPage from "./pages/AdminProjectsPage";
 import AdminPage from "./pages/AdminPage";
 import DashboardPage from "./pages/DashboardPage";
 import LandingPage from "./pages/LandingPage";
@@ -87,6 +88,7 @@ function App() {
             <Route path="/projects/:projectId/*" element={<ProjectPage />} />
             <Route path="/account/tokens" element={<AccountTokensPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/projects" element={<AdminProjectsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </>

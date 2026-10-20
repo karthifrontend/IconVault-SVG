@@ -1,6 +1,7 @@
-// The Font section, laid out like Icon Vault's: the actions at the top (Build font is the outlined button that starts it; Download font, the main action, and Copy CSS switch on once a font is built), then three columns: 1. Scope selection (whole project, a folder or the chosen icons, with the icon checklist) and the target formats, 2. Font and CSS settings (name, prefix, base class, starting codepoint), 3. Font metrics and normalization. Below them the result (a summary, conversion warnings and the "Stable Unicode codepoints mapping" table with every glyph, its character (editable), CSS entity and CSS class) and the font build history. The font is built on the server; for editors, new characters are saved on the icons so rebuilding later keeps every glyph on the same character.
+// The Font section, laid out like Icon Vault's: the actions at the top (they sit in the project bar: Build font, the outlined button, rebuilds on demand; Download font, the main action, and Copy CSS switch on once a font is built, which now happens automatically), then three columns: 1. Scope selection (whole project, a folder or the chosen icons, with the icon checklist) and the target formats, 2. Font and CSS settings (name, prefix, base class, starting codepoint), 3. Font metrics and normalization. Below them the result (a summary, conversion warnings and the "Stable Unicode codepoints mapping" table with every glyph, its character (editable), CSS entity and CSS class) and the font build history. The font builds by itself when the page opens and shortly after any setting changes (Build font rebuilds on demand), on the server; for editors, new characters are saved on the icons so rebuilding later keeps every glyph on the same character.
 import { CheckSquare, Copy, Download, Hammer } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { buildFont, downloadFont } from "../../api/fonts";
 import { updateIcon } from "../../api/icons";
 import type { BuildFontInput, FontBuildResult, FontCodepoint, FontFormat } from "../../api/types";
@@ -9,6 +10,7 @@ import { useLocation } from "react-router-dom";
 import { useWorkspace } from "../../context/workspaceContext";
 import { copyText } from "../../lib/clipboard";
 import { clearCachedBuild, peekCachedBuild } from "../../lib/fontBuildCache";
+import { fontAutoBuild } from "../../lib/fontAutoBuild";
 import { defaultFontOptions } from "../../lib/fontDefaults";
 import { loadPreviewFont, nextPreviewFamily, unloadPreviewFont } from "../../lib/fontPreview";
 import { buildFolderTree, flattenFolderTree, totalIconCount } from "../../lib/folderTree";
@@ -33,7 +35,7 @@ const FORMATS: { value: FontFormat; label: string; hint: string }[] = [
 const columnHeading = "text-xs font-semibold uppercase tracking-wide text-muted-foreground";
 
 export default function FontTab() {
-  const { project, folderList, refreshIcons, refreshProject } = useWorkspace();
+  const { project, folderList, refreshIcons, refreshProject, actionsSlot } = useWorkspace();
   const { showToast } = useToast();
   const canEdit = project.access.canEdit;
   const folderOptions = flattenFolderTree(buildFolderTree(folderList.folders));
@@ -107,15 +109,23 @@ export default function FontTab() {
     };
   }
 
+  // Which settings the shown build was made with, and a counter so only the newest build's answer is used.
+  const builtSignature = useRef<string | null>(null);
+  const buildCount = useRef(0);
+
   async function runBuild(override?: string[]) {
     const input = options(override);
     if (typeof input === "string") return setError(input);
+    const mine = ++buildCount.current;
     setBuilding(true);
     setError(null);
     try {
       const built = await buildFont(project.id, input);
+      if (mine !== buildCount.current) return;
       const family = nextPreviewFamily();
       const loaded = await loadPreviewFont(family, built.preview.base64);
+      if (mine !== buildCount.current) return;
+      builtSignature.current = JSON.stringify(input);
       setResult({ build: built, family, loaded });
       setFilter("");
       // New characters were saved on the icons: show them in the other lists too.
@@ -124,15 +134,10 @@ export default function FontTab() {
         refreshProject();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not build the font.");
+      if (mine === buildCount.current) setError(err instanceof Error ? err.message : "Could not build the font.");
     } finally {
-      setBuilding(false);
+      if (mine === buildCount.current) setBuilding(false);
     }
-  }
-
-  function build(event: FormEvent) {
-    event.preventDefault();
-    void runBuild();
   }
 
   async function download() {
@@ -171,32 +176,39 @@ export default function FontTab() {
   const folderNode = folderOptions.find((folder) => folder.id === folderChoice);
   const inScope = scopeKind === "selected" ? (chosen?.length ?? 0) : scopeKind === "all" ? project.iconCount : folderNode ? totalIconCount(folderNode) : 0;
 
+  // The font builds by itself: when the page opens (unless a finished build was handed over) and a moment after any setting changes. Nothing happens while the settings are not valid yet or no icon is covered.
+  const planned = options();
+  const signature = typeof planned === "string" ? null : JSON.stringify(planned);
+  useEffect(() => {
+    // A build handed over from the Icons screen was made with these very settings.
+    if (adopted && builtSignature.current === null && signature) builtSignature.current = signature;
+  }, [adopted, signature]);
+  const buildAutomatically = useEffectEvent(() => void runBuild());
+  useEffect(() => {
+    if (!fontAutoBuild.enabled || !signature || signature === builtSignature.current || inScope === 0) return undefined;
+    const timer = window.setTimeout(buildAutomatically, fontAutoBuild.delayMs);
+    return () => window.clearTimeout(timer);
+  }, [signature, inScope]);
+
+  // The three actions sit in the project bar (like Upload icons on the Icons screen); without a bar they show above the settings.
+  const actions = (
+    <div role="group" aria-label="Font actions" className="flex flex-wrap items-center gap-2">
+      <Button variant="primary" icon={<Download aria-hidden="true" className="h-4 w-4" />} onClick={download} loading={downloading} disabled={!result}>
+        Download font
+      </Button>
+      <Button icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={() => built && copy(built.css, "the stylesheet")} disabled={!built}>
+        Copy CSS
+      </Button>
+      <Button variant="outline-primary" icon={<Hammer aria-hidden="true" className="h-4 w-4" />} onClick={() => void runBuild()} loading={building}>
+        Build font
+      </Button>
+    </div>
+  );
+
   return (
     <div>
-      <form onSubmit={build} className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">Icon font</h2>
-            <p className="text-sm text-muted-foreground">Every icon becomes one character. Icons keep their character between builds.</p>
-          </div>
-          <div role="group" aria-label="Font actions" className="flex flex-wrap items-center gap-2">
-            <Button variant="primary" icon={<Download aria-hidden="true" className="h-4 w-4" />} onClick={download} loading={downloading} disabled={!result} aria-describedby={result ? undefined : "font-download-hint"}>
-              Download font
-            </Button>
-            <Button icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={() => built && copy(built.css, "the stylesheet")} disabled={!built}>
-              Copy CSS
-            </Button>
-            <Button type="submit" variant="outline-primary" icon={<Hammer aria-hidden="true" className="h-4 w-4" />} loading={building}>
-              Build font
-            </Button>
-          </div>
-        </div>
-
-        {!result && (
-          <p id="font-download-hint" className="text-xs text-muted-foreground">
-            Build the font first; then Download font is ready.
-          </p>
-        )}
+      {actionsSlot ? createPortal(actions, actionsSlot) : <div className="mb-4 flex justify-end">{actions}</div>}
+      <form onSubmit={(event) => event.preventDefault()} className="space-y-4">
         {error && (
           <p role="alert" className="text-sm font-medium text-destructive">
             {error}
@@ -278,9 +290,9 @@ export default function FontTab() {
           </section>
 
           <section aria-labelledby="font-css" className="space-y-3">
-            <h3 id="font-css" className={columnHeading}>
+            <h2 id="font-css" className={columnHeading}>
               2. Font &amp; CSS settings
-            </h3>
+            </h2>
             <TextField label="Font name" value={fontName} maxLength={50} autoComplete="off" onChange={(event) => setFontName(event.target.value)} />
             <div className="grid gap-3 sm:grid-cols-2">
               <TextField label="Class prefix" value={prefix} maxLength={20} autoComplete="off" hint="Classes look like prefix-name." onChange={(event) => setPrefix(event.target.value)} />
@@ -290,9 +302,9 @@ export default function FontTab() {
           </section>
 
           <section aria-labelledby="font-metrics" className="space-y-3">
-            <h3 id="font-metrics" className={columnHeading}>
+            <h2 id="font-metrics" className={columnHeading}>
               3. Font metrics &amp; normalization
-            </h3>
+            </h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <TextField label="Font height" value={fontHeight} inputMode="numeric" autoComplete="off" hint="EM, 300 to 2048; 1000 suits most icons." onChange={(event) => setFontHeight(event.target.value)} />
               <TextField label="Descent" value={descent} inputMode="numeric" autoComplete="off" hint="How far glyphs sit below the baseline." onChange={(event) => setDescent(event.target.value)} />

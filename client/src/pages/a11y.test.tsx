@@ -10,12 +10,14 @@ import * as iconsApi from "../api/icons";
 import * as projectsApi from "../api/projects";
 import * as tokensApi from "../api/tokens";
 import AppHeader from "../components/shell/AppHeader";
+import ManageMenu from "../components/shell/ManageMenu";
 import { ThemeProvider } from "../context/ThemeProvider";
 import { ToastProvider } from "../context/ToastContext";
 import { accessibilityViolations } from "../test/axe";
 import { READ_ONLY, makeDetail, makeFolder, makeIcon, makeProject } from "../test/fixtures";
 import AccountTokensPage from "./AccountTokensPage";
 import AdminPage from "./AdminPage";
+import AdminProjectsPage from "./AdminProjectsPage";
 import DashboardPage from "./DashboardPage";
 import LandingPage from "./LandingPage";
 import ProjectPage from "./ProjectPage";
@@ -219,11 +221,9 @@ describe("project workspace", () => {
     await clean();
   });
 
-  it("settings, and the edit dialog", async () => {
+  it("settings", async () => {
     project("/projects/p1/settings");
     await screen.findByRole("heading", { name: "Danger zone" });
-    await clean();
-    await userEvent.click(screen.getByRole("button", { name: "Edit details" }));
     await clean();
   });
 
@@ -251,6 +251,21 @@ describe("admin and tokens", () => {
     await screen.findByText("bob@example.com");
     await clean();
     await userEvent.click(screen.getByRole("button", { name: "Delete Bob" }));
+    await clean();
+  });
+
+  it("the project list for admins, with the Manage menu open", async () => {
+    renderAt("/admin/projects", <AdminProjectsPage />);
+    await screen.findByRole("table", { name: "Projects" });
+    await clean();
+    await userEvent.click(screen.getByRole("button", { name: "Delete Feather" }));
+    await clean();
+  });
+
+  it("the Manage menu", async () => {
+    renderAt("/", <ManageMenu />);
+    await userEvent.click(await screen.findByRole("button", { name: "Manage" }));
+    await screen.findByRole("menu", { name: "Admin tools" });
     await clean();
   });
 

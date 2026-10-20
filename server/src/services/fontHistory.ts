@@ -8,9 +8,23 @@ type Id = Types.ObjectId;
 
 export type FontBuildSummary = { id: string; version: number; fontName: string; iconCount: number; formats: string[]; size: number; createdAt: Date };
 
+// Packages kept before version numbers existed have none: number them oldest first, after any numbers already handed out.
+async function ensureVersions(projectId: Id): Promise<void> {
+  const missing = await FontBuild.find({ projectId, version: { $exists: false } }, { _id: 1 }).sort({ createdAt: 1, _id: 1 }).lean();
+  if (missing.length === 0) return;
+  const [project, newest] = await Promise.all([Project.findById(projectId, { fontBuildCount: 1 }).lean(), FontBuild.findOne({ projectId, version: { $exists: true } }, { version: 1 }).sort({ version: -1 }).lean()]);
+  let next = Math.max(project?.fontBuildCount ?? 0, newest?.version ?? 0);
+  for (const row of missing) {
+    next += 1;
+    await FontBuild.collection.updateOne({ _id: row._id, version: { $exists: false } }, { $set: { version: next } });
+  }
+  await Project.updateOne({ _id: projectId, fontBuildCount: { $lt: next } }, { $set: { fontBuildCount: next } });
+}
+
 // Keeps a downloaded package. Skips ones too large to store; the download itself is not affected.
 export async function recordFontBuild(projectId: Id, userId: string, build: { fontName: string; iconCount: number }, formats: string[], zip: Buffer): Promise<boolean> {
   if (zip.length > MAX_STORED_BUILD_BYTES) return false;
+  await ensureVersions(projectId);
   // The next version number for this project, taken atomically so two downloads at once cannot share one.
   const counted = await Project.findOneAndUpdate({ _id: projectId }, { $inc: { fontBuildCount: 1 } }, { new: true, projection: { fontBuildCount: 1 } });
   if (!counted) return false;
@@ -21,6 +35,7 @@ export async function recordFontBuild(projectId: Id, userId: string, build: { fo
 }
 
 export async function listFontBuilds(projectId: Id): Promise<FontBuildSummary[]> {
+  await ensureVersions(projectId);
   const rows = await FontBuild.find({ projectId }, { zip: 0 }).sort({ createdAt: -1, _id: -1 }).lean();
   return rows.map((row) => ({ id: String(row._id), version: row.version, fontName: row.fontName, iconCount: row.iconCount, formats: row.formats ?? [], size: row.size, createdAt: row.createdAt as Date }));
 }

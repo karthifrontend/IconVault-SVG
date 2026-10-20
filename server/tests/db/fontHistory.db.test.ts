@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { unzipSync } from "fflate";
+import mongoose from "mongoose";
 import FontBuild from "../../src/models/FontBuild.js";
 import { SVG, hasDatabase, startHarness, type TestUser } from "./harness.js";
 
@@ -93,6 +94,17 @@ describe("font build history (HTTP, throwaway database)", { skip: hasDatabase ? 
     assert.equal((await h.call(owner.token, "DELETE", `/api/projects/${p.id}/font/builds/${newest.id}`)).status, 200);
     await download(owner.token, p.id, { fontName: "C" });
     assert.deepEqual((await builds(owner.token, p.id)).body.builds.map((b: any) => [b.fontName, b.version]), [["C", 3], ["A", 1]]);
+  });
+
+  it("numbers packages kept before versions existed, oldest first, and carries on after them", async () => {
+    const p = await makeProject();
+    const base = { projectId: new mongoose.Types.ObjectId(p.id), createdBy: new mongoose.Types.ObjectId(owner.id), fontName: "Legacy", iconCount: 2, formats: ["ttf"], size: 3, zip: Buffer.from("zip") };
+    // Written straight to the collection, the way an older version of the app stored them (no version).
+    await FontBuild.collection.insertOne({ ...base, fontName: "Legacy one", createdAt: new Date("2026-10-01T10:00:00Z") });
+    await FontBuild.collection.insertOne({ ...base, fontName: "Legacy two", createdAt: new Date("2026-10-02T10:00:00Z") });
+    assert.deepEqual((await builds(owner.token, p.id)).body.builds.map((b: any) => [b.fontName, b.version]), [["Legacy two", 2], ["Legacy one", 1]]);
+    await download(owner.token, p.id, { fontName: "New" });
+    assert.deepEqual((await builds(owner.token, p.id)).body.builds.map((b: any) => b.version), [3, 2, 1]);
   });
 
   it("numbers each project on its own", async () => {
