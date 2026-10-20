@@ -172,18 +172,22 @@ describe("details", () => {
 });
 
 describe("preview", () => {
-  it("shows the icon at the chosen size on the chosen background", async () => {
+  it("shows the icon at the project-wide size, with no size buttons of its own, on the chosen background", async () => {
     setup();
     await ready();
-    expect(screen.getByRole("img", { name: "Arrow Left at 64 pixels" })).toBeInTheDocument();
-    const group = screen.getByRole("group", { name: "Preview size" });
-    expect(within(group).getByRole("button", { name: "64 pixels" })).toHaveAttribute("aria-pressed", "true");
-    await userEvent.click(within(group).getByRole("button", { name: "128 pixels" }));
-    expect(screen.getByRole("img", { name: "Arrow Left at 128 pixels" })).toBeInTheDocument();
-    expect(within(group).getByRole("button", { name: "128 pixels" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("img", { name: "Arrow Left at 40 pixels" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Preview size" })).not.toBeInTheDocument();
 
     await userEvent.selectOptions(screen.getByLabelText("Preview background"), "dark");
-    expect(screen.getByRole("img", { name: /at 128 pixels/ }).parentElement?.className).toContain("bg-neutral-900");
+    expect(screen.getByRole("img", { name: /at 40 pixels/ }).parentElement?.className).toContain("bg-neutral-900");
+  });
+
+  it("follows the size chosen in the Icons toolbar", async () => {
+    window.localStorage.setItem("iconAppearance", JSON.stringify({ size: 72, color: "", style: "natural" }));
+    setup();
+    await ready();
+    expect(screen.getByRole("img", { name: "Arrow Left at 72 pixels" })).toBeInTheDocument();
+    window.localStorage.removeItem("iconAppearance");
   });
 });
 

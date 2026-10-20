@@ -598,6 +598,14 @@ These change only how icons are drawn on screen, in this browser (remembered per
 - The reference's filter button beside sort was not added (the filters here are sort and the folder list).
 - Light mode and the browser pane were checked at phone width and a wide desktop width only once each; the page width limit grew to 96 rem.
 
+## 2026-10-20: Follow-up, no per-icon preview size (change request)
+
+Requested because icon size is now one project-wide setting in the Icons toolbar. Client only. One commit on `main`, local only.
+
+- The icon details panel no longer has its own size buttons (16 to 128). Its preview uses the toolbar's size, colour and style, so one choice applies everywhere. The preview background choice stays.
+- Validation: client `npm test` **568 of 568** (the old size-button test became two: no size buttons and the default of 40 px, and following a size saved from the toolbar). Types and lint clean. Not checked in the browser; the change only removes a row of buttons and reuses the toolbar's saved value.
+- Open: to see an icon at an exact size such as 128 px you now use the toolbar slider (maximum 96 px).
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -607,7 +615,7 @@ These change only how icons are drawn on screen, in this browser (remembered per
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 567 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 568 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

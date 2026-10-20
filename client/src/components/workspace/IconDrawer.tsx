@@ -1,9 +1,10 @@
-// The panel that opens when an icon is clicked. Preview at several sizes and backgrounds; quick actions (copy as SVG, React or Vue, download, optimize, move to trash); and three tabs: Details (name, folder, tags, codepoint), Code (edit the SVG with a live preview, and the generated snippets) and Versions (restore an earlier state). People who cannot edit the project see everything read-only.
+// The panel that opens when an icon is clicked. Preview at the project-wide icon size, colour and style (set in the Icons toolbar) on a chosen background; quick actions (copy as SVG, React or Vue, download, optimize, move to trash); and three tabs: Details (name, folder, tags, codepoint), Code (edit the SVG with a live preview, and the generated snippets) and Versions (restore an earlier state). People who cannot edit the project see everything read-only.
 import { Copy, Download, Sparkles, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { deleteIcon, downloadIcon, getIcon, optimizeIcon, restoreIcon, restoreVersion, updateIcon } from "../../api/icons";
 import type { FolderWithCount, IconDetail } from "../../api/types";
 import { useToast } from "../../context/ToastContext";
+import { useIconAppearance } from "../../hooks/useIconAppearance";
 import { useResource } from "../../hooks/useResource";
 import { usePersistentChoice } from "../../hooks/usePersistentChoice";
 import { cn } from "../../lib/cn";
@@ -22,7 +23,6 @@ import { SelectField, TextAreaField, TextField } from "../ui/Fields";
 import SvgPreview from "../ui/SvgPreview";
 import Tabs from "../ui/Tabs";
 
-const SIZES = [16, 24, 32, 48, 64, 96, 128] as const;
 
 type IconDrawerProps = {
   // The icon to show, or null when the drawer is closed.
@@ -74,7 +74,8 @@ type PanelProps = Omit<IconDrawerProps, "iconId"> & { icon: IconDetail; tab: Tab
 function IconPanel({ icon, tab, onTab, reload, canEdit, folders, idPrefix, onClose, onChanged }: PanelProps) {
   const { showToast } = useToast();
   const [surface, setSurface] = usePersistentChoice<Surface>("iconSurface", SURFACES, "theme");
-  const [size, setSize] = useState<number>(64);
+  const [appearance] = useIconAppearance();
+  const size = appearance.size;
   const [busy, setBusy] = useState<string | null>(null);
   const warnings = iconWarnings(icon);
   const saved = savingsPercent(icon.originalByteSize, icon.byteSize);
@@ -135,23 +136,9 @@ function IconPanel({ icon, tab, onTab, reload, canEdit, folders, idPrefix, onClo
 
       <section aria-label="Preview">
         <div className={cn("flex min-h-44 items-center justify-center rounded-xl border border-border p-6", surfaceClass(surface))} style={surfaceStyle(surface)}>
-          <SvgPreview svg={icon.svg} size={size} label={`${icon.name} at ${size} pixels`} />
+          <SvgPreview svg={icon.svg} size={size} color={appearance.color} iconStyle={appearance.style} label={`${icon.name} at ${size} pixels`} />
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <div role="group" aria-label="Preview size" className="inline-flex flex-wrap gap-1">
-            {SIZES.map((value) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={size === value}
-                onClick={() => setSize(value)}
-                className={cn("h-8 rounded-md border px-2 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring", size === value ? "border-primary bg-primary/10 text-foreground" : "border-input text-muted-foreground hover:text-foreground")}
-              >
-                {value}
-                <span className="sr-only"> pixels</span>
-              </button>
-            ))}
-          </div>
           <SelectField label="Preview background" hideLabel value={surface} onChange={(event) => setSurface(event.target.value as Surface)} className="h-8 w-auto py-0 text-xs">
             {SURFACES.map((value) => (
               <option key={value} value={value}>
