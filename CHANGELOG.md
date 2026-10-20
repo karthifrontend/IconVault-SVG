@@ -277,6 +277,47 @@ Logged separately from Phases 0 to 3. Client only; the server is untouched. Sign
 ### Next
 - Phase 5: bring the compiler into projects (Sprite tab using the existing in-browser engine), import a sprite with a conflict dialog, retire the old library routes and clear the old test bundles.
 
+## 2026-10-20: Phase 5, compiler inside projects and retirement of the old library (Icon Vault integration)
+
+Logged separately from Phases 0 to 4. Client and server. Commits on `main`: `c0d3a20` (Sprite section and sprite import), `02d9f52` (retirement of the old library), plus this entry; local only.
+
+### Changes
+| Commit | Change |
+|---|---|
+| `c0d3a20` | **Sprite section** in every project (`/projects/:id/sprite`, new "Sprite" link in the project header). It builds a sprite **in the browser** from the project's icons (all, or one folder with its subfolders; paged fetch past 1000 icons) using the existing compiler engine (`utils/buildDemo.ts`: sprite document, grid sprite, demo page; `previewPng.ts`; `zipBundle.ts`). Symbol ids are `<project prefix>-<icon id>`, the same id the icon drawer shows. Shows symbol count and size, a sandboxed live preview (the demo page), Copy sprite, Download sprite.svg, Download bundle (ZIP with the sprite, `<prefix>-grid.svg`, `demo.html`, `preview.png`), and the symbol ids with a copy-`<use>` button each (filter for long lists). Anyone who can see a project can build and download; icons whose SVG cannot be read are listed, not silently dropped. |
+| `c0d3a20` | **Import a sprite** (editors): pick a sprite `.svg`; each `<symbol>` becomes a standalone SVG file and goes through the normal upload (cleaned, optimized, folder choice, Keep both / Replace / Skip when a name is taken, batches of 100, partial results kept on failure). The project's own prefix is dropped from names so a sprite exported from a project does not double it. The old per-icon conflict dialogs were replaced by the strategy choice. |
+| `02d9f52` | **Old library retired.** Client: the old compiler screen (`Compiler.tsx`), all `components/helpers/*`, `useLibrary`, `useSpriteCompiler`, `useFileDropzone`, `api/sprites.ts`, `/classic` and its header link, and the light-only legacy styles are removed. Server: `/api/sprites` routes, the `Sprite` and `SpriteVersion` models, their index sync, and the two sprite maintenance scripts and npm scripts are removed. New one-off `npm run cutover:drop-legacy` (dry run by default, `-- --confirm` to act). README rewritten for the new product and API. |
+
+### Data change (done, as decided in Phase 0)
+- After checking that the Phase 0 backup (`backups/2026-10-19T11-28-33-474Z/`: `sprites` 2, `sprite_versions` 2, `users` 1) is intact, the cutover script **dropped the old `sprites` (2 documents: `gg-new`, `gg-2`) and `sprite_versions` (2) collections**. To get them back, restore from that backup folder. The `users` collection was not touched.
+- Your own account's projects created since Phase 4 (`gg-pub`, `gg-private`) were not touched.
+
+### Changes in behaviour you will notice
+- **There is no stand-alone compiler any more.** To compile, add icons to a project (upload, paste, copy, or import an existing sprite) and open its Sprite section. Loose SVGs can no longer be compiled without putting them in a project first (the "Door 2 only" decision).
+- Saved library bundles and their versions no longer exist as such; the two old test bundles are gone (backup kept). Icon version history is per icon now (Phase 2 and 4).
+- `/api/sprites*` now answers 404. `/classic` redirects to the dashboard.
+- Bundle size: JavaScript 661.0 kB to 503.2 kB (156 kB gzip), CSS 73.9 kB to 47.9 kB, from removing the old screens.
+- **ESLint now reports 5 problems instead of 31**, because the files that carried the old baseline were deleted (the remaining ones are in `AuthContext.tsx`, `ToastContext.tsx`, `previewPng.ts`).
+
+### Not carried over from the old compiler (intentional gaps)
+- The old **live demo's colour and gradient controls** with copy-paste snippets for HTML, React, Vue, Angular, Svelte and Next.js. The Sprite section's preview is the generated `demo.html` (colour swatches included) and the `<use>` code per symbol. Framework snippets for sprites are not rebuilt; say if you want them.
+- The old **"update an existing sprite" conflict-comparison screens** and the old **public/private library tree**. Public and private now live on projects.
+
+### Validation (verified)
+- Client `npm test`: **398 tests** in 27 files (new: sprite building and splitting, Sprite section, import dialog; App tests updated). Two timing-sensitive tests timed out in one full run while the machine was overloaded and passed when re-run on their own; earlier full runs passed completely. `npx tsc -b` and `npm run build` pass.
+- Server `npm test`: **92 of 92**; `npm run test:db` against a throwaway database: **100 of 100**. Smoke tests updated (project routes answer 503 with no database; `/api/sprites` is 404).
+- Browser pane with a throwaway test user (deleted afterwards): Sprite section built a 4-symbol sprite (883 B) with correct ids and a working preview; imported a 2-symbol sprite file (one new symbol, one clashing with an existing name): 2 icons added, the list refreshed to 6 symbols including the numbered duplicate (`spr-home-1`); no new console errors after reload.
+
+### Not tested, or open
+- **The downloaded ZIP and sprite file were not opened.** The download button ran without an error and the pieces are unit-tested, but the produced files were not inspected, and the preview image (`preview.png`) is rendered by existing browser code that is not covered by tests.
+- Real Google or Microsoft sign-in (please confirm once in your browser, as agreed), copying a sprite to the clipboard in a real browser, import with Replace or Skip in the browser, importing into a folder, very large sprites (hundreds of symbols) and sprites with gradients or shared ids were not tried.
+- Imported symbols that use `<use>` references to other symbols are not resolved. External references are removed by the sanitizer.
+- Fonts: the Sprite link is shown for font projects too; a Font section arrives in Phase 7.
+- Visual: in the import dialog the native control says "No file chosen" after a file was read (the name is shown underneath).
+
+### Next
+- Phase 6: admin area (users list, delete, transfer), project export and import, API token and the new CLI.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
