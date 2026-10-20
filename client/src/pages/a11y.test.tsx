@@ -156,11 +156,15 @@ describe("project workspace", () => {
     await clean();
   });
 
-  it("the generate button, and the checklist in both views", async () => {
+  it("the generate button on the bulk bar", async () => {
     project("/projects/p1");
     await userEvent.click(await screen.findByRole("checkbox", { name: "Select Home" }));
     await clean();
-    await userEvent.click(screen.getByRole("button", { name: "Generate sprite" }));
+  });
+
+  it("the checklist, opened on the Sprite page, in both views", async () => {
+    project("/projects/p1/sprite");
+    await userEvent.click(await screen.findByRole("button", { name: "Review / edit checklist" }));
     const dialog = await screen.findByRole("dialog", { name: "Choose icons for the sprite" });
     await within(dialog).findByText(/icons selected for the sprite/);
     await clean();

@@ -1,4 +1,5 @@
-// "Stable Unicode codepoints mapping": every glyph of the built font with the character it sits on and the CSS entity that draws it. Editors can type a new character (four hex digits, E000 to F8FF); it is saved on the icon and the font is rebuilt, so the preview, the stylesheet and the download all use it. Clearing the box hands the icon the next free character on the next build. Viewers see the table without editing.
+// "Stable Unicode codepoints mapping": every glyph of the built font with the character it sits on, the CSS entity that draws it and its CSS class (with a copy button). Editors can type a new character (four hex digits, E000 to F8FF); it is saved on the icon and the font is rebuilt, so the preview, the stylesheet and the download all use it. Clearing the box hands the icon the next free character on the next build. Viewers see the table without editing.
+import { Copy } from "lucide-react";
 import { useState } from "react";
 import type { FontCodepoint } from "../../api/types";
 import { cn } from "../../lib/cn";
@@ -14,12 +15,13 @@ type CodepointTableProps = {
   busy: boolean;
   // Saves the new character (null clears it) and rebuilds; rejects with the reason when it cannot.
   onSave: (glyph: FontCodepoint, codepoint: string | null) => Promise<void>;
+  onCopyClass: (className: string) => void;
 };
 
-export default function CodepointTable({ glyphs, family, canEdit, busy, onSave }: CodepointTableProps) {
+export default function CodepointTable({ glyphs, family, canEdit, busy, onSave, onCopyClass }: CodepointTableProps) {
   return (
-    <div className="overflow-x-auto relative rounded-xl border border-border">
-      <table className="w-full min-w-xl text-left text-sm">
+    <div className="relative overflow-x-auto rounded-xl border border-border">
+      <table className="w-full min-w-3xl text-left text-sm">
         <caption className="sr-only">Stable Unicode codepoints mapping</caption>
         <thead className="bg-muted text-xs text-muted-foreground">
           <tr>
@@ -38,11 +40,14 @@ export default function CodepointTable({ glyphs, family, canEdit, busy, onSave }
             <th scope="col" className="px-3 py-2 font-medium">
               CSS entity
             </th>
+            <th scope="col" className="px-3 py-2 font-medium">
+              CSS class
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
           {glyphs.map((glyph) => (
-            <Row key={glyph.id} glyph={glyph} family={family} canEdit={canEdit} busy={busy} onSave={onSave} />
+            <Row key={glyph.id} glyph={glyph} family={family} canEdit={canEdit} busy={busy} onSave={onSave} onCopyClass={onCopyClass} />
           ))}
         </tbody>
       </table>
@@ -50,7 +55,7 @@ export default function CodepointTable({ glyphs, family, canEdit, busy, onSave }
   );
 }
 
-function Row({ glyph, family, canEdit, busy, onSave }: { glyph: FontCodepoint; family: string | null } & Pick<CodepointTableProps, "canEdit" | "busy" | "onSave">) {
+function Row({ glyph, family, canEdit, busy, onSave, onCopyClass }: { glyph: FontCodepoint; family: string | null } & Pick<CodepointTableProps, "canEdit" | "busy" | "onSave" | "onCopyClass">) {
   // null means "not being edited": the box shows the saved value.
   const [draft, setDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -126,6 +131,7 @@ function Row({ glyph, family, canEdit, busy, onSave }: { glyph: FontCodepoint; f
                 className={cn("h-8 w-20 rounded-md border bg-background px-2 font-mono text-sm uppercase focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring disabled:opacity-60", error ? "border-destructive" : "border-input")}
               />
               {saving && <span className="text-xs text-muted-foreground">Saving…</span>}
+              {glyph.isNew && !saving && <span className="rounded bg-primary/10 px-1 text-xs text-primary">new</span>}
             </div>
             {error && (
               <p id={errorId} role="alert" className="mt-1 max-w-xs text-xs font-medium text-destructive">
@@ -134,10 +140,21 @@ function Row({ glyph, family, canEdit, busy, onSave }: { glyph: FontCodepoint; f
             )}
           </div>
         ) : (
-          <span className="font-mono">U+{glyph.codepoint}</span>
+          <span className="font-mono">
+            U+{glyph.codepoint}
+            {glyph.isNew && <span className="ml-1.5 rounded bg-primary/10 px-1 text-xs text-primary">new</span>}
+          </span>
         )}
       </td>
       <td className="px-3 py-2 font-mono text-xs">{`\\${glyph.codepoint.toLowerCase()}`}</td>
+      <td className="px-3 py-2">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="max-w-48 truncate font-mono text-xs">{glyph.className}</span>
+          <button type="button" onClick={() => onCopyClass(glyph.className)} aria-label={`Copy class ${glyph.className}`} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+            <Copy aria-hidden="true" className="h-3.5 w-3.5" />
+          </button>
+        </span>
+      </td>
     </tr>
   );
 }

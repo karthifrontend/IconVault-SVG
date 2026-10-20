@@ -12,8 +12,9 @@ const glyphs: FontCodepoint[] = [
 
 function setup(over: Partial<React.ComponentProps<typeof CodepointTable>> = {}) {
   const onSave = vi.fn().mockResolvedValue(undefined);
-  render(<CodepointTable glyphs={glyphs} family="fam" canEdit busy={false} onSave={onSave} {...over} />);
-  return { onSave };
+  const onCopyClass = vi.fn();
+  render(<CodepointTable glyphs={glyphs} family="fam" canEdit busy={false} onSave={onSave} onCopyClass={onCopyClass} {...over} />);
+  return { onSave, onCopyClass };
 }
 const box = (name: string) => screen.getByRole("textbox", { name: `Codepoint for ${name}` }) as HTMLInputElement;
 
@@ -21,7 +22,7 @@ describe("what it shows", () => {
   it("is a table with a caption and named columns, one row per glyph", () => {
     setup();
     const table = screen.getByRole("table", { name: "Stable Unicode codepoints mapping" });
-    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Preview", "Icon name", "Slug", "Assigned hex codepoint", "CSS entity"]);
+    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Preview", "Icon name", "Slug", "Assigned hex codepoint", "CSS entity", "CSS class"]);
     expect(within(table).getAllByRole("row")).toHaveLength(3);
     expect(screen.getByText("add-square")).toBeInTheDocument();
   });
@@ -31,6 +32,16 @@ describe("what it shows", () => {
     expect(box("Add square").value).toBe("E701");
     expect(screen.getByText("\\e701")).toBeInTheDocument();
     expect(screen.getByText("\\e002")).toBeInTheDocument();
+  });
+
+  it("shows each CSS class with a button that copies it, and marks icons that just got a character", async () => {
+    const { onCopyClass } = setup();
+    expect(screen.getByText("m-add-square")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Copy class m-home" }));
+    expect(onCopyClass).toHaveBeenCalledWith("m-home");
+    const homeRow = screen.getByText("m-home").closest("tr") as HTMLElement;
+    expect(within(homeRow).getByText("new")).toBeInTheDocument();
+    expect(within(screen.getByText("m-add-square").closest("tr") as HTMLElement).queryByText("new")).not.toBeInTheDocument();
   });
 
   it("keeps the scroll box positioned, so its hidden caption cannot widen a phone page", () => {
@@ -91,7 +102,7 @@ describe("changing a character", () => {
 
   it("shows the server's reason next to the box and keeps what was typed", async () => {
     const onSave = vi.fn().mockRejectedValue(new Error('Codepoint E701 is already used by "Add square".'));
-    render(<CodepointTable glyphs={glyphs} family="fam" canEdit busy={false} onSave={onSave} />);
+    render(<CodepointTable glyphs={glyphs} family="fam" canEdit busy={false} onSave={onSave} onCopyClass={vi.fn()} />);
     await userEvent.clear(box("Home"));
     await userEvent.type(box("Home"), "E701{Enter}");
     expect(await screen.findByRole("alert")).toHaveTextContent('already used by "Add square"');
@@ -120,7 +131,7 @@ describe("changing a character", () => {
   it("locks the box while it saves", async () => {
     let finish: () => void = () => undefined;
     const onSave = vi.fn(() => new Promise<void>((resolve) => (finish = resolve)));
-    render(<CodepointTable glyphs={glyphs} family="fam" canEdit busy={false} onSave={onSave} />);
+    render(<CodepointTable glyphs={glyphs} family="fam" canEdit busy={false} onSave={onSave} onCopyClass={vi.fn()} />);
     await userEvent.clear(box("Home"));
     await userEvent.type(box("Home"), "E811{Enter}");
     expect(box("Home")).toBeDisabled();

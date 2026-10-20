@@ -14,7 +14,7 @@ Keep SVG icons in projects and folders, and compile them into a single `sprite.s
 - Move projects in and out: export a project as one ZIP (settings, folders, icons) and import it as a new private project, in the interface or with the command line.
 - Administrators (emails in `ADMIN_EMAILS`) can list users, delete a user (their projects are deleted or handed to someone else), and move a project to another owner. There are no passwords.
 - Personal API tokens (account menu, API tokens) for the command line and scripts: shown once, revocable, never admin.
-- Select icons and press Generate sprite (or Generate font in a font project): a checklist (search, folder filter, group by folder, select or deselect whole folders) confirms the icons, then the Sprite or Font section builds from exactly those.
+- Select icons and press Generate sprite (or Generate font in a font project): you land on the Sprite or Font page with a checklist (search, folder filter, group by folder, select or deselect whole folders) that confirms the icons, then it builds from exactly those. The Font page groups its controls (Icons, Font settings, Target formats) under the actions and lists every glyph once in the codepoint mapping table.
 - Sprite section: compile all icons or one folder into a sprite in the browser; preview, copy, download `sprite.svg`, or download a ZIP with the sprite, a grid sprite, `demo.html` and `preview.png`; copy the `<use>` code for each symbol.
 - Colour theme: light, dark or follow the system (switch in the header; the choice is remembered).
 

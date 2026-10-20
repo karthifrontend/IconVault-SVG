@@ -72,7 +72,7 @@ describe("building", () => {
     setup();
     expect(screen.getByLabelText("Font name")).toHaveValue("FeatherIcons");
     expect(screen.getByLabelText("Class prefix")).toHaveValue("fth");
-    expect(screen.getByLabelText("First character")).toHaveValue("E001");
+    expect(screen.getByLabelText("Starting codepoint (hex)")).toHaveValue("E001");
     expect(screen.getByLabelText("WOFF2")).toBeChecked();
     expect(screen.getByLabelText("TTF")).toBeChecked();
     expect(screen.getByLabelText("EOT")).not.toBeChecked();
@@ -84,14 +84,14 @@ describe("building", () => {
     expect(buildFont).toHaveBeenCalledWith("p1", { scope: "all", formats: ["woff2", "woff", "ttf"], fontName: "FeatherIcons", prefix: "fth", startCodepoint: "E001", fontHeight: 1000, descent: 0, normalize: true });
     expect(await screen.findByText("2 icons")).toBeInTheDocument();
     expect(screen.getByText(/WOFF2 1\.2 KB, TTF 3\.3 KB/)).toBeInTheDocument();
-    const home = screen.getByRole("button", { name: "Copy class fth-home" }).closest("li") as HTMLElement;
-    expect(within(home).getByText("E001")).toBeInTheDocument();
+    // One table lists every glyph: character, CSS entity, class. There is no second grid repeating the same icons.
+    expect(screen.getAllByRole("table")).toHaveLength(1);
+    expect(screen.queryByRole("heading", { name: "Characters" })).not.toBeInTheDocument();
+    const home = screen.getByRole("button", { name: "Copy class fth-home" }).closest("tr") as HTMLElement;
+    expect(within(home).getByRole("textbox", { name: "Codepoint for Home" })).toHaveValue("E001");
+    expect(within(home).getByText("\\e001")).toBeInTheDocument();
     expect(within(home).getByText("new")).toBeInTheDocument();
-    expect(within(screen.getByRole("button", { name: "Copy class fth-star" }).closest("li") as HTMLElement).queryByText("new")).not.toBeInTheDocument();
-    // The button's visible text is only the class name, so voice control can say it.
-    const text = screen.getByRole("button", { name: "Copy class fth-home" }).textContent ?? "";
-    expect(text.endsWith("fth-home")).toBe(true);
-    expect(text).not.toContain("E001");
+    expect(within(screen.getByRole("button", { name: "Copy class fth-star" }).closest("tr") as HTMLElement).queryByText("new")).not.toBeInTheDocument();
     expect(preview.loadPreviewFont).toHaveBeenCalledWith(expect.stringMatching(/^iconfont-preview-/), "d09GMg==");
   });
 
@@ -102,8 +102,8 @@ describe("building", () => {
     await userEvent.type(screen.getByLabelText("Font name"), "Mine");
     await userEvent.click(screen.getByLabelText("WOFF"));
     await userEvent.click(screen.getByLabelText("EOT"));
-    await userEvent.clear(screen.getByLabelText("First character"));
-    await userEvent.type(screen.getByLabelText("First character"), "e100");
+    await userEvent.clear(screen.getByLabelText("Starting codepoint (hex)"));
+    await userEvent.type(screen.getByLabelText("Starting codepoint (hex)"), "e100");
     await userEvent.click(screen.getByText("Advanced"));
     await userEvent.clear(screen.getByLabelText("Font height"));
     await userEvent.type(screen.getByLabelText("Font height"), "1200");
@@ -119,12 +119,12 @@ describe("building", () => {
     await build();
     expect(await screen.findByRole("alert")).toHaveTextContent("Enter a font name.");
     await userEvent.type(screen.getByLabelText("Font name"), "X");
-    await userEvent.clear(screen.getByLabelText("First character"));
-    await userEvent.type(screen.getByLabelText("First character"), "zz");
+    await userEvent.clear(screen.getByLabelText("Starting codepoint (hex)"));
+    await userEvent.type(screen.getByLabelText("Starting codepoint (hex)"), "zz");
     await build();
     expect(screen.getByRole("alert")).toHaveTextContent("4 hex digits");
-    await userEvent.clear(screen.getByLabelText("First character"));
-    await userEvent.type(screen.getByLabelText("First character"), "E001");
+    await userEvent.clear(screen.getByLabelText("Starting codepoint (hex)"));
+    await userEvent.type(screen.getByLabelText("Starting codepoint (hex)"), "E001");
     for (const format of ["WOFF2", "WOFF", "TTF"]) await userEvent.click(screen.getByLabelText(format));
     await build();
     expect(screen.getByRole("alert")).toHaveTextContent("at least one format");
@@ -136,7 +136,7 @@ describe("building", () => {
     setup();
     await userEvent.click(screen.getByRole("button", { name: "Build font" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("There are no icons to put in the font.");
-    expect(screen.queryByRole("button", { name: "Download ZIP" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
   it("lists conversion warnings", async () => {
@@ -201,7 +201,7 @@ describe("the codepoint mapping table", () => {
     expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ fontName: "FeatherIcons", formats: ["woff2", "woff", "ttf"] }));
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Codepoint for Home" })).toHaveValue("E701"));
     expect(screen.getByText("\\e701")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Copy class fth-home" }).closest("li")).toHaveTextContent("E701");
+    expect(screen.getByRole("button", { name: "Copy class fth-home" }).closest("tr")).toHaveTextContent("\\e701");
     expect(await screen.findByText("Home now uses U+E701. Rebuilding the font.")).toBeInTheDocument();
     expect(fns.refreshIcons).toHaveBeenCalled();
   });
@@ -260,35 +260,89 @@ describe("the codepoint mapping table", () => {
   });
 });
 
-describe("chosen icons", () => {
-  it("builds by itself with the icons handed over by the checklist", async () => {
-    setup({}, { iconIds: ["a", "b"], autoBuild: true });
+describe("the page layout", () => {
+  it("puts the actions at the top, with Copy CSS beside Build font, and groups the controls in titled sections", () => {
+    setup();
+    const actions = screen.getByRole("group", { name: "Font actions" });
+    expect(within(actions).getAllByRole("button").map((b) => b.textContent)).toEqual(["Build font", "Copy CSS", "Download ZIP", "Import a font"]);
+    expect(within(actions).getByRole("button", { name: "Build font" }).className).toContain("bg-primary");
+    for (const title of ["Icons", "Font settings", "Target formats"]) expect(screen.getByRole("region", { name: title })).toBeInTheDocument();
+    // The actions come before the sections in the page.
+    expect(actions.compareDocumentPosition(screen.getByRole("region", { name: "Icons" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("has Copy CSS switched off until there is a build", async () => {
+    setup();
+    expect(screen.getByRole("button", { name: "Copy CSS" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await screen.findByText("2 icons");
+    expect(screen.getByRole("button", { name: "Copy CSS" })).toBeEnabled();
+  });
+
+  it("says how many icons will be compiled for all, a folder or a choice", async () => {
+    setup({ project: makeDetail({ id: "p1", prefix: "fth", purpose: "font", iconCount: 9 }), folderList: { folders: [makeFolder({ id: "ui", name: "UI", iconCount: 4 })], uncategorizedCount: 5 } });
+    const icons = screen.getByRole("region", { name: "Icons" });
+    expect(within(icons).getByText(/9 icons/)).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Icons to include"), "ui");
+    expect(within(icons).getByText(/4 icons/)).toBeInTheDocument();
+  });
+
+  it("shows the target formats as toggle pills", async () => {
+    setup();
+    const group = screen.getByRole("group", { name: "Target formats" });
+    expect(within(group).getAllByRole("checkbox").map((c) => c.closest("label")?.textContent)).toEqual(["WOFF2", "WOFF", "TTF", "EOT", "SVG"]);
+    await userEvent.click(within(group).getByLabelText("EOT"));
+    expect(within(group).getByLabelText("EOT")).toBeChecked();
+  });
+});
+
+describe("chosen icons and the checklist", () => {
+  const list = () => vi.mocked(iconsApi.listIcons).mockResolvedValue({ icons: [makeIcon({ id: "a", name: "Home", slug: "home" }), makeIcon({ id: "b", name: "Star", slug: "star" })], total: 2, page: 1, limit: 1000 });
+
+  it("opens the checklist on arrival from the bulk bar, with the selected icons ticked and nothing built yet", async () => {
+    list();
+    setup({}, { iconIds: ["a"], openChecklist: true });
+    const dialog = await screen.findByRole("dialog", { name: "Choose icons for the font" });
+    await within(dialog).findByText(/icons selected for the font/);
+    expect(within(dialog).getByRole("checkbox", { name: /Home/ })).toBeChecked();
+    expect(within(dialog).getByRole("checkbox", { name: /Star/ })).not.toBeChecked();
+    expect(buildFont).not.toHaveBeenCalled();
+    expect(screen.getByRole("option", { name: "Chosen icons (1)" })).toBeInTheDocument();
+  });
+
+  it("builds with the chosen icons when the checklist is confirmed", async () => {
+    list();
+    setup({}, { iconIds: ["a", "b"], openChecklist: true });
+    const dialog = await screen.findByRole("dialog", { name: "Choose icons for the font" });
+    await userEvent.click(await within(dialog).findByRole("checkbox", { name: /Star/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Generate font (1 icon)" }));
+    await waitFor(() => expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a"] })));
     expect(await screen.findByText("2 icons")).toBeInTheDocument();
     expect(buildFont).toHaveBeenCalledTimes(1);
-    expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a", "b"] }));
-    expect(screen.getByLabelText("Icons to include")).toHaveValue("selected");
-    expect(screen.getByRole("option", { name: "Chosen icons (2)" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("does not build until asked when the icons were handed over without autoBuild", async () => {
-    setup({}, { iconIds: ["a"] });
-    expect(screen.getByRole("option", { name: "Chosen icons (1)" })).toBeInTheDocument();
+  it("keeps the chosen icons on the page when the checklist is cancelled, and builds only when asked", async () => {
+    list();
+    setup({}, { iconIds: ["a", "b"], openChecklist: true });
+    await userEvent.click(await within(await screen.findByRole("dialog")).findByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(buildFont).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Icons to include")).toHaveValue("selected");
     await userEvent.click(screen.getByRole("button", { name: "Build font" }));
-    expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a"] }));
+    expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a", "b"] }));
   });
 
-  it("builds only once, not again when the screen redraws", async () => {
-    setup({}, { iconIds: ["a", "b"], autoBuild: true });
-    await screen.findByText("2 icons");
-    await userEvent.type(screen.getByLabelText("Font name"), "X");
-    expect(buildFont).toHaveBeenCalledTimes(1);
+  it("does not open the checklist when the icons were handed over without the flag, or when nothing was", () => {
+    setup({}, { iconIds: ["a"] });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Chosen icons (1)" })).toBeInTheDocument();
   });
 
-  it("opens the checklist from Choose icons and builds with the new choice at once", async () => {
-    vi.mocked(iconsApi.listIcons).mockResolvedValue({ icons: [makeIcon({ id: "a", name: "Home", slug: "home" }), makeIcon({ id: "b", name: "Star", slug: "star" })], total: 2, page: 1, limit: 1000 });
+  it("opens the checklist from Review / edit checklist and builds with the new choice at once", async () => {
+    list();
     setup();
-    await userEvent.click(screen.getByRole("button", { name: "Choose icons" }));
+    await userEvent.click(screen.getByRole("button", { name: "Review / edit checklist" }));
     const dialog = screen.getByRole("dialog", { name: "Choose icons for the font" });
     await within(dialog).findByText(/icons selected for the font/);
     await userEvent.click(within(dialog).getByRole("checkbox", { name: /Star/ }));

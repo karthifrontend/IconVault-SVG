@@ -19,7 +19,6 @@ import BulkBar from "./BulkBar";
 import { MoveIconsDialog, TagIconsDialog } from "./BulkDialogs";
 import CopyFromProjectDialog from "./CopyFromProjectDialog";
 import IconCard from "./IconCard";
-import IconChecklistDialog from "./IconChecklistDialog";
 import IconDrawer from "./IconDrawer";
 import IconList from "./IconList";
 import IconToolbar, { type IconSort, type IconView } from "./IconToolbar";
@@ -31,7 +30,7 @@ const PAGE = 200;
 // The server returns at most this many in one request.
 const MAX_SHOWN = 1000;
 
-type Dialog = "add" | "copy" | "move" | "tag" | "delete" | "generate" | null;
+type Dialog = "add" | "copy" | "move" | "tag" | "delete" | null;
 
 export default function IconsTab() {
   const { project, folderList, selectedFolder, refreshProject, refreshFolders, refreshIcons, iconsVersion } = useWorkspace();
@@ -185,7 +184,8 @@ export default function IconsTab() {
           onMove={() => setDialog("move")}
           onTag={() => setDialog("tag")}
           generate={project.purpose}
-          onGenerate={() => setDialog("generate")}
+          // Go to the Sprite or Font page with the selection; that page opens the checklist.
+          onGenerate={() => navigate(`/projects/${project.id}/${project.purpose === "font" ? "font" : "sprite"}`, { state: { iconIds: selection.ids, openChecklist: true } })}
           onOptimize={optimizeSelected}
           onDownload={downloadSelected}
           onDelete={() => setDialog("delete")}
@@ -193,19 +193,6 @@ export default function IconsTab() {
         />
       )}
 
-      <IconChecklistDialog
-        open={dialog === "generate"}
-        mode={project.purpose}
-        projectId={project.id}
-        folders={folderList.folders}
-        initialIds={selection.ids}
-        onClose={() => setDialog(null)}
-        onConfirm={(iconIds) => {
-          setDialog(null);
-          // The Sprite section builds as soon as it opens; the Font section starts its build too.
-          navigate(`/projects/${project.id}/${project.purpose === "font" ? "font" : "sprite"}`, { state: { iconIds, autoBuild: true } });
-        }}
-      />
       <UploadDialog
         open={dialog === "add"}
         projectId={project.id}

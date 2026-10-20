@@ -482,6 +482,30 @@ Checked against the real font engine: an edited value from E000 to F8FF **does**
 - The Icon Vault project itself was not changed (it is a separate project); the same rule and the same read-back test would apply there.
 - Not tried: a screen reader on the table, and editing when the project has icons filtered out of the build (the table shows only the icons in the current build).
 
+## 2026-10-20: Follow-up, checklist on the destination page and a grouped Font page (change request)
+
+Requested after trying the Generate flow: the checklist should appear on the Font page (not before leaving the Icons screen), the Font page repeated the same icons twice and needed grouping like Icon Vault, and the main actions belong at the top with Copy CSS beside them. Client only. One commit on `main`, local only.
+
+### Changes
+| Part | Change |
+|---|---|
+| **Flow** | **Generate font / Generate sprite** on the bulk bar now goes straight to the project's Font or Sprite page with the selected icons. That page opens "Choose icons for the font / sprite" over itself, with the selection ticked. Confirming builds (font) or shows (sprite) exactly those icons. **Cancel** keeps the chosen icons on the page without building. The "open the checklist" flag is removed from the address once read, so reloading or coming back does not pop the popup up again. Both pages call the reopen button **Review / edit checklist**. (Before, the popup opened on the Icons screen and the pages then built automatically; that auto-build is gone.) |
+| **Font page layout** | Top row: **Build font** (primary), **Copy CSS** (right beside it, disabled until there is a build), **Download ZIP**, and **Import a font** for editors. Below, titled groups like Icon Vault: **Icons** (says how many icons will be compiled, the "Icons to include" menu, and **Review / edit checklist**), **Font settings** (name, class prefix, **Starting codepoint (hex)** with the "Default E001" hint, Advanced) and **Target formats** as toggle pills (WOFF2, WOFF, TTF, EOT, SVG). |
+| **No repeated section** | The grid of character tiles and the mapping table listed the same icons twice. They are now one section, **Stable Unicode codepoints mapping**: Preview, Icon name, Slug, editable hex codepoint (with a "new" tag for characters just assigned), CSS entity, and a new **CSS class** column with a copy button. The filter above it still searches name, class and character. |
+| **Download ZIP** | Now always available (it builds on the server from the current settings), not only after a build. |
+
+### Validation (verified)
+- Client `npm test`: **548 of 548** (updated and new: the actions group and its order, Copy CSS off until a build, the "how many icons" sentence, format pills, the checklist opening on arrival and cancelling or confirming, the flag not reopening the popup, Generate on the Icons screen going straight to the page for sprite and font projects, the class column and its copy button, one table instead of two). Types and lint clean.
+- Real browser (throwaway user, font project with 7 icons): select all, Generate font: the URL became the Font page and the checklist opened over it with 7 ticked; confirming built the font (TTF 2.0 KB, WOFF 1.3 KB, WOFF2 924 B); the page shows the grouped sections and a single mapping table with seven rows; reloading did not reopen the popup; axe: no violations in light, and none in dark when the page is loaded in dark mode; at 375 px the page does not scroll sideways, the actions wrap, and only the table scrolls inside its box. Test data removed; the database holds your 1 user and 2 projects.
+
+### Note on how dark mode was checked
+Toggling the theme on an already open page in the hidden browser pane froze colour transitions halfway and made axe report false contrast failures; loading the page in dark mode from the start gave a clean result. Real dark-mode checks should load the page in dark mode.
+
+### Not tested, or open
+- I read "grouping" as grouping the page into titled sections and merging the duplicate list. If you meant grouping the mapping table's rows by folder (as the checklist can), that is not done; the table is one flat list.
+- The Sprite page keeps its own layout (selector row, then actions) and only got the new flow and the "Review / edit checklist" label; it was not regrouped like the Font page.
+- A screen reader was not used on the new layout.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -491,7 +515,7 @@ Checked against the real font engine: an edited value from E000 to F8FF **does**
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 539 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 548 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.
