@@ -1,7 +1,9 @@
 // Verifies the session token, loads the User, and attaches it to the request (Auth, error, and validation rules).
 import type { NextFunction, Request, Response } from "express";
 import type { HydratedDocument } from "mongoose";
+import { hashToken, looksLikeApiToken } from "../lib/apiToken.js";
 import { verifySession } from "../lib/session.js";
+import ApiToken from "../models/ApiToken.js";
 import { isAdminUser } from "../lib/admins.js";
 import User, { type UserDoc } from "../models/User.js";
 
@@ -15,6 +17,8 @@ declare global {
       user?: SessionUser;
       // True when the signed-in user is listed in ADMIN_EMAILS (see lib/admins.ts).
       isAdmin?: boolean;
+      // How the request was authenticated: a browser session or a personal API token.
+      authMethod?: "session" | "token";
     }
   }
 }
@@ -38,6 +42,29 @@ export async function requireUser(
     return;
   }
 
+  // A personal API token: look it up by hash. Revoked tokens are refused. Tokens never carry admin rights, whatever the user's role is.
+  if (looksLikeApiToken(token)) {
+    try {
+      const row = await ApiToken.findOne({ tokenHash: hashToken(token), revokedAt: null });
+      const user = row ? await User.findById(row.userId) : null;
+      if (!row || !user) {
+        res.status(401).json({ error: "That API token is invalid or has been revoked." });
+        return;
+      }
+      // Recording the last use is a convenience; do it at most once a minute and never fail the request over it.
+      if (!row.lastUsedAt || Date.now() - row.lastUsedAt.getTime() > 60_000) {
+        ApiToken.updateOne({ _id: row._id }, { $set: { lastUsedAt: new Date() } }).catch(() => undefined);
+      }
+      req.user = user;
+      req.isAdmin = false;
+      req.authMethod = "token";
+      next();
+    } catch {
+      res.status(401).json({ error: "Invalid API token." });
+    }
+    return;
+  }
+
   // Verify the session token and load the user from the database.
   try {
     const claims = await verifySession(token);
@@ -48,6 +75,7 @@ export async function requireUser(
     }
     req.user = user;
     req.isAdmin = isAdminUser(user);
+    req.authMethod = "session";
     next();
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid session.";

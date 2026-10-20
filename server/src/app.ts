@@ -7,6 +7,7 @@ import projectRouter from "./routes/projectRoutes.js";
 import folderRouter from "./routes/folderRoutes.js";
 import iconRouter from "./routes/iconRoutes.js";
 import adminRouter from "./routes/adminRoutes.js";
+import tokenRouter from "./routes/tokenRoutes.js";
 import { errorHandler } from "./lib/errors.js";
 
 export function createApp(): Express {
@@ -23,6 +24,7 @@ export function createApp(): Express {
   app.use("/api/auth/me", meRouter);
   app.use("/api/projects", projectRouter);
   app.use("/api/admin", adminRouter);
+  app.use("/api/tokens", tokenRouter);
   app.use("/api", folderRouter);
   app.use("/api", iconRouter);
 
