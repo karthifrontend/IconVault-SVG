@@ -172,14 +172,21 @@ describe("details", () => {
 });
 
 describe("preview", () => {
-  it("shows the icon at the project-wide size, with no size buttons of its own, on the chosen background", async () => {
+  it("shows the icon at the project-wide size, with no size buttons or background switch of its own", async () => {
     setup();
     await ready();
     expect(screen.getByRole("img", { name: "Arrow Left at 40 pixels" })).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Preview size" })).not.toBeInTheDocument();
 
-    await userEvent.selectOptions(screen.getByLabelText("Preview background"), "dark");
+    expect(screen.queryByLabelText("Preview background")).not.toBeInTheDocument();
+  });
+
+  it("uses the background chosen in the Icons toolbar", async () => {
+    window.localStorage.setItem("iconSurface", "dark");
+    setup();
+    await ready();
     expect(screen.getByRole("img", { name: /at 40 pixels/ }).parentElement?.className).toContain("bg-neutral-900");
+    window.localStorage.removeItem("iconSurface");
   });
 
   it("follows the size chosen in the Icons toolbar", async () => {

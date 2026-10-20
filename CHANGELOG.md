@@ -604,6 +604,7 @@ Requested because icon size is now one project-wide setting in the Icons toolbar
 
 - The icon details panel no longer has its own size buttons (16 to 128). Its preview uses the toolbar's size, colour and style, so one choice applies everywhere. The preview background choice stays.
 - Validation: client `npm test` **568 of 568** (the old size-button test became two: no size buttons and the default of 40 px, and following a size saved from the toolbar). Types and lint clean. Not checked in the browser; the change only removes a row of buttons and reuses the toolbar's saved value.
+- Also removed from the details panel: its own **Preview background** switch. The panel uses the background chosen in the Icons toolbar (saved in the browser), like the size.
 - Open: to see an icon at an exact size such as 128 px you now use the toolbar slider (maximum 96 px).
 
 ## Known issues
@@ -615,7 +616,7 @@ Requested because icon size is now one project-wide setting in the Icons toolbar
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 568 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 569 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

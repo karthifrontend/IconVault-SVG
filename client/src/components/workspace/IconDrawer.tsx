@@ -1,4 +1,4 @@
-// The panel that opens when an icon is clicked. Preview at the project-wide icon size, colour and style (set in the Icons toolbar) on a chosen background; quick actions (copy as SVG, React or Vue, download, optimize, move to trash); and three tabs: Details (name, folder, tags, codepoint), Code (edit the SVG with a live preview, and the generated snippets) and Versions (restore an earlier state). People who cannot edit the project see everything read-only.
+// The panel that opens when an icon is clicked. Preview at the project-wide icon size, colour and style (set in the Icons toolbar) on the background chosen there; quick actions (copy as SVG, React or Vue, download, optimize, move to trash); and three tabs: Details (name, folder, tags, codepoint), Code (edit the SVG with a live preview, and the generated snippets) and Versions (restore an earlier state). People who cannot edit the project see everything read-only.
 import { Copy, Download, Sparkles, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { deleteIcon, downloadIcon, getIcon, optimizeIcon, restoreIcon, restoreVersion, updateIcon } from "../../api/icons";
@@ -13,7 +13,7 @@ import { codepointProblem } from "../../lib/codepoint";
 import { buildFolderTree, flattenFolderTree, folderPath } from "../../lib/folderTree";
 import { formatBytes, formatDate, formatRelative, savingsPercent } from "../../lib/format";
 import { iconWarnings } from "../../lib/iconInfo";
-import { SURFACES, SURFACE_LABELS, surfaceClass, surfaceStyle, type Surface } from "../../lib/previewSurface";
+import { SURFACES, surfaceClass, surfaceStyle, type Surface } from "../../lib/previewSurface";
 import { toReactComponent, toVueComponent } from "../../lib/svgSnippets";
 import { parseTags } from "../../lib/upload";
 import { triggerBrowserDownload } from "../../utils/zipBundle";
@@ -73,7 +73,7 @@ type PanelProps = Omit<IconDrawerProps, "iconId"> & { icon: IconDetail; tab: Tab
 
 function IconPanel({ icon, tab, onTab, reload, canEdit, folders, idPrefix, onClose, onChanged }: PanelProps) {
   const { showToast } = useToast();
-  const [surface, setSurface] = usePersistentChoice<Surface>("iconSurface", SURFACES, "theme");
+  const [surface] = usePersistentChoice<Surface>("iconSurface", SURFACES, "theme");
   const [appearance] = useIconAppearance();
   const size = appearance.size;
   const [busy, setBusy] = useState<string | null>(null);
@@ -137,15 +137,6 @@ function IconPanel({ icon, tab, onTab, reload, canEdit, folders, idPrefix, onClo
       <section aria-label="Preview">
         <div className={cn("flex min-h-44 items-center justify-center rounded-xl border border-border p-6", surfaceClass(surface))} style={surfaceStyle(surface)}>
           <SvgPreview svg={icon.svg} size={size} color={appearance.color} iconStyle={appearance.style} label={`${icon.name} at ${size} pixels`} />
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <SelectField label="Preview background" hideLabel value={surface} onChange={(event) => setSurface(event.target.value as Surface)} className="h-8 w-auto py-0 text-xs">
-            {SURFACES.map((value) => (
-              <option key={value} value={value}>
-                {`Background: ${SURFACE_LABELS[value]}`}
-              </option>
-            ))}
-          </SelectField>
         </div>
       </section>
 
