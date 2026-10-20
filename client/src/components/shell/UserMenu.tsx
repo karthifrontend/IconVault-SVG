@@ -1,10 +1,13 @@
 // The signed-in user's menu in the header: avatar and name as a button that opens a small panel with the account details and Sign out. Closes on Escape (focus returns to the button), on a click outside, and when focus leaves.
-import { ChevronDown, LogOut } from "lucide-react";
+import { ChevronDown, KeyRound, LogOut, Users } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import type { CurrentUser } from "../../context/AuthContext";
 import { cn } from "../../lib/cn";
 
 const PROVIDER_LABEL: Record<CurrentUser["provider"], string> = { google: "Google", microsoft: "Microsoft" };
+
+const menuItemClass = "flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-foreground transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
 
 function initialsOf(name: string, email: string): string {
   const source = name.trim() || email;
@@ -90,6 +93,16 @@ export default function UserMenu({ user, onSignOut }: { user: CurrentUser; onSig
             {user.role === "admin" && <span className="rounded-md bg-primary px-1.5 py-0.5 font-semibold text-primary-foreground">Admin</span>}
           </div>
           <div className="border-t border-border pt-1">
+            <Link to="/account/tokens" role="menuitem" onClick={() => setOpen(false)} className={menuItemClass}>
+              <KeyRound aria-hidden="true" className="h-4 w-4" />
+              API tokens
+            </Link>
+            {user.role === "admin" && (
+              <Link to="/admin" role="menuitem" onClick={() => setOpen(false)} className={menuItemClass}>
+                <Users aria-hidden="true" className="h-4 w-4" />
+                Administration
+              </Link>
+            )}
             <button
               ref={signOutRef}
               type="button"
@@ -98,7 +111,7 @@ export default function UserMenu({ user, onSignOut }: { user: CurrentUser; onSig
                 setOpen(false);
                 onSignOut();
               }}
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-foreground transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+              className={menuItemClass}
             >
               <LogOut aria-hidden="true" className="h-4 w-4" />
               Sign out

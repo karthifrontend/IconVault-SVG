@@ -46,6 +46,42 @@ beforeEach(() => {
   searchIcons.mockResolvedValue({ icons: [], total: 0, page: 1, limit: 24 });
 });
 
+describe("importing a project", () => {
+  const zip = () => new File(["zip"], "feather-export.zip", { type: "application/zip" });
+
+  it("creates a project from the chosen ZIP and offers to open it", async () => {
+    vi.mocked(projectsApi.importProject).mockResolvedValue({ project: makeDetail({ id: "imp1", name: "Feather" }), imported: 12, foldersCreated: 2, problems: [] });
+    renderPage();
+    await userEvent.upload(await screen.findByLabelText("Project export file"), zip());
+    expect(projectsApi.importProject).toHaveBeenCalledWith(expect.objectContaining({ name: "feather-export.zip" }));
+    expect(await screen.findByText("Imported “Feather” with 12 icons.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    expect(screen.getByText("Project page")).toBeInTheDocument();
+  });
+
+  it("warns when some icons could not be imported", async () => {
+    vi.mocked(projectsApi.importProject).mockResolvedValue({ project: makeDetail({ id: "imp2", name: "Partial" }), imported: 1, foldersCreated: 0, problems: [{ file: "icons/bad.svg", message: "Not valid" }] });
+    renderPage();
+    await userEvent.upload(await screen.findByLabelText("Project export file"), zip());
+    expect(await screen.findByText(/1 icon could not be imported\./)).toBeInTheDocument();
+  });
+
+  it("shows the reason when the file is refused", async () => {
+    vi.mocked(projectsApi.importProject).mockRejectedValue(new ApiError("This archive has no project.json, so it is not a project export.", 400));
+    renderPage();
+    await userEvent.upload(await screen.findByLabelText("Project export file"), zip());
+    expect(await screen.findByText(/no project\.json/)).toBeInTheDocument();
+  });
+
+  it("opens the file picker from the button", async () => {
+    renderPage();
+    const input = (await screen.findByLabelText("Project export file")) as HTMLInputElement;
+    const click = vi.spyOn(input, "click");
+    await userEvent.click(screen.getByRole("button", { name: "Import project" }));
+    expect(click).toHaveBeenCalled();
+  });
+});
+
 describe("listing", () => {
   it("shows a loading state, then the project cards", async () => {
     listProjects.mockResolvedValue(reply([makeProject({ name: "Feather", description: "Line icons", iconCount: 3, purpose: "font", visibility: "public" })]));

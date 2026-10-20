@@ -166,3 +166,35 @@ export type BatchOptimizeResult = BatchResult & {
 };
 
 export type DownloadedFile = { blob: Blob; filename: string };
+
+// ---- Admin, API tokens, project export and import (Phase 6) ----
+
+export type AdminUser = {
+  id: string;
+  displayName: string;
+  email: string;
+  provider: string;
+  picture: string | null;
+  createdAt: string;
+  lastLoginAt: string | null;
+  projectCount: number;
+  iconCount: number;
+  activeTokens: number;
+  isAdmin: boolean;
+  isSelf: boolean;
+};
+export type AdminUserList = { users: AdminUser[]; total: number; page: number; limit: number };
+export type ListUsersParams = { search?: string; page?: number; limit?: number };
+export type DeleteUserResult = { deletedProjects: number; deletedIcons: number; transferredProjects: number; revokedTokens: number };
+
+export type ApiTokenItem = { id: string; name: string; prefix: string; createdAt: string; lastUsedAt: string | null; revokedAt: string | null };
+export type ApiTokenList = { tokens: ApiTokenItem[]; maxActive: number };
+// Returned once, when the token is created; it cannot be shown again.
+export type CreatedApiToken = ApiTokenItem & { token: string };
+
+export type ProjectImportResult = {
+  project: ProjectDetail;
+  imported: number;
+  foldersCreated: number;
+  problems: { file: string; message: string }[];
+};

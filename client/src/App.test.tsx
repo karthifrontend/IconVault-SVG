@@ -28,6 +28,8 @@ const auth: MockAuth = {
 
 vi.mock("./context/AuthContext", () => ({ useAuth: () => auth }));
 vi.mock("./pages/DashboardPage", () => ({ default: () => <main id="main"><h1>Your projects</h1></main> }));
+vi.mock("./pages/AdminPage", () => ({ default: () => <main id="main"><h1>Administration screen</h1></main> }));
+vi.mock("./pages/AccountTokensPage", () => ({ default: () => <main id="main"><h1>API tokens screen</h1></main> }));
 vi.mock("./pages/ProjectPage", () => ({ default: () => <main id="main"><h1>Project workspace</h1></main> }));
 vi.mock("./lib/navigation", () => ({ reloadPage: vi.fn() }));
 
@@ -167,6 +169,32 @@ describe("signed in", () => {
     renderApp("/classic");
     expect(screen.getByRole("heading", { level: 1, name: "Your projects" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Classic compiler" })).not.toBeInTheDocument();
+  });
+
+  it("links to API tokens for everyone and to Administration only for admins", async () => {
+    const { unmount } = renderApp();
+    await userEvent.click(screen.getByRole("button", { name: /account menu/i }));
+    const menu = screen.getByRole("menu", { name: "Account" });
+    expect(within(menu).getByRole("menuitem", { name: "API tokens" })).toHaveAttribute("href", "/account/tokens");
+    expect(within(menu).queryByRole("menuitem", { name: "Administration" })).not.toBeInTheDocument();
+    unmount();
+
+    auth.currentUser = user({ role: "admin" });
+    renderApp();
+    await userEvent.click(screen.getByRole("button", { name: /account menu/i }));
+    expect(screen.getByRole("menuitem", { name: "Administration" })).toHaveAttribute("href", "/admin");
+  });
+
+  it("opens the token and admin screens from the menu and closes the menu", async () => {
+    auth.currentUser = user({ role: "admin" });
+    renderApp();
+    await userEvent.click(screen.getByRole("button", { name: /account menu/i }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "API tokens" }));
+    expect(screen.getByRole("heading", { level: 1, name: "API tokens screen" })).toBeInTheDocument();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /account menu/i }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Administration" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Administration screen" })).toBeInTheDocument();
   });
 
   it("shows the user in the header, with a role badge only for admins", async () => {

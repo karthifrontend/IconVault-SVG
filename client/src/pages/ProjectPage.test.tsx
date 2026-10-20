@@ -11,6 +11,7 @@ import { ToastProvider } from "../context/ToastContext";
 import { READ_ONLY, makeDetail, makeFolder } from "../test/fixtures";
 import ProjectPage from "./ProjectPage";
 
+vi.mock("../context/AuthContext", () => ({ useAuth: () => ({ currentUser: { id: "u1", displayName: "Ada", email: "ada@example.com", role: "user" } }) }));
 vi.mock("../api/projects");
 vi.mock("../api/folders");
 vi.mock("../api/icons");

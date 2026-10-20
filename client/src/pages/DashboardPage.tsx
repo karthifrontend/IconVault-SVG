@@ -1,9 +1,9 @@
 // The signed-in home screen: every project the user can see, with filters (kept in the address, so Back works and links can be shared), create, edit, duplicate, archive and delete, plus a search that also finds icons across projects and can copy them into one of the user's projects.
-import { Plus, Search } from "lucide-react";
-import { useState } from "react";
+import { Plus, Search, Upload } from "lucide-react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { searchIcons } from "../api/icons";
-import { deleteProject, duplicateProject, listProjects, updateProject } from "../api/projects";
+import { deleteProject, duplicateProject, importProject, listProjects, updateProject } from "../api/projects";
 import type { IconSearchResult, ListProjectsParams, ProjectSummary } from "../api/types";
 import CopyToProjectDialog from "../components/projects/CopyToProjectDialog";
 import ProjectCard from "../components/projects/ProjectCard";
@@ -65,6 +65,27 @@ export default function DashboardPage() {
     );
   }
 
+  const importRef = useRef<HTMLInputElement | null>(null);
+  const [importing, setImporting] = useState(false);
+
+  // Creates a new private project from an export ZIP and says what was left out.
+  async function handleImportChosen(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setImporting(true);
+    try {
+      const result = await importProject(file);
+      projects.reload();
+      const skipped = result.problems.length > 0 ? ` ${pluralize(result.problems.length, "icon")} could not be imported.` : "";
+      showToast(`Imported “${result.project.name}” with ${pluralize(result.imported, "icon")}.${skipped}`, result.problems.length > 0 ? "warning" : "success", [{ label: "Open", type: "primary", onClick: () => navigate(`/projects/${result.project.id}`) }]);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not import the project.", "error");
+    } finally {
+      setImporting(false);
+    }
+  }
+
   async function handleDuplicate(project: ProjectSummary) {
     try {
       const copy = await duplicateProject(project.id);
@@ -93,9 +114,15 @@ export default function DashboardPage() {
     <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-4 pb-16 pt-[calc(57px+2rem)] outline-none">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
-        <Button variant="primary" icon={<Plus aria-hidden="true" className="h-4 w-4" />} onClick={() => setForm({ mode: "create" })}>
-          New project
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <input ref={importRef} type="file" accept=".zip,application/zip" aria-label="Project export file" className="hidden" onChange={handleImportChosen} />
+          <Button icon={<Upload aria-hidden="true" className="h-4 w-4" />} onClick={() => importRef.current?.click()} loading={importing}>
+            Import project
+          </Button>
+          <Button variant="primary" icon={<Plus aria-hidden="true" className="h-4 w-4" />} onClick={() => setForm({ mode: "create" })}>
+            New project
+          </Button>
+        </div>
       </div>
 
       <div className="mt-6 flex flex-wrap items-end gap-3">

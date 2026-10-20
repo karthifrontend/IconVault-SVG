@@ -6,6 +6,8 @@ import LoginModal from "./components/LoginModal";
 import AppHeader from "./components/shell/AppHeader";
 import { useAuth } from "./context/AuthContext";
 import { useToast } from "./context/ToastContext";
+import AccountTokensPage from "./pages/AccountTokensPage";
+import AdminPage from "./pages/AdminPage";
 import DashboardPage from "./pages/DashboardPage";
 import LandingPage from "./pages/LandingPage";
 import ProjectPage from "./pages/ProjectPage";
@@ -83,6 +85,8 @@ function App() {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/projects/:projectId/*" element={<ProjectPage />} />
+            <Route path="/account/tokens" element={<AccountTokensPage />} />
+            <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </>

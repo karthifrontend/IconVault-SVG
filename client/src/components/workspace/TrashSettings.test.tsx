@@ -9,9 +9,14 @@ import * as projectsApi from "../../api/projects";
 import { ToastProvider } from "../../context/ToastContext";
 import { WorkspaceContext, type WorkspaceContextValue } from "../../context/workspaceContext";
 import { READ_ONLY, makeDetail, makeIcon } from "../../test/fixtures";
+import * as zip from "../../utils/zipBundle";
 import SettingsTab from "./SettingsTab";
 import TrashTab from "./TrashTab";
 
+const auth = { currentUser: { id: "u1", displayName: "Ada", email: "ada@example.com", role: "user" } };
+vi.mock("../../context/AuthContext", () => ({ useAuth: () => auth }));
+vi.mock("../../utils/zipBundle", () => ({ triggerBrowserDownload: vi.fn() }));
+vi.mock("../admin/TransferProjectDialog", () => ({ default: ({ open }: { open: boolean }) => (open ? <div role="dialog" aria-label="Transfer ownership" /> : null) }));
 vi.mock("../../api/icons");
 vi.mock("../../api/projects");
 
@@ -39,6 +44,7 @@ function setup(node: React.ReactNode, over: Partial<WorkspaceContextValue> = {})
 beforeEach(() => {
   vi.resetAllMocks();
   window.localStorage.clear();
+  auth.currentUser.role = "user";
 });
 
 describe("Trash", () => {
@@ -200,6 +206,34 @@ describe("Settings", () => {
     await userEvent.click(screen.getByRole("button", { name: "Delete project" }));
     await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete project" }));
     expect(await within(screen.getByRole("dialog")).findByRole("alert")).toHaveTextContent("Could not delete.");
+  });
+
+  it("exports the project as a ZIP for anyone who can see it", async () => {
+    const blob = new Blob(["z"]);
+    vi.mocked(projectsApi.exportProject).mockResolvedValue({ blob, filename: "feather-export.zip" });
+    setup(<SettingsTab />, { project: makeDetail({ id: "p1", access: READ_ONLY }) });
+    await userEvent.click(screen.getByRole("button", { name: "Export project" }));
+    expect(projectsApi.exportProject).toHaveBeenCalledWith("p1");
+    await waitFor(() => expect(zip.triggerBrowserDownload).toHaveBeenCalledWith(blob, "feather-export.zip"));
+  });
+
+  it("reports a failed export", async () => {
+    vi.mocked(projectsApi.exportProject).mockRejectedValue(new ApiError("Project not found.", 404));
+    setup(<SettingsTab />);
+    await userEvent.click(screen.getByRole("button", { name: "Export project" }));
+    expect(await screen.findByText("Project not found.")).toBeInTheDocument();
+  });
+
+  it("offers ownership transfer to admins only", async () => {
+    setup(<SettingsTab />);
+    expect(screen.queryByRole("button", { name: "Transfer ownership" })).not.toBeInTheDocument();
+  });
+
+  it("opens the transfer dialog for an admin", async () => {
+    auth.currentUser.role = "admin";
+    setup(<SettingsTab />);
+    await userEvent.click(screen.getByRole("button", { name: "Transfer ownership" }));
+    expect(screen.getByRole("dialog", { name: "Transfer ownership" })).toBeInTheDocument();
   });
 
   it("is read-only for viewers", () => {
