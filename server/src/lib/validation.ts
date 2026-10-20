@@ -206,6 +206,8 @@ export const buildFontSchema = z
     formats: z.array(z.enum(FONT_FORMATS)).min(1, "choose at least one format").default(["woff2", "woff", "ttf"]),
     fontName: z.string().trim().min(1, "is required").max(50).default("IconFont"),
     prefix: z.string().trim().max(20).regex(/^[a-zA-Z0-9_-]*$/, "use letters, digits, - or _").default("icon"),
+    // Optional shared class: with it the stylesheet needs class="base prefix-name"; without it any element whose class starts with the prefix works.
+    baseClass: z.string().trim().max(30).regex(/^([a-zA-Z][a-zA-Z0-9_-]*)?$/, "start with a letter, then letters, digits, - or _").default(""),
     startCodepoint: z
       .string()
       .trim()

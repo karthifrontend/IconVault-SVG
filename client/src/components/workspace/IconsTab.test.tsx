@@ -391,7 +391,7 @@ describe("building a sprite or a font from the selection", () => {
     await userEvent.click(screen.getByRole("button", { name: "Build font" }));
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/projects/p1/font"));
     expect(fontsApi.buildFont).toHaveBeenCalledTimes(1);
-    expect(fontsApi.buildFont).toHaveBeenCalledWith("p1", { scope: "selected", iconIds: ["a", "b"], formats: ["woff2", "woff", "ttf"], fontName: "FeatherIcons", prefix: "feather", startCodepoint: "E001", fontHeight: 1000, descent: 0, normalize: true });
+    expect(fontsApi.buildFont).toHaveBeenCalledWith("p1", { scope: "selected", iconIds: ["a", "b"], formats: ["woff2", "woff", "ttf"], fontName: "FeatherIcons", prefix: "feather", baseClass: "", startCodepoint: "E001", fontHeight: 1000, descent: 0, normalize: true });
     expect(state()).toEqual({ iconIds: ["a", "b"], built: true });
     expect(peekCachedBuild("p1")?.build.fontName).toBe("feather");
     expect(preview.loadPreviewFont).toHaveBeenCalledWith(expect.stringMatching(/^iconfont-preview-/), "AA==");

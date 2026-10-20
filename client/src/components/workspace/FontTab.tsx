@@ -1,6 +1,6 @@
-// The Font section, laid out in groups: the actions at the top (Download font is the main action, with Copy CSS and Build font beside it), then Icons (which icons go in, with the checklist), Font settings, and Target formats; below them the result: a summary, any conversion warnings, and one "Stable Unicode codepoints mapping" table with every glyph, its character (editable), CSS entity and CSS class. The font is built on the server; for editors, new characters are saved on the icons so rebuilding later keeps every glyph on the same character. Editors can also import an existing font.
-import { Copy, Download, Hammer, ListChecks } from "lucide-react";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+// The Font section, laid out like Icon Vault's: the actions at the top (Download font is the main action, with Copy CSS and Build font beside it), then three columns: 1. Scope selection (whole project, a folder or the chosen icons, with the icon checklist) and the target formats, 2. Font and CSS settings (name, prefix, base class, starting codepoint), 3. Font metrics and normalization. Below them the result (a summary, conversion warnings and the "Stable Unicode codepoints mapping" table with every glyph, its character (editable), CSS entity and CSS class) and the font build history. The font is built on the server; for editors, new characters are saved on the icons so rebuilding later keeps every glyph on the same character.
+import { CheckSquare, Copy, Download, Hammer } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
 import { buildFont, downloadFont } from "../../api/fonts";
 import { updateIcon } from "../../api/icons";
 import type { BuildFontInput, FontBuildResult, FontCodepoint, FontFormat } from "../../api/types";
@@ -18,6 +18,7 @@ import { triggerBrowserDownload } from "../../utils/zipBundle";
 import { Button } from "../ui/Button";
 import { SelectField, TextField } from "../ui/Fields";
 import CodepointTable from "./CodepointTable";
+import FontHistory from "./FontHistory";
 import IconChecklistDialog from "./IconChecklistDialog";
 
 const FORMATS: { value: FontFormat; label: string; hint: string }[] = [
@@ -28,17 +29,8 @@ const FORMATS: { value: FontFormat; label: string; hint: string }[] = [
   { value: "svg", label: "SVG", hint: "legacy SVG font" },
 ];
 
-// One titled group of controls.
-function Group({ id, title, children }: { id: string; title: string; children: ReactNode }) {
-  return (
-    <section aria-labelledby={id} className="rounded-2xl border border-border p-4">
-      <h3 id={id} className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h3>
-      <div className="mt-3">{children}</div>
-    </section>
-  );
-}
+// The small uppercase heading of one column.
+const columnHeading = "text-xs font-semibold uppercase tracking-wide text-muted-foreground";
 
 export default function FontTab() {
   const { project, folderList, refreshIcons, refreshProject } = useWorkspace();
@@ -50,11 +42,17 @@ export default function FontTab() {
   const handed = readBuildSelection(useLocation().state);
   const [chosen, setChosen] = useState<string[] | null>(handed?.iconIds ?? null);
   const [choosing, setChoosing] = useState(false);
-  const [scope, setScope] = useState(handed ? "selected" : "all");
+  const [scopeKind, setScopeKind] = useState<"all" | "folder" | "selected">(handed ? "selected" : "all");
+  const [folderChoice, setFolderChoice] = useState("");
+  // The scope the server is asked for: "all", "selected" or a folder id.
+  const scope = scopeKind === "folder" ? folderChoice : scopeKind;
   // The same starting settings the Icons screen uses when it builds a font straight from a selection.
   const [defaults] = useState(() => defaultFontOptions(project));
   const [fontName, setFontName] = useState(defaults.fontName);
   const [prefix, setPrefix] = useState(defaults.prefix);
+  const [baseClass, setBaseClass] = useState(defaults.baseClass);
+  // Bumped when a package was downloaded, so the build history reloads.
+  const [historyVersion, setHistoryVersion] = useState(0);
   const [startCodepoint, setStartCodepoint] = useState(defaults.startCodepoint);
   const [formats, setFormats] = useState<FontFormat[]>(defaults.formats);
   const [fontHeight, setFontHeight] = useState(String(defaults.fontHeight));
@@ -83,11 +81,13 @@ export default function FontTab() {
 
   function options(override?: string[]): BuildFontInput | string {
     const picked = override ?? chosen;
-    const effectiveScope = override ? "selected" : scope;
+    const effectiveScope = override ? "selected" : scopeKind === "folder" && !folderChoice ? "folder-empty" : scope;
     const height = Number(fontHeight);
     const down = Number(descent);
     if (!fontName.trim()) return "Enter a font name.";
     if (formats.length === 0) return "Choose at least one format.";
+    if (!/^([a-zA-Z][a-zA-Z0-9_-]*)?$/.test(baseClass.trim())) return "The base class must start with a letter and use only letters, digits, - or _.";
+    if (effectiveScope === "folder-empty") return "Choose a folder.";
     if (!/^[0-9a-fA-F]{4}$/.test(startCodepoint.trim())) return "The first character must be 4 hex digits, for example E001.";
     if (!Number.isInteger(height) || height < 300 || height > 2048) return "Font height must be a whole number from 300 to 2048.";
     if (!Number.isInteger(down) || down < -1000 || down > 1000) return "Descent must be a whole number from -1000 to 1000.";
@@ -99,6 +99,7 @@ export default function FontTab() {
       formats,
       fontName: fontName.trim(),
       prefix: prefix.trim(),
+      baseClass: baseClass.trim(),
       startCodepoint: startCodepoint.trim().toUpperCase(),
       fontHeight: height,
       descent: down,
@@ -141,6 +142,8 @@ export default function FontTab() {
     try {
       const { blob, filename } = await downloadFont(project.id, input);
       triggerBrowserDownload(blob, filename);
+      // The server keeps an editor's download in the history.
+      if (canEdit) setHistoryVersion((value) => value + 1);
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Could not download the font.", "error");
     } finally {
@@ -165,8 +168,8 @@ export default function FontTab() {
   const built = result?.build;
   const shown = built ? built.codepoints.filter((glyph) => `${glyph.name} ${glyph.className} ${glyph.codepoint}`.toLowerCase().includes(filter.trim().toLowerCase())) : [];
   // How many icons the current choice covers, for the sentence in the Icons group.
-  const folderNode = folderOptions.find((folder) => folder.id === scope);
-  const inScope = scope === "selected" ? (chosen?.length ?? 0) : scope === "all" ? project.iconCount : folderNode ? totalIconCount(folderNode) : 0;
+  const folderNode = folderOptions.find((folder) => folder.id === folderChoice);
+  const inScope = scopeKind === "selected" ? (chosen?.length ?? 0) : scopeKind === "all" ? project.iconCount : folderNode ? totalIconCount(folderNode) : 0;
 
   return (
     <div>
@@ -196,62 +199,105 @@ export default function FontTab() {
         )}
         {!canEdit && <p className="text-xs text-muted-foreground">You can build and download this font. The characters are not saved on the project because you cannot change it.</p>}
 
-        <Group id="font-icons" title="Icons">
-          <p className="text-sm">
-            <span className="font-semibold">{pluralize(inScope, "icon")}</span> will be compiled into the font glyphs and CSS. Only ticked icons are included.
-          </p>
-          <div className="mt-3 flex flex-wrap items-end gap-3">
-            <div className="min-w-56 flex-1">
-              <SelectField label="Icons to include" value={scope} onChange={(event) => setScope(event.target.value)}>
-                {chosen && <option value="selected">{`Chosen icons (${chosen.length})`}</option>}
-                <option value="all">All icons in the project</option>
-                {folderOptions.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {`${"  ".repeat(folder.depth)}${folder.name}`}
-                  </option>
-                ))}
-              </SelectField>
-            </div>
-            <Button icon={<ListChecks aria-hidden="true" className="h-4 w-4" />} onClick={() => setChoosing(true)}>
-              Review / edit checklist
-            </Button>
-          </div>
-        </Group>
-
-        <Group id="font-settings" title="Font settings">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <TextField label="Font name" value={fontName} maxLength={50} autoComplete="off" onChange={(event) => setFontName(event.target.value)} />
-            <TextField label="Class prefix" value={prefix} maxLength={20} autoComplete="off" hint="Classes look like prefix-name." onChange={(event) => setPrefix(event.target.value)} />
-            <TextField label="Starting codepoint (hex)" value={startCodepoint} maxLength={4} autoComplete="off" hint="Default E001. New icons count up from here (E000 to F8FF)." onChange={(event) => setStartCodepoint(event.target.value)} />
-          </div>
-          <details className="mt-4">
-            <summary className="cursor-pointer text-sm font-medium">Advanced</summary>
-            <div className="mt-3 grid gap-3 sm:grid-cols-3">
-              <TextField label="Font height" value={fontHeight} inputMode="numeric" autoComplete="off" hint="300 to 2048; 1000 suits most icons." onChange={(event) => setFontHeight(event.target.value)} />
-              <TextField label="Descent" value={descent} inputMode="numeric" autoComplete="off" hint="How far glyphs sit below the baseline." onChange={(event) => setDescent(event.target.value)} />
-              <label className="flex cursor-pointer items-center gap-2 self-center text-sm">
-                <input type="checkbox" checked={normalize} onChange={(event) => setNormalize(event.target.checked)} className="h-4 w-4 accent-[hsl(var(--primary))]" />
-                Scale icons to fill the height
-              </label>
-            </div>
-          </details>
-        </Group>
-
-        <section aria-labelledby="font-formats" className="rounded-2xl border border-border p-4">
-          <fieldset>
-            <legend id="font-formats" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Target formats
-            </legend>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {FORMATS.map((format) => (
-                <label key={format.value} className="cursor-pointer" title={format.hint}>
-                  <input type="checkbox" checked={formats.includes(format.value)} onChange={() => toggleFormat(format.value)} className="peer sr-only" />
-                  <span className="inline-flex h-9 items-center rounded-full border border-input bg-background px-4 font-mono text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring">{format.label}</span>
+        <div className="grid gap-4 rounded-2xl border border-border p-4 md:grid-cols-3 md:gap-6">
+          <section aria-labelledby="font-scope" className="space-y-4">
+            <fieldset>
+              <legend id="font-scope" className={columnHeading}>
+                1. Scope selection
+              </legend>
+              <div className="mt-3 space-y-2 text-sm">
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input type="radio" name="font-scope" checked={scopeKind === "all"} onChange={() => setScopeKind("all")} className="h-4 w-4 accent-[hsl(var(--primary))]" />
+                  {`Whole project (${pluralize(project.iconCount, "icon")})`}
                 </label>
-              ))}
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input type="radio" name="font-scope" checked={scopeKind === "folder"} onChange={() => setScopeKind("folder")} className="h-4 w-4 accent-[hsl(var(--primary))]" />
+                  Selected folder
+                </label>
+                {scopeKind === "folder" && (
+                  <SelectField label="Folder" hideLabel value={folderChoice} onChange={(event) => setFolderChoice(event.target.value)}>
+                    <option value="">Choose a folder…</option>
+                    {folderOptions.map((folder) => (
+                      <option key={folder.id} value={folder.id}>
+                        {`${"  ".repeat(folder.depth)}${folder.name} (${pluralize(totalIconCount(folder), "icon")})`}
+                      </option>
+                    ))}
+                  </SelectField>
+                )}
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="radio"
+                    name="font-scope"
+                    checked={scopeKind === "selected"}
+                    onChange={() => {
+                      setScopeKind("selected");
+                      // Nothing chosen yet: open the checklist to choose.
+                      if (!chosen) setChoosing(true);
+                    }}
+                    className="h-4 w-4 accent-[hsl(var(--primary))]"
+                  />
+                  {`Selected icons (${chosen?.length ?? 0})`}
+                </label>
+              </div>
+            </fieldset>
+
+            <div className="rounded-xl border border-border bg-muted/40 p-3">
+              <div className="flex items-center justify-between text-sm font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <CheckSquare aria-hidden="true" className="h-4 w-4 text-primary" />
+                  Icon checklist
+                </span>
+                <span className="text-primary" aria-label={`${inScope} of ${project.iconCount} icons included`}>
+                  {inScope} / {project.iconCount}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">Only checked icons will be compiled into the font glyphs and CSS.</p>
+              <Button className="mt-2 w-full" size="sm" onClick={() => setChoosing(true)}>
+                Review / edit checklist
+              </Button>
             </div>
-          </fieldset>
-        </section>
+
+            <fieldset>
+              <legend id="font-formats" className={columnHeading}>
+                Target formats
+              </legend>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {FORMATS.map((format) => (
+                  <label key={format.value} className="cursor-pointer" title={format.hint}>
+                    <input type="checkbox" checked={formats.includes(format.value)} onChange={() => toggleFormat(format.value)} className="peer sr-only" />
+                    <span className="inline-flex h-9 items-center rounded-full border border-input bg-background px-4 font-mono text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring">{format.label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          </section>
+
+          <section aria-labelledby="font-css" className="space-y-3">
+            <h3 id="font-css" className={columnHeading}>
+              2. Font &amp; CSS settings
+            </h3>
+            <TextField label="Font name" value={fontName} maxLength={50} autoComplete="off" onChange={(event) => setFontName(event.target.value)} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TextField label="Class prefix" value={prefix} maxLength={20} autoComplete="off" hint="Classes look like prefix-name." onChange={(event) => setPrefix(event.target.value)} />
+              <TextField label="Base class" value={baseClass} maxLength={30} autoComplete="off" hint="Optional. Then use class=&quot;base prefix-name&quot;." onChange={(event) => setBaseClass(event.target.value)} />
+            </div>
+            <TextField label="Starting codepoint (hex)" value={startCodepoint} maxLength={4} autoComplete="off" hint="Default: E001 (Private Use Area). New icons count up from here (E000 to F8FF)." onChange={(event) => setStartCodepoint(event.target.value)} />
+          </section>
+
+          <section aria-labelledby="font-metrics" className="space-y-3">
+            <h3 id="font-metrics" className={columnHeading}>
+              3. Font metrics &amp; normalization
+            </h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TextField label="Font height" value={fontHeight} inputMode="numeric" autoComplete="off" hint="EM, 300 to 2048; 1000 suits most icons." onChange={(event) => setFontHeight(event.target.value)} />
+              <TextField label="Descent" value={descent} inputMode="numeric" autoComplete="off" hint="How far glyphs sit below the baseline." onChange={(event) => setDescent(event.target.value)} />
+            </div>
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <input type="checkbox" checked={normalize} onChange={(event) => setNormalize(event.target.checked)} className="h-4 w-4 accent-[hsl(var(--primary))]" />
+              Normalize glyph bounds to height
+            </label>
+          </section>
+        </div>
       </form>
 
       {built && (
@@ -295,7 +341,10 @@ export default function FontTab() {
               {built.codepoints.length > 10 && <input type="search" aria-label="Filter characters" placeholder="Filter" value={filter} onChange={(event) => setFilter(event.target.value)} className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm" />}
             </div>
             <div className="mt-3">
-              <CodepointTable glyphs={shown.slice(0, 300)} family={result?.loaded ? result.family : null} canEdit={canEdit} busy={building} onSave={saveCodepoint} onCopyClass={(className) => void copy(className, `the class ${className}`)} />
+              <CodepointTable glyphs={shown.slice(0, 300)} family={result?.loaded ? result.family : null} canEdit={canEdit} busy={building} onSave={saveCodepoint} onCopyClass={(className) => {
+                  const classes = built.baseClass ? `${built.baseClass} ${className}` : className;
+                  void copy(classes, `the class ${classes}`);
+                }} />
             </div>
             {shown.length === 0 && <p className="mt-2 text-sm text-muted-foreground">No characters match “{filter}”.</p>}
             {shown.length > 300 && <p className="mt-2 text-sm text-muted-foreground">Showing the first 300 of {shown.length}. Use the filter to find others.</p>}
@@ -303,16 +352,18 @@ export default function FontTab() {
         </section>
       )}
 
+      <FontHistory projectId={project.id} canEdit={canEdit} version={historyVersion} />
+
       <IconChecklistDialog
         open={choosing}
         mode="font"
         projectId={project.id}
         folders={folderList.folders}
-        initialIds={scope === "selected" ? chosen : null}
+        initialIds={scopeKind === "selected" ? chosen : null}
         onClose={() => setChoosing(false)}
         onConfirm={(iconIds) => {
           setChosen(iconIds);
-          setScope("selected");
+          setScopeKind("selected");
           setChoosing(false);
           // Build with the new choice right away (the state above is not visible to this call yet).
           void runBuild(iconIds);

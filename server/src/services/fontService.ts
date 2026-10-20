@@ -1,4 +1,4 @@
-// Building an icon font from a project's icons. Icons keep a stable codepoint (so a font rebuilt later puts every glyph on the same character): icons that already have one keep it, the others get the next free Private Use character, and for editors those new codepoints are saved on the icons. The fonts, CSS, SCSS, glyph map and specimen page come from `fantasticon`; ZIP packaging uses fflate. Nothing is kept on the server: each build runs in a temporary folder that is removed afterwards.
+// Building an icon font from a project's icons. Icons keep a stable codepoint (so a font rebuilt later puts every glyph on the same character): icons that already have one keep it, the others get the next free Private Use character, and for editors those new codepoints are saved on the icons. The fonts, CSS, SCSS, glyph map and specimen page come from `fantasticon`; ZIP packaging uses fflate. Builds run in a temporary folder that is removed afterwards; a package an editor downloads is also kept in the font build history (see fontHistory.ts).
 import { zipSync } from "fflate";
 import { FontAssetType, OtherAssetType, generateFonts } from "fantasticon";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
@@ -98,6 +98,8 @@ export type FontBuild = {
   prefix: string;
   iconCount: number;
   warnings: { icon: string; message: string }[];
+  // The shared class, when one was asked for (the stylesheet then needs class="base prefix-name").
+  baseClass: string;
   codepoints: { id: string; name: string; slug: string; codepoint: string; className: string; isNew: boolean }[];
   css: string;
   // Everything that goes into the ZIP: the requested font files, css, scss, json, html and a README.
@@ -158,6 +160,8 @@ export async function buildFont(projectId: Id, icons: FontIcon[], input: BuildFo
         formatOptions: { json: { indent: 2 } },
         codepoints,
         prefix,
+        // A base class turns the shared rule into `.base:before` and each icon into `.base.prefix-name:before`.
+        ...(input.baseClass ? { selector: `.${input.baseClass}` } : {}),
         fontHeight: input.fontHeight,
         descent: input.descent,
         normalize: input.normalize,
@@ -178,12 +182,13 @@ export async function buildFont(projectId: Id, icons: FontIcon[], input: BuildFo
       files.push({ name, data });
       if (isFont) sizes[ext] = data.length;
     }
-    files.push({ name: "README.md", data: Buffer.from(readme(fontName, prefix, icons, wanted)) });
+    files.push({ name: "README.md", data: Buffer.from(readme(fontName, prefix, icons, wanted, input.baseClass)) });
 
     const css = files.find((file) => file.name === `${fontName}.css`)?.data.toString("utf8") ?? "";
     return {
       fontName,
       prefix,
+      baseClass: input.baseClass,
       iconCount: icons.length,
       warnings: conversionWarnings(icons),
       codepoints: icons.map((icon) => ({ id: icon.id, name: icon.name, slug: icon.slug, codepoint: toHex(plan.all.get(icon.id) as number), className: `${prefix}-${icon.slug}`, isNew: plan.assigned.has(icon.id) })),
@@ -197,9 +202,9 @@ export async function buildFont(projectId: Id, icons: FontIcon[], input: BuildFo
   }
 }
 
-function readme(fontName: string, prefix: string, icons: FontIcon[], formats: string[]): string {
+function readme(fontName: string, prefix: string, icons: FontIcon[], formats: string[], baseClass = ""): string {
   const sample = icons[0]?.slug ?? "icon";
-  return `# ${fontName}\n\nAn icon font with ${icons.length} icons. Formats: ${formats.join(", ")}.\n\n## Use it\n\n1. Link the stylesheet:\n\n   <link rel="stylesheet" href="${fontName}.css">\n\n2. Add an icon:\n\n   <i class="${prefix}-${sample}"></i>\n\nOpen ${fontName}.html to see every icon with its class name. ${fontName}.json maps each icon to its character code, and stays the same when the font is rebuilt.\n`;
+  return `# ${fontName}\n\nAn icon font with ${icons.length} icons. Formats: ${formats.join(", ")}.\n\n## Use it\n\n1. Link the stylesheet:\n\n   <link rel="stylesheet" href="${fontName}.css">\n\n2. Add an icon:\n\n   <i class="${baseClass ? `${baseClass} ` : ""}${prefix}-${sample}"></i>\n\nOpen ${fontName}.html to see every icon with its class name. ${fontName}.json maps each icon to its character code, and stays the same when the font is rebuilt.\n`;
 }
 
 // A ZIP of the build's files (fonts, stylesheet, specimen and so on).

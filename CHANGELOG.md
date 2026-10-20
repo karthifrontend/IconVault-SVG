@@ -660,6 +660,37 @@ Requested from the Icon Vault screenshots. One commit on `main`, local only. The
 ### Validation (verified)
 - Server database tests: new `tests/db/uncategorized.db.test.ts` (4 tests: rename, trim, reset; the 40 character limit and a non-owner refused; only folderless icons trashed and restorable; edit access needed and other projects untouched). Client tests for the menu (labels, rename dialog, reset, confirm then trash, disabled when empty, hidden for read-only).
 
+## 2026-10-20: Follow-up, Font page compared with Icon Vault: three columns, base class and build history (change request)
+
+You asked whether every feature of the Icon Vault font page was considered (screenshots 2 and 3). I compared them with the Icon Vault source and its running page. Result: most were there; these were missing and are now added. One commit on `main`, local only.
+
+### Comparison
+| Icon Vault feature | Before | Now |
+|---|---|---|
+| 1. Scope selection as radios (Whole project (n icons), Selected folder with a folder list, Selected icons (n)) | one dropdown | radios as in Icon Vault; picking Selected icons with nothing chosen opens the checklist |
+| Icon checklist card with "n / total" and Review / edit checklist | a button | the card with the counter |
+| Target formats as pills | had it | same, moved under the scope column |
+| 2. Font name, CSS prefix, **Base class**, starting codepoint with "Default: E001 (Private Use Area)" | no base class | base class added (optional) |
+| 3. Font height (EM), descent, normalize | hidden under "Advanced" | always visible in the third column; the normalize label now reads "Normalize glyph bounds to height" |
+| Stable Unicode codepoints mapping (preview, name, slug, hex, CSS entity) | had it, editable | unchanged |
+| **Font build history** (kept packages with Download and delete) | none | added, see below |
+
+### Base class
+Optional. Empty keeps the old stylesheet (any element whose class starts with the prefix). With a base class such as `m` the stylesheet has `.m:before` and `.m.m-home:before`, so markup is `class="m m-home"`. The README inside the ZIP and the Copy class button follow it. Letters, digits, - and _, starting with a letter, up to 30.
+
+### Font build history
+- Every package an **editor** downloads is kept (the ZIP and a few facts). The page shows them newest first with date, size, formats, **Download** (anyone who can see the project) and a delete button (editors, with a confirmation). The server keeps the last 20 per project and skips any over 12 MB; they are removed with the project. Downloads by viewers are not kept.
+- This changes an earlier statement: the Font page used to store nothing on the server. It now stores those ZIPs (collection `font_builds`). The History tells you what is kept; the "Build font" preview and codepoints work as before.
+
+### Validation (verified)
+- Server unit **136 of 136**; database tests **171 of 171** (new: `fontHistory.db.test.ts` with 7 tests: keeping, listing and downloading again, viewers' downloads not kept but listable on a public project, private projects hidden, delete rules, the 20 limit and removal with the project, the base class stylesheet and README, bad base classes refused; and the 4 uncategorized tests).
+- Client **593 of 593** (new: the history list, empty, error, download and delete; the three columns, the folder and base class checks, Selected icons opening the checklist, copying a class with the base class). Types and lint clean.
+- Real browser (throwaway user, font project with two icons and one kept download): the page showed the three columns, the history row, the breadcrumb pill and centred menu; Uncategorized renamed to "Loose icons" from its menu. A browser accidentally pointed at the Icon Vault tab briefly wrote a test sign-in into that tab's storage; it was removed again. Test data deleted (the font history went with the project): the database holds your 1 user and 2 projects.
+
+### Not tested, or open
+- Clicking the page's **Download font** button was not repeated in the browser; the download and the history entry are covered by the server tests.
+- Icon Vault shows "Generate Font (n)" and a compiled-in-browser specimen panel; here Build font keeps its own preview and the mapping table.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -669,7 +700,7 @@ Requested from the Icon Vault screenshots. One commit on `main`, local only. The
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 575 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 593 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 171 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

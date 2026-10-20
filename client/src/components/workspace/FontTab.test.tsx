@@ -65,6 +65,7 @@ beforeEach(() => {
   vi.mocked(clipboard.copyText).mockResolvedValue(true);
   vi.mocked(preview.loadPreviewFont).mockResolvedValue(true);
   buildFont.mockResolvedValue(built());
+  vi.mocked(fontsApi.listFontBuilds).mockResolvedValue([]);
 });
 
 describe("building", () => {
@@ -81,7 +82,7 @@ describe("building", () => {
   it("sends the options, then shows the count, sizes and every character", async () => {
     setup();
     await userEvent.click(screen.getByRole("button", { name: "Build font" }));
-    expect(buildFont).toHaveBeenCalledWith("p1", { scope: "all", formats: ["woff2", "woff", "ttf"], fontName: "FeatherIcons", prefix: "fth", startCodepoint: "E001", fontHeight: 1000, descent: 0, normalize: true });
+    expect(buildFont).toHaveBeenCalledWith("p1", { scope: "all", formats: ["woff2", "woff", "ttf"], fontName: "FeatherIcons", prefix: "fth", baseClass: "", startCodepoint: "E001", fontHeight: 1000, descent: 0, normalize: true });
     expect(await screen.findByText("2 icons")).toBeInTheDocument();
     expect(screen.getByText(/WOFF2 1\.2 KB, TTF 3\.3 KB/)).toBeInTheDocument();
     // One table lists every glyph: character, CSS entity, class. There is no second grid repeating the same icons.
@@ -97,19 +98,20 @@ describe("building", () => {
 
   it("sends a folder, other formats and advanced values as chosen", async () => {
     setup();
-    await userEvent.selectOptions(screen.getByLabelText("Icons to include"), "ui");
+    await userEvent.click(screen.getByRole("radio", { name: "Selected folder" }));
+    await userEvent.selectOptions(screen.getByLabelText("Folder"), "ui");
     await userEvent.clear(screen.getByLabelText("Font name"));
+    await userEvent.type(screen.getByLabelText("Base class"), "fth");
     await userEvent.type(screen.getByLabelText("Font name"), "Mine");
     await userEvent.click(screen.getByLabelText("WOFF"));
     await userEvent.click(screen.getByLabelText("EOT"));
     await userEvent.clear(screen.getByLabelText("Starting codepoint (hex)"));
     await userEvent.type(screen.getByLabelText("Starting codepoint (hex)"), "e100");
-    await userEvent.click(screen.getByText("Advanced"));
     await userEvent.clear(screen.getByLabelText("Font height"));
     await userEvent.type(screen.getByLabelText("Font height"), "1200");
-    await userEvent.click(screen.getByLabelText("Scale icons to fill the height"));
+    await userEvent.click(screen.getByLabelText("Normalize glyph bounds to height"));
     await userEvent.click(screen.getByRole("button", { name: "Build font" }));
-    expect(buildFont).toHaveBeenCalledWith("p1", { scope: "folder", folderId: "ui", formats: ["woff2", "ttf", "eot"], fontName: "Mine", prefix: "fth", startCodepoint: "E100", fontHeight: 1200, descent: 0, normalize: false });
+    expect(buildFont).toHaveBeenCalledWith("p1", { scope: "folder", folderId: "ui", formats: ["woff2", "ttf", "eot"], fontName: "Mine", prefix: "fth", baseClass: "fth", startCodepoint: "E100", fontHeight: 1200, descent: 0, normalize: false });
   });
 
   it("checks the options before asking the server", async () => {
@@ -268,7 +270,7 @@ describe("a font built on the Icons screen", () => {
     expect(await screen.findByRole("table", { name: "Stable Unicode codepoints mapping" })).toBeInTheDocument();
     expect(screen.getByText(/WOFF2 1\.2 KB, TTF 3\.3 KB/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy CSS" })).toBeEnabled();
-    expect(screen.getByRole("option", { name: "Chosen icons (2)" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Selected icons (2)" })).toBeInTheDocument();
     expect(buildFont).not.toHaveBeenCalled();
     // The page makes sure the preview font is registered, so the glyph previews draw even if it was removed in between.
     expect(preview.loadPreviewFont).toHaveBeenCalledWith("iconfont-preview-77", "d09GMg==");
@@ -286,7 +288,7 @@ describe("a font built on the Icons screen", () => {
     cacheBuild({ projectId: "other", build: built(), family: "iconfont-preview-79", loaded: true });
     setup({}, { iconIds: ["a", "b"], built: true });
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Chosen icons (2)" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Selected icons (2)" })).toBeInTheDocument();
   });
 
   it("lets the person download it straight away as the main action", async () => {
@@ -308,9 +310,10 @@ describe("the page layout", () => {
     // Download font is the main action; Build font is the secondary one.
     expect(within(actions).getByRole("button", { name: "Download font" }).className).toContain("bg-primary");
     expect(within(actions).getByRole("button", { name: "Build font" }).className).not.toContain("bg-primary");
-    for (const title of ["Icons", "Font settings", "Target formats"]) expect(screen.getByRole("region", { name: title })).toBeInTheDocument();
-    // The actions come before the sections in the page.
-    expect(actions.compareDocumentPosition(screen.getByRole("region", { name: "Icons" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    for (const title of ["1. Scope selection", "2. Font & CSS settings", "3. Font metrics & normalization"]) expect(screen.getByRole("region", { name: title })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Target formats" })).toBeInTheDocument();
+    // The actions come before the columns in the page.
+    expect(actions.compareDocumentPosition(screen.getByRole("region", { name: "1. Scope selection" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("has Copy CSS switched off until there is a build", async () => {
@@ -323,10 +326,48 @@ describe("the page layout", () => {
 
   it("says how many icons will be compiled for all, a folder or a choice", async () => {
     setup({ project: makeDetail({ id: "p1", prefix: "fth", purpose: "font", iconCount: 9 }), folderList: { folders: [makeFolder({ id: "ui", name: "UI", iconCount: 4 })], uncategorizedCount: 5 } });
-    const icons = screen.getByRole("region", { name: "Icons" });
-    expect(within(icons).getByText(/9 icons/)).toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByLabelText("Icons to include"), "ui");
-    expect(within(icons).getByText(/4 icons/)).toBeInTheDocument();
+    const scope = screen.getByRole("region", { name: "1. Scope selection" });
+    expect(within(scope).getByRole("radio", { name: "Whole project (9 icons)" })).toBeChecked();
+    expect(within(scope).getByText("9 / 9")).toBeInTheDocument();
+    await userEvent.click(within(scope).getByRole("radio", { name: "Selected folder" }));
+    await userEvent.selectOptions(within(scope).getByLabelText("Folder"), "ui");
+    expect(within(scope).getByText("4 / 9")).toBeInTheDocument();
+  });
+
+  it("has three columns like Icon Vault, with the font metrics always visible", () => {
+    setup();
+    const css = screen.getByRole("region", { name: "2. Font & CSS settings" });
+    for (const label of ["Font name", "Class prefix", "Base class", "Starting codepoint (hex)"]) expect(within(css).getByLabelText(label)).toBeInTheDocument();
+    const metrics = screen.getByRole("region", { name: "3. Font metrics & normalization" });
+    for (const label of ["Font height", "Descent", "Normalize glyph bounds to height"]) expect(within(metrics).getByLabelText(label)).toBeVisible();
+    expect(screen.queryByText("Advanced")).not.toBeInTheDocument();
+  });
+
+  it("asks for a folder before building a folder scope, and rejects a bad base class", async () => {
+    setup();
+    await userEvent.click(screen.getByRole("radio", { name: "Selected folder" }));
+    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Choose a folder.");
+    await userEvent.click(screen.getByRole("radio", { name: "Whole project (0 icons)" }));
+    await userEvent.type(screen.getByLabelText("Base class"), "9bad");
+    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("base class must start with a letter");
+    expect(buildFont).not.toHaveBeenCalled();
+  });
+
+  it("opens the checklist when Selected icons is picked with nothing chosen yet", async () => {
+    vi.mocked(iconsApi.listIcons).mockResolvedValue({ icons: [makeIcon({ id: "a", name: "Home", slug: "home" })], total: 1, page: 1, limit: 1000 });
+    setup();
+    await userEvent.click(screen.getByRole("radio", { name: "Selected icons (0)" }));
+    expect(await screen.findByRole("dialog", { name: "Choose icons for the font" })).toBeInTheDocument();
+  });
+
+  it("copies a class with the base class in front when there is one", async () => {
+    buildFont.mockResolvedValue(built({ baseClass: "fth" }));
+    setup();
+    await userEvent.click(screen.getByRole("button", { name: "Build font" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Copy class fth-home" }));
+    expect(clipboard.copyText).toHaveBeenCalledWith("fth fth-home");
   });
 
   it("shows the target formats as toggle pills", async () => {
@@ -344,9 +385,8 @@ describe("chosen icons and the checklist", () => {
   it("arrives from the bulk bar on the page itself: no popup, the icons shown as chosen, nothing built yet", () => {
     setup({}, { iconIds: ["a", "b"] });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Icons to include")).toHaveValue("selected");
-    expect(screen.getByRole("option", { name: "Chosen icons (2)" })).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Icons" })).getByText(/2 icons/)).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Selected icons (2)" })).toBeChecked();
+    expect(within(screen.getByRole("region", { name: "1. Scope selection" })).getByText("2 / 0")).toBeInTheDocument();
     expect(buildFont).not.toHaveBeenCalled();
   });
 
@@ -359,8 +399,8 @@ describe("chosen icons and the checklist", () => {
 
   it("ignores a damaged hand-over", () => {
     setup({}, { iconIds: "nope" });
-    expect(screen.getByLabelText("Icons to include")).toHaveValue("all");
-    expect(screen.queryByRole("option", { name: /Chosen icons/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /^Whole project/ })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Selected icons (0)" })).not.toBeChecked();
   });
 
   it("opens the checklist from Review / edit checklist with the chosen icons ticked, and builds with the new choice at once", async () => {
@@ -373,7 +413,7 @@ describe("chosen icons and the checklist", () => {
     await userEvent.click(within(dialog).getByRole("checkbox", { name: /Star/ }));
     await userEvent.click(within(dialog).getByRole("button", { name: "Build font (1 icon)" }));
     await waitFor(() => expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a"] })));
-    expect(screen.getByRole("option", { name: "Chosen icons (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Selected icons (1)" })).toBeInTheDocument();
   });
 
   it("opens the checklist from the page with everything ticked when nothing was chosen", async () => {
@@ -387,7 +427,7 @@ describe("chosen icons and the checklist", () => {
 
   it("has no Chosen option until something is chosen", () => {
     setup();
-    expect(screen.queryByRole("option", { name: /Chosen icons/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: /Selected icons \([1-9]/ })).not.toBeInTheDocument();
   });
 });
 

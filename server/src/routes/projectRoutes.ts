@@ -8,6 +8,7 @@ import { heavyLimit } from "../middleware/rateLimit.js";
 import { requireDb } from "../middleware/requireDb.js";
 import { requireUser } from "../middleware/requireUser.js";
 import { canEdit } from "../lib/permissions.js";
+import { deleteFontBuild, getFontBuildZip, listFontBuilds, recordFontBuild } from "../services/fontHistory.js";
 import { buildFont, iconsForFont, zipFontBuild } from "../services/fontService.js";
 import { exportProject, importProject } from "../services/projectArchive.js";
 import { buildProjectSprite } from "../services/spriteService.js";
@@ -73,7 +74,7 @@ router.post("/:projectId/font/build", heavyLimit, async (req, res) => {
   const input = buildFontSchema.parse(req.body ?? {});
   const icons = await iconsForFont(project._id, input);
   const build = await buildFont(project._id, icons, input, canEdit(actor, project));
-  res.json({ fontName: build.fontName, prefix: build.prefix, iconCount: build.iconCount, warnings: build.warnings, codepoints: build.codepoints, css: build.css, preview: build.preview, sizes: build.sizes });
+  res.json({ fontName: build.fontName, prefix: build.prefix, baseClass: build.baseClass, iconCount: build.iconCount, warnings: build.warnings, codepoints: build.codepoints, css: build.css, preview: build.preview, sizes: build.sizes });
 });
 
 // The same build as a ZIP: the chosen font files, stylesheet, SCSS, glyph map, a specimen page and a README.
@@ -83,7 +84,28 @@ router.post("/:projectId/font/download", heavyLimit, async (req, res) => {
   const input = buildFontSchema.parse(req.body ?? {});
   const icons = await iconsForFont(project._id, input);
   const build = await buildFont(project._id, icons, input, canEdit(actor, project));
-  sendDownload(res, { filename: `${build.fontName}-font.zip`, contentType: "application/zip", body: zipFontBuild(build) });
+  const zip = zipFontBuild(build);
+  // Editors' downloads are kept in the build history (best effort: a failure here must not lose the download).
+  if (canEdit(actor, project)) await recordFontBuild(project._id, actor.id, build, input.formats, zip).catch(() => false);
+  sendDownload(res, { filename: `${build.fontName}-font.zip`, contentType: "application/zip", body: zip });
+});
+
+// The font build history: packages editors downloaded earlier (newest first, at most 20).
+router.get("/:projectId/font/builds", async (req, res) => {
+  const project = await loadProject(actorOf(req), req.params.projectId, "view");
+  res.json({ builds: await listFontBuilds(project._id) });
+});
+
+router.get("/:projectId/font/builds/:buildId/download", heavyLimit, async (req, res) => {
+  const project = await loadProject(actorOf(req), req.params.projectId, "view");
+  const file = await getFontBuildZip(project._id, String(req.params.buildId));
+  sendDownload(res, { filename: file.filename, contentType: "application/zip", body: file.zip });
+});
+
+router.delete("/:projectId/font/builds/:buildId", async (req, res) => {
+  const project = await loadProject(actorOf(req), req.params.projectId, "edit");
+  await deleteFontBuild(project._id, String(req.params.buildId));
+  res.json({ deleted: true });
 });
 
 // The icons compiled into one SVG sprite. Optional query: folderId (a folder and its subfolders) or folderId=root (uncategorized only).

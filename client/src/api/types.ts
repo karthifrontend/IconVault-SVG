@@ -213,6 +213,8 @@ export type BuildFontInput = {
   formats?: FontFormat[];
   fontName?: string;
   prefix?: string;
+  // Optional shared class: with it the stylesheet needs class="base prefix-name".
+  baseClass?: string;
   startCodepoint?: string;
   fontHeight?: number;
   descent?: number;
@@ -224,6 +226,7 @@ export type FontWarning = { icon: string; message: string };
 export type FontBuildResult = {
   fontName: string;
   prefix: string;
+  baseClass?: string;
   iconCount: number;
   warnings: FontWarning[];
   codepoints: FontCodepoint[];
@@ -231,6 +234,9 @@ export type FontBuildResult = {
   preview: { format: "woff2"; base64: string };
   sizes: Partial<Record<FontFormat, number>>;
 };
+
+// One kept download in the font build history.
+export type FontBuildSummary = { id: string; fontName: string; iconCount: number; formats: FontFormat[]; size: number; createdAt: string };
 
 export type FontImportOptions = {
   folderId?: string | null;
