@@ -1,10 +1,11 @@
-// Top of a project, in one bar: where you are (back to Projects), the project's name with its prefix, type and visibility, the sections as a pill menu (Icons, Icon Font or Sprite, Settings, Trash), and a slot on the right where the Icons screen places Upload icons and From Another Project. A note when it is read-only for you.
-import { Archive, ArrowLeft, Globe, Lock, Settings, Trash2, Type, Layers, Shapes } from "lucide-react";
+// Top of a project, in one bar: where you are (back to Projects), the project's name with its type and visibility (each in its own colour), the sections as a pill menu (Icons, Icon Font or Sprite, Settings, Trash), and a slot on the right where the Icons screen places Upload icons and From Another Project. Under the bar: the prefix, whether it is archived, the description and a note when it is read-only for you.
+import { Archive, ArrowLeft, Settings, Trash2, Type, Layers, Shapes } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import type { ProjectDetail } from "../../api/types";
 import { cn } from "../../lib/cn";
 import Badge from "../ui/Badge";
 import ProjectAvatar from "../projects/ProjectAvatar";
+import { PurposeBadge, VisibilityBadge } from "../projects/ProjectBadges";
 
 const pillClass = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -28,10 +29,8 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
           <ProjectAvatar name={project.name} color={project.color} />
           <h1 className="max-w-64 truncate text-xl font-bold tracking-tight">{project.name}</h1>
           <div className="flex flex-wrap items-center gap-1.5">
-            {project.prefix && <Badge className="font-mono uppercase">{`Prefix: ${project.prefix}`}</Badge>}
-            <Badge icon={isFont ? <Type aria-hidden="true" className="h-3 w-3" /> : <Shapes aria-hidden="true" className="h-3 w-3" />}>{isFont ? "Icon Font Project" : "Sprite Project"}</Badge>
-            <Badge icon={project.visibility === "public" ? <Globe aria-hidden="true" className="h-3 w-3" /> : <Lock aria-hidden="true" className="h-3 w-3" />}>{project.visibility === "public" ? "Public" : "Private"}</Badge>
-            {project.isArchived && <Badge icon={<Archive aria-hidden="true" className="h-3 w-3" />}>Archived</Badge>}
+            <VisibilityBadge visibility={project.visibility} />
+            <PurposeBadge purpose={project.purpose} long />
           </div>
         </div>
 
@@ -60,8 +59,11 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
         <div ref={actionsRef} className="ml-auto flex flex-wrap items-center gap-2 empty:hidden" />
       </div>
 
-      <p className="mt-2 text-xs text-muted-foreground">by {project.owner.displayName}</p>
-      {project.description && <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{project.description}</p>}
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+        {project.prefix && <Badge className="font-mono uppercase">{`Prefix: ${project.prefix}`}</Badge>}
+        {project.isArchived && <Badge icon={<Archive aria-hidden="true" className="h-3 w-3" />}>Archived</Badge>}
+        {project.description && <p className="max-w-3xl text-sm text-muted-foreground">{project.description}</p>}
+      </div>
 
       {!project.access.canEdit && (
         <p role="note" className="mt-3 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">

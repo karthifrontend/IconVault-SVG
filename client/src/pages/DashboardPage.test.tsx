@@ -93,6 +93,7 @@ describe("listing", () => {
     expect(within(card).getByText("Font")).toBeInTheDocument();
     expect(within(card).getByText(/3 icons/)).toBeInTheDocument();
     expect(within(card).getByText("You")).toBeInTheDocument();
+    expect(within(card).getByText(/Created by/)).toBeInTheDocument();
     expect(within(card).getByRole("link", { name: "Feather" })).toHaveAttribute("href", expect.stringMatching(/^\/projects\/p\d+$/));
   });
 
@@ -101,6 +102,7 @@ describe("listing", () => {
     renderPage();
     const card = (await screen.findByRole("heading", { name: "Shared" })).closest("li") as HTMLElement;
     expect(within(card).getByText("Grace Hopper")).toBeInTheDocument();
+    expect(within(card).getByText(/Created by/)).toBeInTheDocument();
     expect(within(card).getByRole("img", { name: "1 sample icon" })).toBeInTheDocument();
   });
 

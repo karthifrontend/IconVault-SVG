@@ -615,6 +615,15 @@ Requested after seeing the toolbar. Client only. One commit on `main`, local onl
 - Size, colour, style, sort, background and grid or list are now in one row (on screens at least 1440 px wide; the style buttons then show icons only, with their names from 1700 px; narrower screens wrap and a phone stacks them).
 - Validation: client tests, types and lint (see the count in Known issues). Checked in the browser at 1500 px: one row, no sideways scroll.
 
+## 2026-10-20: Follow-up, coloured badges, header rows and Created by on the cards (change request)
+
+Requested from the project bar screenshot. Client only. One commit on `main`, local only.
+
+- **Colours:** Private is violet, Public green, Icon Font indigo, Sprite amber (`components/projects/ProjectBadges.tsx`). The words stay, so colour is never the only signal. The dashboard cards use the same badges (their type reads "Font" or "Sprite").
+- **Project bar:** next to the name only the visibility and type badges. The prefix, the Archived badge and the description moved to the row under the bar. "by <owner>" is removed from the project page.
+- **Dashboard cards:** the owner moved from under the name to a last line, "Created by You" or "Created by <name>", under a thin rule.
+- Validation: client `npm test` **571 of 571**, types and lint clean. Real browser (throwaway user, one font and one sprite project): the cards and the project bar looked as described in light mode. Dark mode was not looked at for these badges; they use lighter text shades there. Test data removed.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -624,7 +633,7 @@ Requested after seeing the toolbar. Client only. One commit on `main`, local onl
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 569 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 571 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

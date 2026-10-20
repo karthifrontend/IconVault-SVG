@@ -1,5 +1,5 @@
-// One project on the dashboard: accent avatar, name, badges, a few sample icons, counts, and an actions menu. The whole card opens the project (a stretched link on the name), and the menu sits above it.
-import { Archive, ArchiveRestore, Copy, FolderOpen, Globe, Lock, Pencil, Trash2 } from "lucide-react";
+// One project on the dashboard: accent avatar, name, coloured badges, a few sample icons, counts, who created it, and an actions menu. The whole card opens the project (a stretched link on the name), and the menu sits above it.
+import { Archive, ArchiveRestore, Copy, FolderOpen, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { ProjectSummary } from "../../api/types";
 import { formatRelative, pluralize } from "../../lib/format";
@@ -7,6 +7,7 @@ import ActionMenu, { type MenuAction } from "../ui/ActionMenu";
 import Badge from "../ui/Badge";
 import SvgPreview from "../ui/SvgPreview";
 import ProjectAvatar from "./ProjectAvatar";
+import { PurposeBadge, VisibilityBadge } from "./ProjectBadges";
 
 export type ProjectCardActions = {
   onEdit: (project: ProjectSummary) => void;
@@ -42,7 +43,6 @@ export default function ProjectCard({ project, currentUserId, onEdit, onDuplicat
               {project.name}
             </Link>
           </h3>
-          <p className="truncate text-xs text-muted-foreground">{mine ? "You" : project.owner.displayName}</p>
         </div>
         <ActionMenu label={`Actions for ${project.name}`} actions={actions} className="relative z-10 -mr-1 -mt-1" />
       </div>
@@ -50,8 +50,8 @@ export default function ProjectCard({ project, currentUserId, onEdit, onDuplicat
       <p className="line-clamp-2 min-h-10 text-sm text-muted-foreground">{project.description || "No description."}</p>
 
       <div className="flex flex-wrap gap-1.5">
-        <Badge icon={project.visibility === "public" ? <Globe aria-hidden="true" className="h-3 w-3" /> : <Lock aria-hidden="true" className="h-3 w-3" />}>{project.visibility === "public" ? "Public" : "Private"}</Badge>
-        <Badge>{project.purpose === "font" ? "Font" : "Sprite"}</Badge>
+        <VisibilityBadge visibility={project.visibility} />
+        <PurposeBadge purpose={project.purpose} />
         {project.isArchived && <Badge icon={<Archive aria-hidden="true" className="h-3 w-3" />}>Archived</Badge>}
       </div>
 
@@ -68,6 +68,9 @@ export default function ProjectCard({ project, currentUserId, onEdit, onDuplicat
 
       <p className="text-xs text-muted-foreground">
         {pluralize(project.iconCount, "icon")} · Updated {formatRelative(project.updatedAt)}
+      </p>
+      <p className="truncate border-t border-border pt-2 text-xs text-muted-foreground">
+        Created by <span className="font-medium text-foreground">{mine ? "You" : project.owner.displayName}</span>
       </p>
     </li>
   );

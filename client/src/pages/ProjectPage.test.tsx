@@ -134,7 +134,7 @@ describe("header", () => {
     expect(screen.getByText("Prefix: icon")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Icon Font" })).toHaveAttribute("href", "/projects/p1/font");
     expect(screen.queryByRole("link", { name: "Sprite" })).not.toBeInTheDocument();
-    expect(screen.getByText("by Ada Lovelace")).toBeInTheDocument();
+    expect(screen.queryByText(/^by /)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Projects" })).toHaveAttribute("href", "/");
 
     const nav = screen.getByRole("navigation", { name: "Project sections" });
