@@ -25,6 +25,8 @@ export async function startHarness() {
   assert.match(dbName, /^svg-compiler-test-/);
 
   process.env.SESSION_SECRET = "http-test-secret-0123456789";
+  // These suites make thousands of requests from one address; the limiter has its own tests.
+  process.env.RATE_LIMIT_DISABLED = "1";
   await mongoose.connect(uri, { dbName, serverSelectionTimeoutMS: 15000 });
   await Promise.all([User, Project, Folder, Icon, IconVersion, ApiToken].map((model) => model.syncIndexes()));
 

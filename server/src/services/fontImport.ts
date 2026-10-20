@@ -77,6 +77,8 @@ export async function readFontGlyphs(buffer: Buffer, mappingText = ""): Promise<
 async function readBinaryFont(buffer: Buffer, kind: GlyphRead["kind"], mapping: Map<string, string>): Promise<GlyphRead> {
   let bytes = buffer;
   if (kind === "woff2") {
+    // The header says how big the font will be once unpacked (totalSfntSize, bytes 16 to 19). Check that first so a tiny file cannot make the server allocate gigabytes.
+    if (buffer.length >= 20 && buffer.readUInt32BE(16) > MAX_UNPACKED_BYTES) throw new BadRequestError("That font unpacks to more than 24 MB.");
     try {
       bytes = Buffer.from(await wawoff2.decompress(buffer));
     } catch {

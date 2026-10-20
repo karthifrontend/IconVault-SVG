@@ -19,6 +19,7 @@ import {
   pasteIconSchema,
   updateIconSchema,
 } from "../lib/validation.js";
+import { heavyLimit } from "../middleware/rateLimit.js";
 import { requireDb } from "../middleware/requireDb.js";
 import { requireUser } from "../middleware/requireUser.js";
 import Icon from "../models/Icon.js";
@@ -97,7 +98,7 @@ router.get("/projects/:projectId/icons", async (req, res) => {
 });
 
 // Upload SVG files and ZIP archives (multipart field "files"). Fields: folderId, strategy (rename|replace|skip), optimize, tags.
-router.post("/projects/:projectId/icons/upload", upload.array("files", 200), async (req, res) => {
+router.post("/projects/:projectId/icons/upload", heavyLimit, upload.array("files", 200), async (req, res) => {
   const project = await loadProject(actorOf(req), req.params.projectId, "edit");
   const fields = parseUploadFields(req.body as Record<string, unknown> | undefined);
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
@@ -114,7 +115,7 @@ router.post("/projects/:projectId/icons/upload", upload.array("files", 200), asy
 
 // Import the glyphs of an existing font (field "font": TTF, OTF, WOFF, WOFF2 or SVG font; optional field "mapping": a CSS or JSON file that names the characters). Fields: folderId, strategy, optimize, privateUseOnly (default true), dryRun (only report what would be imported).
 const fontFiles = upload.fields([{ name: "font", maxCount: 1 }, { name: "mapping", maxCount: 1 }]);
-router.post("/projects/:projectId/icons/import-font", fontFiles, async (req, res) => {
+router.post("/projects/:projectId/icons/import-font", heavyLimit, fontFiles, async (req, res) => {
   const project = await loadProject(actorOf(req), req.params.projectId, "edit");
   const fields = parseFontImportFields(req.body as Record<string, unknown> | undefined);
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
@@ -154,7 +155,7 @@ router.post("/projects/:projectId/icons/paste", async (req, res) => {
 });
 
 // Copy icons from a project the user can view into this one (which they must be able to edit).
-router.post("/projects/:projectId/icons/copy", async (req, res) => {
+router.post("/projects/:projectId/icons/copy", heavyLimit, async (req, res) => {
   const actor = actorOf(req);
   const input = copyIconsSchema.parse(req.body ?? {});
   const target = await loadProject(actor, req.params.projectId, "edit");
@@ -168,7 +169,7 @@ router.post("/projects/:projectId/icons/copy", async (req, res) => {
 });
 
 // One icon downloads as an SVG, several as a ZIP.
-router.post("/projects/:projectId/icons/download", async (req, res) => {
+router.post("/projects/:projectId/icons/download", heavyLimit, async (req, res) => {
   const project = await loadProject(actorOf(req), req.params.projectId, "view");
   const input = iconIdsSchema.parse(req.body ?? {});
   const file = await downloadIcons(project._id, toIds(input.iconIds));
@@ -200,7 +201,7 @@ router.post("/projects/:projectId/icons/batch/restore", async (req, res) => {
   res.json(await batchRestore(project._id, toIds(input.iconIds)));
 });
 
-router.post("/projects/:projectId/icons/batch/optimize", async (req, res) => {
+router.post("/projects/:projectId/icons/batch/optimize", heavyLimit, async (req, res) => {
   const project = await loadProject(actorOf(req), req.params.projectId, "edit");
   const input = iconIdsSchema.parse(req.body ?? {});
   res.json(await batchOptimize(project._id, toIds(input.iconIds)));

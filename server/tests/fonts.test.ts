@@ -154,9 +154,28 @@ describe("reading real fonts", () => {
     await assert.rejects(readFontGlyphs(Buffer.alloc(0)), /empty/);
     await assert.rejects(readFontGlyphs(Buffer.alloc(MAX_FONT_BYTES + 1)), /larger than 8 MB/);
     await assert.rejects(readFontGlyphs(Buffer.from("PK\u0003\u0004 just a zip")), /not a font file/);
-    await assert.rejects(readFontGlyphs(Buffer.from("wOF2 definitely not a font")), /WOFF2/);
+    await assert.rejects(readFontGlyphs(Buffer.from("wOF2 junk")), /WOFF2/);
     await assert.rejects(readFontGlyphs(Buffer.concat([Buffer.from([0, 1, 0, 0]), Buffer.from("garbage garbage garbage")])), /could not be read/);
     await assert.rejects(readFontGlyphs(Buffer.from("<svg><font>")), /not well-formed|no glyphs|XML/i);
+  });
+
+  it("refuses a WOFF2 whose header announces a huge unpacked size, before unpacking it", async () => {
+    const bomb = Buffer.alloc(64);
+    bomb.write("wOF2", 0, "latin1");
+    bomb.writeUInt32BE(0x7fffffff, 16);
+    await assert.rejects(readFontGlyphs(bomb), /more than 24 MB/);
+  });
+
+  it("does not expand XML entities in an SVG font (no billion laughs)", async () => {
+    const laughs = '<?xml version="1.0"?><!DOCTYPE lol [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;"><!ENTITY c "&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;">]><svg xmlns="http://www.w3.org/2000/svg"><defs><font><font-face units-per-em="1000"/><glyph unicode="&#xe001;" glyph-name="&c;" d="M0 0h10v10z"/></font></defs></svg>';
+    const started = Date.now();
+    try {
+      const read = await readFontGlyphs(Buffer.from(laughs));
+      assert.ok(read.glyphs.every((g) => g.name.length < 100), "entities must not be expanded");
+    } catch (err) {
+      assert.match((err as Error).message, /well-formed|font/i);
+    }
+    assert.ok(Date.now() - started < 2000);
   });
 
   it("skips glyphs that have no outline", async () => {

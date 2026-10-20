@@ -4,6 +4,7 @@ import multer from "multer";
 import { BadRequestError } from "../lib/errors.js";
 import { actorOf, loadProject, parseObjectId, sendDownload } from "../lib/http.js";
 import { buildFontSchema, createProjectSchema, listProjectsQuerySchema, updateProjectSchema } from "../lib/validation.js";
+import { heavyLimit } from "../middleware/rateLimit.js";
 import { requireDb } from "../middleware/requireDb.js";
 import { requireUser } from "../middleware/requireUser.js";
 import { canEdit } from "../lib/permissions.js";
@@ -27,7 +28,7 @@ router.post("/", async (req, res) => {
 });
 
 // Create a new private project from a ZIP made by the export (multipart field "file"). Declared before the /:projectId routes.
-router.post("/import", archive.single("file"), async (req, res) => {
+router.post("/import", heavyLimit, archive.single("file"), async (req, res) => {
   if (!req.file) throw new BadRequestError('Attach the export ZIP in the "file" field.');
   const result = await importProject(actorOf(req), req.file.buffer);
   res.status(201).json(result);
@@ -60,13 +61,13 @@ router.post("/:projectId/duplicate", async (req, res) => {
 });
 
 // The whole project (settings, folders, icons) as one ZIP that /import can read back. Anyone who can see the project can export it.
-router.get("/:projectId/export", async (req, res) => {
+router.get("/:projectId/export", heavyLimit, async (req, res) => {
   const project = await loadProject(actorOf(req), req.params.projectId, "view");
   sendDownload(res, await exportProject(project));
 });
 
 // Builds an icon font and returns what the page needs to preview it (a small WOFF2 plus the stylesheet and the character for every icon). Anyone who can see the project may build; only editors get the new codepoints saved on the icons.
-router.post("/:projectId/font/build", async (req, res) => {
+router.post("/:projectId/font/build", heavyLimit, async (req, res) => {
   const actor = actorOf(req);
   const project = await loadProject(actor, req.params.projectId, "view");
   const input = buildFontSchema.parse(req.body ?? {});
@@ -76,7 +77,7 @@ router.post("/:projectId/font/build", async (req, res) => {
 });
 
 // The same build as a ZIP: the chosen font files, stylesheet, SCSS, glyph map, a specimen page and a README.
-router.post("/:projectId/font/download", async (req, res) => {
+router.post("/:projectId/font/download", heavyLimit, async (req, res) => {
   const actor = actorOf(req);
   const project = await loadProject(actor, req.params.projectId, "view");
   const input = buildFontSchema.parse(req.body ?? {});
@@ -86,7 +87,7 @@ router.post("/:projectId/font/download", async (req, res) => {
 });
 
 // The icons compiled into one SVG sprite. Optional query: folderId (a folder and its subfolders) or folderId=root (uncategorized only).
-router.get("/:projectId/sprite", async (req, res) => {
+router.get("/:projectId/sprite", heavyLimit, async (req, res) => {
   const project = await loadProject(actorOf(req), req.params.projectId, "view");
   const folderId = typeof req.query.folderId === "string" ? req.query.folderId : undefined;
   const folder = folderId === undefined ? null : folderId === "root" ? "root" : parseObjectId(folderId, "folder id");
