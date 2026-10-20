@@ -144,7 +144,8 @@ describe("IconToolbar", () => {
     expect(onSearch).toHaveBeenLastCalledWith("r");
     await userEvent.selectOptions(screen.getByLabelText("Sort by"), "name");
     expect(onSort).toHaveBeenCalledWith("name");
-    await userEvent.selectOptions(screen.getByLabelText("Preview background"), "checker");
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
+    await userEvent.click(screen.getByRole("menuitemradio", { name: "Checkerboard" }));
     expect(onSurface).toHaveBeenCalledWith("checker");
     await userEvent.click(screen.getByRole("button", { name: "List view" }));
     expect(onView).toHaveBeenCalledWith("list");
@@ -220,12 +221,44 @@ describe("IconToolbar", () => {
     expect(onAppearance).toHaveBeenLastCalledWith({ style: "wireframe" });
   });
 
-  it("has no breadcrumb, and puts search beside select all", () => {
+  it("has no breadcrumb, no background dropdown, and search before the size control", () => {
     setup();
     expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).not.toBeInTheDocument();
-    const selectAll = screen.getByLabelText(/Select all/);
+    expect(screen.queryByLabelText("Preview background")).not.toBeInTheDocument();
     const search = screen.getByRole("searchbox", { name: "Search icons" });
-    expect(selectAll.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const size = screen.getByRole("group", { name: "Icon size" });
+    expect(search.compareDocumentPosition(size) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("keeps the preview background in the More menu: a single choice with the current one checked", async () => {
+    const { onSurface } = setup({ surface: "light" });
+    const more = screen.getByRole("button", { name: "More" });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(more);
+    const menu = screen.getByRole("menu", { name: "More view options" });
+    expect(within(menu).getAllByRole("menuitemradio").map((i) => [i.textContent, i.getAttribute("aria-checked")])).toEqual([["Match theme", "false"], ["Light", "true"], ["Dark", "false"], ["Checkerboard", "false"]]);
+    await userEvent.click(within(menu).getByRole("menuitemradio", { name: "Dark" }));
+    expect(onSurface).toHaveBeenCalledWith("dark");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(more).toHaveFocus();
+  });
+
+  it("moves through the More menu with the keyboard and closes on Escape or an outside click", async () => {
+    setup();
+    const more = screen.getByRole("button", { name: "More" });
+    more.focus();
+    await userEvent.keyboard("{ArrowDown}");
+    await waitFor(() => expect(screen.getByRole("menuitemradio", { name: "Match theme" })).toHaveFocus());
+    await userEvent.keyboard("{End}");
+    expect(screen.getByRole("menuitemradio", { name: "Checkerboard" })).toHaveFocus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(screen.getByRole("menuitemradio", { name: "Match theme" })).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(more).toHaveFocus();
+    await userEvent.click(more);
+    await userEvent.click(document.body);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
   it("puts the add buttons into the header slot when there is one", () => {

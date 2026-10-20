@@ -1,4 +1,4 @@
-// Top of a project, in one bar: where you are (back to Projects), the project's name with its type and visibility (each in its own colour), the sections as a pill menu (Icons, Icon Font or Sprite, Settings, Trash), and a slot on the right where the Icons screen places Upload icons and From Another Project. Under the bar: the prefix, whether it is archived, the description and a note when it is read-only for you.
+// Top of a project, in one bar: where you are (back to Projects), the project's name with its type and visibility (each in its own colour), the sections as a pill menu (Icons, Icon Font or Sprite, Settings, Trash), and a slot on the right where the Icons screen places Upload icons and From Another Project. Under the bar: an Archived badge when it is archived, and a note when it is read-only for you.
 import { Archive, ArrowLeft, Settings, Trash2, Type, Layers, Shapes } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import type { ProjectDetail } from "../../api/types";
@@ -59,11 +59,11 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
         <div ref={actionsRef} className="ml-auto flex flex-wrap items-center gap-2 empty:hidden" />
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-        {project.prefix && <Badge className="font-mono uppercase">{`Prefix: ${project.prefix}`}</Badge>}
-        {project.isArchived && <Badge icon={<Archive aria-hidden="true" className="h-3 w-3" />}>Archived</Badge>}
-        {project.description && <p className="max-w-3xl text-sm text-muted-foreground">{project.description}</p>}
-      </div>
+      {project.isArchived && (
+        <div className="mt-3">
+          <Badge icon={<Archive aria-hidden="true" className="h-3 w-3" />}>Archived</Badge>
+        </div>
+      )}
 
       {!project.access.canEdit && (
         <p role="note" className="mt-3 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">

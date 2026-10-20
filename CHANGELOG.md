@@ -634,6 +634,15 @@ Requested after seeing the toolbar. Client only. One commit on `main`, local onl
 - The one-row toolbar now starts at 1366 px wide (the controls are narrower).
 - Validation: client tests, types and lint (counts in Known issues). Checked in the browser at 1500 px: one row, no sideways scroll.
 
+## 2026-10-20: Follow-up, simpler header, search first, background moved into More (change request)
+
+Requested after seeing the toolbar. Client only. One commit on `main`, local only.
+
+- **Header:** the prefix and the description are no longer shown on the project page (the prefix is still in Settings, the description in Edit details). Only an Archived badge and the read-only note can appear under the bar.
+- **Toolbar:** **Search** is first in the row again, before the size control. Select all now sits alone on the row below.
+- **Background:** the "Background: Match theme" dropdown is gone. A **More** button (after sort) opens a menu with the preview background as a single-choice list (Match theme, Light, Dark, Checkerboard), with the current one ticked. It is the place for further view options later. Keyboard: arrows open and move, Escape closes.
+- Validation: client tests, types and lint (counts in Known issues). Checked in the browser at 1500 px: search first, one row, More menu opens with the current background ticked.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -643,7 +652,7 @@ Requested after seeing the toolbar. Client only. One commit on `main`, local onl
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 573 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 575 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 160 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

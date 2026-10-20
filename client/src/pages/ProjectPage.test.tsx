@@ -128,10 +128,11 @@ describe("header", () => {
   it("shows the project, its badges and owner, and links to each section with counts", async () => {
     renderPage();
     expect(await screen.findByRole("heading", { level: 1, name: "Feather" })).toBeInTheDocument();
-    expect(screen.getByText("Line icons")).toBeInTheDocument();
+    // The prefix and the description are not shown in the project bar area.
+    expect(screen.queryByText("Line icons")).not.toBeInTheDocument();
     expect(screen.getByText("Public")).toBeInTheDocument();
     expect(screen.getByText("Icon Font Project")).toBeInTheDocument();
-    expect(screen.getByText("Prefix: icon")).toBeInTheDocument();
+    expect(screen.queryByText(/^Prefix:/)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Icon Font" })).toHaveAttribute("href", "/projects/p1/font");
     expect(screen.queryByRole("link", { name: "Sprite" })).not.toBeInTheDocument();
     expect(screen.queryByText(/^by /)).not.toBeInTheDocument();

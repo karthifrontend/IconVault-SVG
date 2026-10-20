@@ -1,12 +1,12 @@
-// Controls above the icon list: the preview size / colour / style, sort (an icon with a menu), background and grid or list view in one row, the "select all" checkbox with the search beside it, and (for editors) the Upload icons menu, which can be placed into the project header.
+// Controls above the icon list: the preview size / colour / style, sort (an icon with a menu), a More menu (preview background) and grid or list view in one row, with search first, the "select all" checkbox  and (for editors) the Upload icons menu, which can be placed into the project header.
 import { ArrowUpDown, Box, Copy, Eye, LayoutGrid, List, Minus, Plus, Search, Square } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
 import { ICON_COLORS, ICON_STYLES, ICON_STYLE_HINTS, ICON_STYLE_LABELS, MAX_ICON_SIZE, MIN_ICON_SIZE, clampIconSize, type IconAppearance, type IconStyle } from "../../lib/iconAppearance";
-import { SURFACES, SURFACE_LABELS, type Surface } from "../../lib/previewSurface";
+import type { Surface } from "../../lib/previewSurface";
 import { Button } from "../ui/Button";
-import { SelectField } from "../ui/Fields";
+import MoreMenu from "./MoreMenu";
 import UploadMenu, { type UploadKind } from "./UploadMenu";
 
 export type IconSort = "newest" | "oldest" | "name" | "name-desc" | "largest";
@@ -59,6 +59,21 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2 min-[1366px]:flex-nowrap">
+        <div className="relative min-w-48 flex-1">
+          <label htmlFor="icon-search" className="sr-only">
+            Search icons
+          </label>
+          <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            id="icon-search"
+            type="search"
+            value={search}
+            onChange={(event) => onSearch(event.target.value)}
+            placeholder="Search by name or tag"
+            autoComplete="off"
+            className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+          />
+        </div>
         <div role="group" aria-label="Icon size" className="flex h-10 items-center gap-2 rounded-lg border border-input bg-background px-2">
           <button type="button" aria-label="Smaller icons" disabled={appearance.size <= MIN_ICON_SIZE} onClick={() => onAppearance({ size: clampIconSize(appearance.size - 4) })} className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-ring">
             <Minus aria-hidden="true" className="h-4 w-4" />
@@ -99,13 +114,7 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
             ))}
           </select>
         </label>
-        <SelectField label="Preview background" hideLabel value={surface} onChange={(event) => onSurface(event.target.value as Surface)} className="h-10 w-auto">
-          {SURFACES.map((value) => (
-            <option key={value} value={value}>
-              {`Background: ${SURFACE_LABELS[value]}`}
-            </option>
-          ))}
-        </SelectField>
+        <MoreMenu surface={surface} onSurface={onSurface} />
         <div role="group" aria-label="View" className="inline-flex rounded-lg border border-input bg-muted p-0.5">
           {(
             [
@@ -137,21 +146,6 @@ export default function IconToolbar({ search, onSearch, sort, onSort, view, onVi
             <input ref={allRef} type="checkbox" checked={all} disabled={loaded === 0} onChange={(event) => onSelectAll(event.target.checked)} className="h-4 w-4 accent-[hsl(var(--primary))]" />
             Select all {loaded} shown
           </label>
-          <div className="relative min-w-48 flex-1 sm:max-w-md">
-            <label htmlFor="icon-search" className="sr-only">
-              Search icons
-            </label>
-            <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              id="icon-search"
-              type="search"
-              value={search}
-              onChange={(event) => onSearch(event.target.value)}
-              placeholder="Search by name or tag"
-              autoComplete="off"
-              className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
-            />
-          </div>
         </div>
         {canAdd && (actionsHost ? createPortal(actions, actionsHost) : actions)}
       </div>

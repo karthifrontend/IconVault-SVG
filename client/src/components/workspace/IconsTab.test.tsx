@@ -174,7 +174,8 @@ describe("search, sort and view", () => {
     window.localStorage.setItem("iconSurface", "dark");
     setup();
     expect(await screen.findByRole("table", { name: "Icons" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Preview background")).toHaveValue("dark");
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
+    expect(screen.getByRole("menuitemradio", { name: "Dark" })).toHaveAttribute("aria-checked", "true");
   });
 });
 
