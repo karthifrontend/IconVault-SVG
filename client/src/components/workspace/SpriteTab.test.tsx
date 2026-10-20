@@ -151,9 +151,19 @@ describe("chosen icons", () => {
     expect(screen.getByRole("option", { name: "Chosen icons (1)" })).toBeInTheDocument();
   });
 
-  it("opens the checklist on arrival from the bulk bar, with the selection ticked, and builds with the confirmed choice", async () => {
+  it("arrives from the bulk bar on the page itself, with no popup", async () => {
     listIcons.mockResolvedValue(reply(four()));
-    setup({}, { iconIds: ["home", "box"], openChecklist: true });
+    setup({}, { iconIds: ["home", "box"] });
+    expect(await screen.findByText("2 symbols")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Chosen icons (2)" })).toBeInTheDocument();
+  });
+
+  it("opens the checklist from Review / edit checklist with the chosen icons ticked, and builds with the confirmed choice", async () => {
+    listIcons.mockResolvedValue(reply(four()));
+    setup({}, { iconIds: ["home", "box"] });
+    await screen.findByText("2 symbols");
+    await userEvent.click(screen.getByRole("button", { name: "Review / edit checklist" }));
     const dialog = await screen.findByRole("dialog", { name: "Choose icons for the sprite" });
     await within(dialog).findByText(/icons selected for the sprite/);
     expect(within(dialog).getByRole("checkbox", { name: /home/i })).toBeChecked();
@@ -164,19 +174,14 @@ describe("chosen icons", () => {
     expect(screen.getByRole("option", { name: "Chosen icons (3)" })).toBeInTheDocument();
   });
 
-  it("keeps the handed-over icons when that checklist is cancelled", async () => {
+  it("keeps the chosen icons when the checklist is cancelled", async () => {
     listIcons.mockResolvedValue(reply(four()));
-    setup({}, { iconIds: ["home", "box"], openChecklist: true });
+    setup({}, { iconIds: ["home", "box"] });
+    await screen.findByText("2 symbols");
+    await userEvent.click(screen.getByRole("button", { name: "Review / edit checklist" }));
     await userEvent.click(await within(await screen.findByRole("dialog")).findByRole("button", { name: "Cancel" }));
-    expect(await screen.findByText("2 symbols")).toBeInTheDocument();
+    expect(screen.getByText("2 symbols")).toBeInTheDocument();
     expect(screen.getByLabelText("Icons to include")).toHaveValue("selected");
-  });
-
-  it("does not open the checklist when the icons arrive without the flag", async () => {
-    listIcons.mockResolvedValue(reply(four()));
-    setup({}, { iconIds: ["home"] });
-    await screen.findByText("1 symbol");
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("offers the checklist to read-only viewers", async () => {

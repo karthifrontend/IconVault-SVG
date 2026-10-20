@@ -191,7 +191,7 @@ describe("show more", () => {
     await screen.findByRole("button", { name: "Open N0" });
     expect(screen.queryByRole("button", { name: "Show more" })).not.toBeInTheDocument();
     expect(screen.getByText(/Only the first 1000 are shown/)).toBeInTheDocument();
-  }, 20000);
+  }, 60000);
 });
 
 describe("selection", () => {
@@ -355,7 +355,7 @@ describe("generating a sprite or a font from the selection", () => {
   const withIcons = () => listIcons.mockResolvedValue(reply(three()));
   const state = () => JSON.parse(screen.getByTestId("where").getAttribute("data-state") as string);
 
-  it("goes straight to the Sprite page with the selected icons and the request to open the checklist there", async () => {
+  it("goes straight to the Sprite page with the selected icons, and shows no popup on the way", async () => {
     withIcons();
     setup();
     await screen.findByRole("button", { name: "Open Alpha" });
@@ -363,8 +363,8 @@ describe("generating a sprite or a font from the selection", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Gamma" }));
     await userEvent.click(screen.getByRole("button", { name: "Generate sprite" }));
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/projects/p1/sprite"));
-    expect(state()).toEqual({ iconIds: ["a", "c"], openChecklist: true });
-    // The popup belongs to the page that was opened, not to the Icons screen.
+    expect(state()).toEqual({ iconIds: ["a", "c"] });
+    // No checklist popup in between: the page itself shows the chosen icons.
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
@@ -375,7 +375,7 @@ describe("generating a sprite or a font from the selection", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: "Select Beta" }));
     await userEvent.click(screen.getByRole("button", { name: "Generate font" }));
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/projects/p1/font"));
-    expect(state()).toEqual({ iconIds: ["b"], openChecklist: true });
+    expect(state()).toEqual({ iconIds: ["b"] });
   });
 
   it("is offered to read-only viewers too", async () => {

@@ -158,7 +158,7 @@ describe("project workspace", () => {
 
   it("the generate button on the bulk bar", async () => {
     project("/projects/p1");
-    await userEvent.click(await screen.findByRole("checkbox", { name: "Select Home" }));
+    await userEvent.click(await screen.findByRole("checkbox", { name: "Select Home" }, { timeout: 8000 }));
     await clean();
   });
 

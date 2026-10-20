@@ -184,8 +184,8 @@ export default function IconsTab() {
           onMove={() => setDialog("move")}
           onTag={() => setDialog("tag")}
           generate={project.purpose}
-          // Go to the Sprite or Font page with the selection; that page opens the checklist.
-          onGenerate={() => navigate(`/projects/${project.id}/${project.purpose === "font" ? "font" : "sprite"}`, { state: { iconIds: selection.ids, openChecklist: true } })}
+          // Go straight to the Sprite or Font page with the selection (it shows them as "Chosen icons"; Review / edit checklist there changes the choice).
+          onGenerate={() => navigate(`/projects/${project.id}/${project.purpose === "font" ? "font" : "sprite"}`, { state: { iconIds: selection.ids } })}
           onOptimize={optimizeSelected}
           onDownload={downloadSelected}
           onDelete={() => setDialog("delete")}

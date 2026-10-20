@@ -5,11 +5,12 @@ import { buildFont, downloadFont } from "../../api/fonts";
 import { updateIcon } from "../../api/icons";
 import type { BuildFontInput, FontBuildResult, FontCodepoint, FontFormat } from "../../api/types";
 import { useToast } from "../../context/ToastContext";
+import { useLocation } from "react-router-dom";
 import { useWorkspace } from "../../context/workspaceContext";
-import { useHandedSelection } from "../../hooks/useHandedSelection";
 import { copyText } from "../../lib/clipboard";
 import { loadPreviewFont, nextPreviewFamily, unloadPreviewFont } from "../../lib/fontPreview";
 import { buildFolderTree, flattenFolderTree, totalIconCount } from "../../lib/folderTree";
+import { readBuildSelection } from "../../lib/loadAllIcons";
 import { formatBytes, pluralize } from "../../lib/format";
 import { triggerBrowserDownload } from "../../utils/zipBundle";
 import { Button } from "../ui/Button";
@@ -44,10 +45,10 @@ export default function FontTab() {
   const canEdit = project.access.canEdit;
   const folderOptions = flattenFolderTree(buildFolderTree(folderList.folders));
 
-  // Icons handed over by the bulk bar ("Generate font") arrive with the checklist open.
-  const handed = useHandedSelection();
+  // Icons handed over by the bulk bar ("Generate font") arrive as the chosen icons; nothing is built until Build font.
+  const handed = readBuildSelection(useLocation().state);
   const [chosen, setChosen] = useState<string[] | null>(handed?.iconIds ?? null);
-  const [choosing, setChoosing] = useState(handed?.openChecklist === true);
+  const [choosing, setChoosing] = useState(false);
   const [scope, setScope] = useState(handed ? "selected" : "all");
   const [fontName, setFontName] = useState(() => project.name.replace(/[^a-zA-Z0-9_-]/g, "") || "IconFont");
   const [prefix, setPrefix] = useState(project.prefix || "icon");

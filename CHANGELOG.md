@@ -506,6 +506,23 @@ Toggling the theme on an already open page in the hidden browser pane froze colo
 - The Sprite page keeps its own layout (selector row, then actions) and only got the new flow and the "Review / edit checklist" label; it was not regrouped like the Font page.
 - A screen reader was not used on the new layout.
 
+## 2026-10-20: Follow-up, no popup on the way to the Font or Sprite page (change request)
+
+Requested after seeing the checklist open over the Font page: the popup is not wanted there; go directly to the page. Client only. One commit on `main`, local only. This replaces the "checklist opens on arrival" behaviour of the previous follow-up.
+
+### Changes
+- **Generate font / Generate sprite** on the bulk bar now goes **directly** to the Font or Sprite page. No popup opens on the way or on arrival. The page shows the selected icons as **Chosen icons (n)** and says "n icons will be compiled into the font glyphs and CSS".
+- The font is **built when you press Build font** (nothing is built automatically on arrival); the sprite page, which builds as soon as it has icons, shows the chosen icons at once.
+- **Review / edit checklist** on the page still opens the checklist (with the chosen icons ticked) to change the choice; confirming rebuilds with it. Nothing else about the checklist changed.
+- The plumbing for opening it on arrival (the router-state flag and the small hook that cleared it from the address) was removed.
+
+### Validation (verified)
+- Client `npm test`: **548 of 548** (updated: arriving from the bulk bar shows no dialog and builds nothing; Build font uses exactly the chosen icons; Review / edit checklist opens with them ticked and rebuilds on confirm, and keeps them on Cancel; the Icons screen hands over only the icon ids; a damaged hand-over is ignored). Two heavy tests were given longer waits for busy machines. Types and lint clean.
+- Real browser (throwaway user, font project with 4 icons): select all, Generate font: the page became `/font` with no popup, "Chosen icons (4)", Copy CSS disabled, nothing built yet. Test data removed; the database holds your 1 user and 2 projects.
+
+### Not tested, or open
+- The sprite page was not re-checked in the browser for this change (its test coverage is updated and passes).
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**

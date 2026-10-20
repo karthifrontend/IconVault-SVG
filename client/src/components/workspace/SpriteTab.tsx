@@ -1,14 +1,14 @@
 // The Sprite section: compiles the project's icons (all, or one folder with its subfolders) into an SVG sprite in the browser, with a live preview, copy and download, a ZIP bundle (sprite, grid sprite, demo page, preview image) and the symbol ids with their <use> code. Editors can also import an existing sprite into the project. Anyone who can see the project can build and download.
 import { Copy, Download, FileArchive, FileUp, ListChecks } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useToast } from "../../context/ToastContext";
 import { useWorkspace } from "../../context/workspaceContext";
 import { useResource } from "../../hooks/useResource";
 import { copyText } from "../../lib/clipboard";
 import { buildFolderTree, flattenFolderTree } from "../../lib/folderTree";
 import { formatBytes, pluralize } from "../../lib/format";
-import { loadAllIcons } from "../../lib/loadAllIcons";
-import { useHandedSelection } from "../../hooks/useHandedSelection";
+import { loadAllIcons, readBuildSelection } from "../../lib/loadAllIcons";
 import { buildSprite } from "../../lib/spriteBuild";
 import { buildDemoHtml, buildGridSpriteXml } from "../../utils/buildDemo";
 import { renderSpritePreviewPng } from "../../utils/previewPng";
@@ -23,11 +23,11 @@ const MAX_LISTED_IDS = 200;
 export default function SpriteTab() {
   const { project, folderList, refreshIcons, refreshFolders, refreshProject, iconsVersion } = useWorkspace();
   const { showToast } = useToast();
-  // Icons handed over by the bulk bar ("Generate sprite") arrive with the checklist open.
-  const handed = useHandedSelection();
+  // Icons handed over by the bulk bar ("Generate sprite") arrive as the chosen icons.
+  const handed = readBuildSelection(useLocation().state);
   const [chosen, setChosen] = useState<string[] | null>(handed?.iconIds ?? null);
   const [choiceVersion, setChoiceVersion] = useState(0);
-  const [choosing, setChoosing] = useState(handed?.openChecklist === true);
+  const [choosing, setChoosing] = useState(false);
   const [scope, setScope] = useState(handed ? "selected" : "all");
   const [importing, setImporting] = useState(false);
   const [bundleBusy, setBundleBusy] = useState(false);

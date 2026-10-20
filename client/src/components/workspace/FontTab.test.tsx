@@ -299,56 +299,48 @@ describe("the page layout", () => {
 describe("chosen icons and the checklist", () => {
   const list = () => vi.mocked(iconsApi.listIcons).mockResolvedValue({ icons: [makeIcon({ id: "a", name: "Home", slug: "home" }), makeIcon({ id: "b", name: "Star", slug: "star" })], total: 2, page: 1, limit: 1000 });
 
-  it("opens the checklist on arrival from the bulk bar, with the selected icons ticked and nothing built yet", async () => {
-    list();
-    setup({}, { iconIds: ["a"], openChecklist: true });
-    const dialog = await screen.findByRole("dialog", { name: "Choose icons for the font" });
-    await within(dialog).findByText(/icons selected for the font/);
-    expect(within(dialog).getByRole("checkbox", { name: /Home/ })).toBeChecked();
-    expect(within(dialog).getByRole("checkbox", { name: /Star/ })).not.toBeChecked();
-    expect(buildFont).not.toHaveBeenCalled();
-    expect(screen.getByRole("option", { name: "Chosen icons (1)" })).toBeInTheDocument();
-  });
-
-  it("builds with the chosen icons when the checklist is confirmed", async () => {
-    list();
-    setup({}, { iconIds: ["a", "b"], openChecklist: true });
-    const dialog = await screen.findByRole("dialog", { name: "Choose icons for the font" });
-    await userEvent.click(await within(dialog).findByRole("checkbox", { name: /Star/ }));
-    await userEvent.click(within(dialog).getByRole("button", { name: "Generate font (1 icon)" }));
-    await waitFor(() => expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a"] })));
-    expect(await screen.findByText("2 icons")).toBeInTheDocument();
-    expect(buildFont).toHaveBeenCalledTimes(1);
+  it("arrives from the bulk bar on the page itself: no popup, the icons shown as chosen, nothing built yet", () => {
+    setup({}, { iconIds: ["a", "b"] });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-
-  it("keeps the chosen icons on the page when the checklist is cancelled, and builds only when asked", async () => {
-    list();
-    setup({}, { iconIds: ["a", "b"], openChecklist: true });
-    await userEvent.click(await within(await screen.findByRole("dialog")).findByRole("button", { name: "Cancel" }));
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(buildFont).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Icons to include")).toHaveValue("selected");
+    expect(screen.getByRole("option", { name: "Chosen icons (2)" })).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Icons" })).getByText(/2 icons/)).toBeInTheDocument();
+    expect(buildFont).not.toHaveBeenCalled();
+  });
+
+  it("builds with exactly the chosen icons when Build font is pressed", async () => {
+    setup({}, { iconIds: ["a", "b"] });
     await userEvent.click(screen.getByRole("button", { name: "Build font" }));
     expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a", "b"] }));
+    expect(await within(await screen.findByRole("region", { name: "Built font" })).findByText("2 icons")).toBeInTheDocument();
   });
 
-  it("does not open the checklist when the icons were handed over without the flag, or when nothing was", () => {
-    setup({}, { iconIds: ["a"] });
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  it("ignores a damaged hand-over", () => {
+    setup({}, { iconIds: "nope" });
+    expect(screen.getByLabelText("Icons to include")).toHaveValue("all");
+    expect(screen.queryByRole("option", { name: /Chosen icons/ })).not.toBeInTheDocument();
+  });
+
+  it("opens the checklist from Review / edit checklist with the chosen icons ticked, and builds with the new choice at once", async () => {
+    list();
+    setup({}, { iconIds: ["a", "b"] });
+    await userEvent.click(screen.getByRole("button", { name: "Review / edit checklist" }));
+    const dialog = screen.getByRole("dialog", { name: "Choose icons for the font" });
+    await within(dialog).findByText(/icons selected for the font/);
+    expect(within(dialog).getByRole("checkbox", { name: /Home/ })).toBeChecked();
+    await userEvent.click(within(dialog).getByRole("checkbox", { name: /Star/ }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Generate font (1 icon)" }));
+    await waitFor(() => expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a"] })));
     expect(screen.getByRole("option", { name: "Chosen icons (1)" })).toBeInTheDocument();
   });
 
-  it("opens the checklist from Review / edit checklist and builds with the new choice at once", async () => {
+  it("opens the checklist from the page with everything ticked when nothing was chosen", async () => {
     list();
     setup();
     await userEvent.click(screen.getByRole("button", { name: "Review / edit checklist" }));
     const dialog = screen.getByRole("dialog", { name: "Choose icons for the font" });
     await within(dialog).findByText(/icons selected for the font/);
-    await userEvent.click(within(dialog).getByRole("checkbox", { name: /Star/ }));
-    await userEvent.click(within(dialog).getByRole("button", { name: "Generate font (1 icon)" }));
-    await waitFor(() => expect(buildFont).toHaveBeenCalledWith("p1", expect.objectContaining({ scope: "selected", iconIds: ["a"] })));
-    expect(screen.getByLabelText("Icons to include")).toHaveValue("selected");
+    expect(within(dialog).getByRole("status")).toHaveTextContent("2 of 2 icons selected for the font");
   });
 
   it("has no Chosen option until something is chosen", () => {

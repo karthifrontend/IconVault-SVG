@@ -14,12 +14,12 @@ export async function loadAllIcons(projectId: string, scope = "all"): Promise<Ic
   }
 }
 
-// What the bulk bar hands to the Sprite or Font section through the address (router state): the selected icons, and whether the checklist should open on arrival.
-export type BuildSelectionState = { iconIds: string[]; openChecklist?: boolean };
+// What the bulk bar hands to the Sprite or Font section through the address (router state): the selected icons, which the page then shows as "Chosen icons".
+export type BuildSelectionState = { iconIds: string[] };
 
 export function readBuildSelection(state: unknown): BuildSelectionState | null {
   if (typeof state !== "object" || state === null) return null;
-  const { iconIds, openChecklist } = state as Partial<BuildSelectionState>;
+  const { iconIds } = state as Partial<BuildSelectionState>;
   if (!Array.isArray(iconIds) || iconIds.length === 0 || !iconIds.every((id) => typeof id === "string")) return null;
-  return { iconIds, openChecklist: openChecklist === true };
+  return { iconIds };
 }
