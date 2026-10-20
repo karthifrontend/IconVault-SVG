@@ -762,6 +762,17 @@ Client only. One commit on `main`, local only.
 - Names only: the stored field (`isArchived`), the API and the address values (`status=archived`) are unchanged, so existing projects and links keep working.
 - Validation: client **623 of 623**; types and lint clean. Tests changed for the new wording and for Select all (moved to its own component with its own tests). Not checked in the browser this time.
 
+## 2026-10-21: Follow-up, dashboard filters as joined pills, Private / Public sections, buttons in the top bar (change request)
+
+Client only. One commit on `main`, local only. The dashboard keeps its project cards; the filter menus change.
+
+- **Joined (split) pills with counts:** **Show** is now All, Private, Public and **Type** is All types, Sprites, Fonts, each with a count ("All 4 | Private 1 | Public 3"). The old Mine choice is gone (an old `scope=mine` link just shows All). Private and Public are told apart in the page from one loaded list, so the counts always add up.
+- **Sections:** with All chosen, the cards are grouped under **Private** and **Public** headings with counts (an empty group is left out). Choosing Private or Public shows one list.
+- **Filter icon:** the "Recently updated" dropdown is a filter icon; it opens the same four sort choices (Recently updated, Newest, Name, Most icons) and its tooltip names the current one. **Status** stays a small dropdown (Active, Draft, Both).
+- **Heading removed:** the visible "Projects" heading is gone (it stays for screen readers). **New project** and **Import project** moved into the top bar, left of the theme switch and account menu.
+- Validation: client **629 of 629**; types and lint clean (the dashboard tests were rewritten for the new controls and cover the counts, the sections, one-kind lists, the type filter and the top-bar buttons). Real browser (throwaway user with one private and two public projects, plus the existing public one): buttons in the bar, pills with counts, the two sections and the filter icon looked right. Test data removed.
+- Not done: showing the dashboard as a left sidebar and list (the earlier attempt, reverted at your request).
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
@@ -771,7 +782,7 @@ Client only. One commit on `main`, local only.
 - ~~Client lists unused dependencies~~ Removed in Phase 8.
 - ~~`npm audit` vulnerabilities in `server/` and `client/`~~ Fixed in Phase 8 (0 and 0). Repeat before each release.
 - Google app is in "Testing" mode: only listed test users can sign in. Microsoft sign-in is not configured (`MS_CLIENT_ID` / `MS_TENANT_ID` unset).
-- Tests: the client has 623 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 175 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
+- Tests: the client has 629 (Phases 3 to 8 and the follow-ups), the server 136 unit plus 175 database tests, and the command line 29. The project is under Git since Phase 0, with local commits only and no remote.
 
 ## Pending work
 - ~~Decide whether to apply the fixes in the zip~~ Done in Phase 0.

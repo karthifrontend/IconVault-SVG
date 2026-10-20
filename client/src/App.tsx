@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import LoginModal from "./components/LoginModal";
 import AppHeader from "./components/shell/AppHeader";
+import { HeaderActionsContext } from "./context/headerActionsContext";
 import { HeaderSlotContext } from "./context/headerSlotContext";
 import { useAuth } from "./context/AuthContext";
 import { useToast } from "./context/ToastContext";
@@ -66,6 +67,7 @@ function App() {
   }, [initializing, showToast]);
 
   const [crumbSlot, setCrumbSlot] = useState<HTMLElement | null>(null);
+  const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
   const openLogin = () => setShowLoginModal(true);
 
   return (
@@ -84,7 +86,8 @@ function App() {
         </div>
       ) : currentUser ? (
         <HeaderSlotContext.Provider value={crumbSlot}>
-          <AppHeader onSignIn={openLogin} crumbRef={setCrumbSlot} />
+          <HeaderActionsContext.Provider value={actionsSlot}>
+          <AppHeader onSignIn={openLogin} crumbRef={setCrumbSlot} actionsRef={setActionsSlot} />
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/projects/:projectId/*" element={<ProjectPage />} />
@@ -93,6 +96,7 @@ function App() {
             <Route path="/admin/projects" element={<AdminProjectsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </HeaderActionsContext.Provider>
         </HeaderSlotContext.Provider>
       ) : (
         <>

@@ -1,6 +1,7 @@
 // The signed-in home screen: every project the user can see, with filters (kept in the address, so Back works and links can be shared), create, edit, duplicate, archive and delete, plus a search that also finds icons across projects and can copy them into one of the user's projects.
-import { Plus, Search, Upload } from "lucide-react";
-import { useRef, useState, type ChangeEvent } from "react";
+import { Filter, Globe, Layers, Lock, Plus, Search, Shapes, Type, Upload } from "lucide-react";
+import { useContext, useRef, useState, type ChangeEvent } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { searchIcons } from "../api/icons";
 import { deleteProject, duplicateProject, importProject, listProjects, updateProject } from "../api/projects";
@@ -11,7 +12,9 @@ import ProjectFormDialog from "../components/projects/ProjectFormDialog";
 import { Button } from "../components/ui/Button";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 import { SelectField } from "../components/ui/Fields";
+import SegmentedGroup from "../components/ui/SegmentedGroup";
 import SvgPreview from "../components/ui/SvgPreview";
+import { HeaderActionsContext } from "../context/headerActionsContext";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { useDebounced } from "../hooks/useDebounced";
@@ -19,11 +22,7 @@ import { useResource } from "../hooks/useResource";
 import { cn } from "../lib/cn";
 import { pluralize } from "../lib/format";
 
-const SCOPES = [
-  { value: "all", label: "All" },
-  { value: "mine", label: "Mine" },
-  { value: "public", label: "Public" },
-] as const;
+const SORT_LABELS = { updated: "Recently updated", created: "Newest", name: "Name", icons: "Most icons" } as const;
 
 function oneOf<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {
   return allowed.includes(value as T) ? (value as T) : fallback;
@@ -37,7 +36,8 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
 
-  const scope = oneOf(params.get("scope"), ["all", "mine", "public"], "all");
+  // Private / Public are told apart in the page (every project the person can see is loaded once); the old "mine" address value falls back to All.
+  const scope = oneOf(params.get("scope"), ["all", "private", "public"], "all");
   const status = oneOf(params.get("status"), ["active", "archived", "all"], "active");
   const purpose = oneOf(params.get("type"), ["all", "sprite", "font"], "all");
   const sort = oneOf(params.get("sort"), ["updated", "created", "name", "icons"], "updated");
@@ -49,7 +49,7 @@ export default function DashboardPage() {
   const [deleting, setDeleting] = useState<ProjectSummary | null>(null);
   const [copying, setCopying] = useState<IconSearchResult | null>(null);
 
-  const query: ListProjectsParams = { scope, status, purpose, sort, limit: 100, ...(search ? { search } : {}) };
+  const query: ListProjectsParams = { scope: "all", status, sort, limit: 100, ...(search ? { search } : {}) };
   const projects = useResource(`projects:${JSON.stringify(query)}`, () => listProjects(query));
   const iconResults = useResource(search.length >= 2 ? `icons:${search}` : null, () => searchIcons(search, { limit: 24 }));
 
@@ -106,26 +106,40 @@ export default function DashboardPage() {
     }
   }
 
-  const list = projects.data?.projects ?? [];
+  const loaded = projects.data?.projects ?? [];
+  const byType = loaded.filter((project) => purpose === "all" || project.purpose === purpose);
+  const byVisibility = loaded.filter((project) => scope === "all" || project.visibility === scope);
+  const renderCards = (items: ProjectSummary[]) => (
+    <ul className={cn("grid gap-4 sm:grid-cols-2 lg:grid-cols-3", projects.loading && "opacity-60")}>
+      {items.map((project) => (
+        <ProjectCard key={project.id} project={project} currentUserId={currentUser?.id ?? ""} onEdit={(p) => setForm({ mode: "edit", project: p })} onDuplicate={handleDuplicate} onToggleArchive={handleToggleArchive} onDelete={setDeleting} />
+      ))}
+    </ul>
+  );
+  const list = byType.filter((project) => scope === "all" || project.visibility === scope);
+  const privateList = list.filter((project) => project.visibility === "private");
+  const publicList = list.filter((project) => project.visibility === "public");
+  const actionsSlot = useContext(HeaderActionsContext);
   const filtersActive = scope !== "all" || status !== "active" || purpose !== "all" || search !== "";
+  const headerButtons = (
+    <div className="flex flex-wrap items-center gap-2">
+      <input ref={importRef} type="file" accept=".zip,application/zip" aria-label="Project export file" className="hidden" onChange={handleImportChosen} />
+      <Button variant="primary" icon={<Plus aria-hidden="true" className="h-4 w-4" />} onClick={() => setForm({ mode: "create" })}>
+        New project
+      </Button>
+      <Button icon={<Upload aria-hidden="true" className="h-4 w-4" />} onClick={() => importRef.current?.click()} loading={importing}>
+        Import project
+      </Button>
+    </div>
+  );
   const showIcons = search.length >= 2;
 
   return (
     <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-4 pb-16 pt-[calc(57px+2rem)] outline-none">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
-        <div className="flex flex-wrap gap-2">
-          <input ref={importRef} type="file" accept=".zip,application/zip" aria-label="Project export file" className="hidden" onChange={handleImportChosen} />
-          <Button icon={<Upload aria-hidden="true" className="h-4 w-4" />} onClick={() => importRef.current?.click()} loading={importing}>
-            Import project
-          </Button>
-          <Button variant="primary" icon={<Plus aria-hidden="true" className="h-4 w-4" />} onClick={() => setForm({ mode: "create" })}>
-            New project
-          </Button>
-        </div>
-      </div>
+      <h1 className="sr-only">Projects</h1>
+      {actionsSlot ? createPortal(headerButtons, actionsSlot) : <div className="flex justify-end">{headerButtons}</div>}
 
-      <div className="mt-6 flex flex-wrap items-end gap-3">
+      <div className="mt-4 flex flex-wrap items-center gap-3">
         <div className="relative min-w-56 flex-1">
           <label htmlFor="dashboard-search" className="sr-only">
             Search projects and icons
@@ -142,39 +156,42 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div role="group" aria-label="Show" className="inline-flex rounded-lg border border-input bg-muted p-0.5">
-          {SCOPES.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={scope === option.value}
-              onClick={() => setFilter("scope", option.value, "all")}
-              className={cn(
-                "h-9 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
-                scope === option.value && "bg-background text-foreground shadow-sm ring-1 ring-border",
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-
-        <SelectField label="Type" hideLabel value={purpose} onChange={(event) => setFilter("type", event.target.value, "all")} className="h-10 w-auto">
-          <option value="all">All types</option>
-          <option value="sprite">Sprites</option>
-          <option value="font">Icon fonts</option>
-        </SelectField>
+        <SegmentedGroup
+          label="Show"
+          value={scope}
+          onChange={(value) => setFilter("scope", value, "all")}
+          options={[
+            { value: "all", label: "All", count: byType.length },
+            { value: "private", label: "Private", count: byType.filter((project) => project.visibility === "private").length, icon: <Lock aria-hidden="true" className="h-3.5 w-3.5" /> },
+            { value: "public", label: "Public", count: byType.filter((project) => project.visibility === "public").length, icon: <Globe aria-hidden="true" className="h-3.5 w-3.5" /> },
+          ]}
+        />
+        <SegmentedGroup
+          label="Type"
+          value={purpose}
+          onChange={(value) => setFilter("type", value, "all")}
+          options={[
+            { value: "all", label: "All types", count: byVisibility.length, icon: <Layers aria-hidden="true" className="h-3.5 w-3.5" /> },
+            { value: "sprite", label: "Sprites", count: byVisibility.filter((project) => project.purpose === "sprite").length, icon: <Shapes aria-hidden="true" className="h-3.5 w-3.5" /> },
+            { value: "font", label: "Fonts", count: byVisibility.filter((project) => project.purpose === "font").length, icon: <Type aria-hidden="true" className="h-3.5 w-3.5" /> },
+          ]}
+        />
         <SelectField label="Status" hideLabel value={status} onChange={(event) => setFilter("status", event.target.value, "active")} className="h-10 w-auto">
           <option value="active">Active</option>
           <option value="archived">Draft</option>
           <option value="all">Both</option>
         </SelectField>
-        <SelectField label="Sort by" hideLabel value={sort} onChange={(event) => setFilter("sort", event.target.value, "updated")} className="h-10 w-auto">
-          <option value="updated">Recently updated</option>
-          <option value="created">Newest</option>
-          <option value="name">Name</option>
-          <option value="icons">Most icons</option>
-        </SelectField>
+        {/* The sort choice is a filter icon; the list of choices opens from it. */}
+        <label className="relative inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-input bg-background text-muted-foreground transition-colors hover:bg-accent hover:text-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-ring" title={`Sort: ${SORT_LABELS[sort]}`}>
+          <Filter aria-hidden="true" className="h-4 w-4" />
+          <select aria-label="Sort by" value={sort} onChange={(event) => setFilter("sort", event.target.value, "updated")} className="absolute inset-0 h-full w-full cursor-pointer opacity-0">
+            {(Object.keys(SORT_LABELS) as Array<keyof typeof SORT_LABELS>).map((value) => (
+              <option key={value} value={value}>
+                {SORT_LABELS[value]}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {showIcons && (
@@ -245,19 +262,28 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
-            <ul className={cn("grid gap-4 sm:grid-cols-2 lg:grid-cols-3", projects.loading && "opacity-60")}>
-              {list.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  currentUserId={currentUser?.id ?? ""}
-                  onEdit={(p) => setForm({ mode: "edit", project: p })}
-                  onDuplicate={handleDuplicate}
-                  onToggleArchive={handleToggleArchive}
-                  onDelete={setDeleting}
-                />
-              ))}
-            </ul>
+            {scope === "all" ? (
+              // Private and Public projects each get their own section.
+              <div className="space-y-8">
+                {[
+                  { key: "private", title: "Private", icon: <Lock aria-hidden="true" className="h-4 w-4" />, items: privateList },
+                  { key: "public", title: "Public", icon: <Globe aria-hidden="true" className="h-4 w-4" />, items: publicList },
+                ]
+                  .filter((group) => group.items.length > 0)
+                  .map((group) => (
+                    <section key={group.key} aria-labelledby={`group-${group.key}`}>
+                      <h3 id={`group-${group.key}`} className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                        {group.icon}
+                        {group.title}
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium normal-case tracking-normal">{group.items.length}</span>
+                      </h3>
+                      {renderCards(group.items)}
+                    </section>
+                  ))}
+              </div>
+            ) : (
+              renderCards(list)
+            )}
             {(projects.data?.total ?? 0) > list.length && <p className="mt-4 text-center text-sm text-muted-foreground">Showing the first {list.length} of {projects.data?.total} projects. Use the search to narrow them down.</p>}
           </>
         )}

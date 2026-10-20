@@ -11,9 +11,11 @@ type AppHeaderProps = {
   onSignIn: () => void;
   // Receives the element where a screen can place its breadcrumb (see HeaderSlotContext).
   crumbRef?: (node: HTMLDivElement | null) => void;
+  // Receives the element where a screen can place its main buttons (see HeaderActionsContext).
+  actionsRef?: (node: HTMLDivElement | null) => void;
 };
 
-export default function AppHeader({ onSignIn, crumbRef }: AppHeaderProps) {
+export default function AppHeader({ onSignIn, crumbRef, actionsRef }: AppHeaderProps) {
   const { currentUser, logout } = useAuth();
 
   async function handleSignOut() {
@@ -36,6 +38,7 @@ export default function AppHeader({ onSignIn, crumbRef }: AppHeaderProps) {
       <div ref={crumbRef} className="mx-3 flex min-w-0 flex-1 justify-center empty:hidden" />
 
       <div className="flex shrink-0 items-center gap-3">
+        <div ref={actionsRef} className="flex items-center gap-2 empty:hidden" />
         {currentUser?.role === "admin" && <ManageMenu />}
         <ThemeToggle />
         {currentUser ? (

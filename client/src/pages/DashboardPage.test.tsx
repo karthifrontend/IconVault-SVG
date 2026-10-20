@@ -7,6 +7,7 @@ import * as foldersApi from "../api/folders";
 import * as iconsApi from "../api/icons";
 import * as projectsApi from "../api/projects";
 import { ApiError } from "../api/http";
+import { HeaderActionsContext } from "../context/headerActionsContext";
 import { ToastProvider } from "../context/ToastContext";
 import { READ_ONLY, makeDetail, makeFolder, makeIcon, makeProject } from "../test/fixtures";
 import DashboardPage from "./DashboardPage";
@@ -130,18 +131,23 @@ describe("listing", () => {
 });
 
 describe("filters", () => {
+  const show = () => within(screen.getByRole("group", { name: "Show" }));
+  const types = () => within(screen.getByRole("group", { name: "Type" }));
+
   it("asks for everything active, newest activity first, by default", async () => {
     renderPage();
     await screen.findByText("You have no projects yet.");
-    expect(listProjects).toHaveBeenCalledWith({ scope: "all", status: "active", purpose: "all", sort: "updated", limit: 100 });
+    expect(listProjects).toHaveBeenCalledWith({ scope: "all", status: "active", sort: "updated", limit: 100 });
   });
 
   it("reads the filters from the address", async () => {
     renderPage("/?scope=public&type=font&status=archived&sort=name");
     await screen.findByText("No projects match.");
-    expect(listProjects).toHaveBeenCalledWith({ scope: "public", status: "archived", purpose: "font", sort: "name", limit: 100 });
-    expect(screen.getByRole("button", { name: "Public" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByLabelText("Type")).toHaveValue("font");
+    expect(listProjects).toHaveBeenCalledWith({ scope: "all", status: "archived", sort: "name", limit: 100 });
+    expect(show().getByRole("button", { name: /^Public/ })).toHaveAttribute("aria-pressed", "true");
+    expect(types().getByRole("button", { name: /^Fonts/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("Status")).toHaveValue("archived");
+    expect(screen.getByLabelText("Sort by")).toHaveValue("name");
   });
 
   it("ignores values it does not know", async () => {
@@ -150,24 +156,114 @@ describe("filters", () => {
     expect(listProjects).toHaveBeenCalledWith(expect.objectContaining({ scope: "all", sort: "updated" }));
   });
 
-  it("changing a filter updates the address and loads again; going back to the default removes it", async () => {
+  it("changing a filter updates the address; going back to the default removes it", async () => {
     renderPage();
     await screen.findByText("You have no projects yet.");
-    await userEvent.click(screen.getByRole("button", { name: "Mine" }));
-    expect(screen.getByTestId("where")).toHaveTextContent("/?scope=mine");
-    await waitFor(() => expect(listProjects).toHaveBeenLastCalledWith(expect.objectContaining({ scope: "mine" })));
-
+    await userEvent.click(show().getByRole("button", { name: /^Private/ }));
+    expect(screen.getByTestId("where")).toHaveTextContent("/?scope=private");
     await userEvent.selectOptions(screen.getByLabelText("Sort by"), "name");
-    expect(screen.getByTestId("where")).toHaveTextContent("scope=mine&sort=name");
-
-    await userEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.getByTestId("where")).toHaveTextContent("scope=private&sort=name");
+    await userEvent.click(types().getByRole("button", { name: /^Sprites/ }));
+    expect(screen.getByTestId("where")).toHaveTextContent("scope=private&sort=name&type=sprite");
+    await userEvent.click(show().getByRole("button", { name: /^All/ }));
+    await userEvent.click(types().getByRole("button", { name: /^All types/ }));
     expect(screen.getByTestId("where")).toHaveTextContent("/?sort=name");
   });
 
   it("says nothing matches (not 'no projects yet') when filters are on", async () => {
-    renderPage("/?scope=mine");
+    renderPage("/?scope=private");
     expect(await screen.findByText("No projects match.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "New project" , description: undefined })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New project" })).toBeInTheDocument();
+  });
+
+  it("calls the statuses Active, Draft and Both, and sorts from a filter icon", async () => {
+    renderPage();
+    const status = (await screen.findByLabelText("Status")) as HTMLSelectElement;
+    expect([...status.options].map((option) => option.textContent)).toEqual(["Active", "Draft", "Both"]);
+    const sort = screen.getByLabelText("Sort by") as HTMLSelectElement;
+    expect([...sort.options].map((option) => option.textContent)).toEqual(["Recently updated", "Newest", "Name", "Most icons"]);
+    expect(screen.getByTitle("Sort: Recently updated")).toBeInTheDocument();
+  });
+});
+
+describe("private and public", () => {
+  const mix = () =>
+    listProjects.mockResolvedValue(
+      reply([
+        makeProject({ id: "a", name: "Alpha", visibility: "private", purpose: "font" }),
+        makeProject({ id: "b", name: "Bravo", visibility: "public", purpose: "sprite" }),
+        makeProject({ id: "c", name: "Charlie", visibility: "public", purpose: "font" }),
+      ]),
+    );
+
+  it("shows counts on the Show and Type pills", async () => {
+    mix();
+    renderPage();
+    await screen.findByRole("heading", { name: "Alpha" });
+    const show = within(screen.getByRole("group", { name: "Show" }));
+    expect(show.getByRole("button", { name: "All 3" })).toBeInTheDocument();
+    expect(show.getByRole("button", { name: "Private 1" })).toBeInTheDocument();
+    expect(show.getByRole("button", { name: "Public 2" })).toBeInTheDocument();
+    const types = within(screen.getByRole("group", { name: "Type" }));
+    expect(types.getByRole("button", { name: "Sprites 1" })).toBeInTheDocument();
+    expect(types.getByRole("button", { name: "Fonts 2" })).toBeInTheDocument();
+  });
+
+  it("groups the projects under Private and Public when All is chosen", async () => {
+    mix();
+    renderPage();
+    await screen.findByRole("heading", { name: "Alpha" });
+    const privateSection = screen.getByRole("region", { name: /Private/ });
+    const publicSection = screen.getByRole("region", { name: /Public/ });
+    expect(within(privateSection).getByRole("heading", { name: "Alpha" })).toBeInTheDocument();
+    expect(within(publicSection).getByRole("heading", { name: "Bravo" })).toBeInTheDocument();
+    expect(within(publicSection).getByRole("heading", { name: "Charlie" })).toBeInTheDocument();
+    expect(within(privateSection).queryByRole("heading", { name: "Bravo" })).not.toBeInTheDocument();
+  });
+
+  it("shows only the chosen kind, in one list, without section headings", async () => {
+    mix();
+    renderPage("/?scope=public");
+    await screen.findByRole("heading", { name: "Bravo" });
+    expect(screen.queryByRole("heading", { name: "Alpha" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /Private/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Charlie" })).toBeInTheDocument();
+  });
+
+  it("filters by type on top of private and public", async () => {
+    mix();
+    renderPage("/?type=font");
+    await screen.findByRole("heading", { name: "Alpha" });
+    expect(screen.queryByRole("heading", { name: "Bravo" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Charlie" })).toBeInTheDocument();
+  });
+
+  it("leaves out a section with no projects", async () => {
+    listProjects.mockResolvedValue(reply([makeProject({ id: "b", name: "Bravo", visibility: "public" })]));
+    renderPage();
+    await screen.findByRole("heading", { name: "Bravo" });
+    expect(screen.queryByRole("region", { name: /Private/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("the top bar", () => {
+  it("has no visible Projects heading, and puts New project and Import project into the top bar when there is one", async () => {
+    const slot = document.createElement("div");
+    document.body.appendChild(slot);
+    render(
+      <HeaderActionsContext.Provider value={slot}>
+        <MemoryRouter>
+          <ToastProvider>
+            <DashboardPage />
+          </ToastProvider>
+        </MemoryRouter>
+      </HeaderActionsContext.Provider>,
+    );
+    await screen.findByText("You have no projects yet.");
+    expect(within(slot).getByRole("button", { name: "New project" })).toBeInTheDocument();
+    expect(within(slot).getByRole("button", { name: "Import project" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Projects" })).toHaveClass("sr-only");
+    slot.remove();
   });
 });
 
@@ -310,12 +406,6 @@ describe("project actions", () => {
     await userEvent.click(within(await menuFor("Mine")).getByRole("menuitem", { name: "Duplicate" }));
     expect(projectsApi.duplicateProject).toHaveBeenCalledWith("mine1");
     expect(await screen.findByText("Created “Mine (Copy)”.")).toBeInTheDocument();
-  });
-
-  it("calls the statuses Active, Draft and Both", async () => {
-    renderPage();
-    const status = (await screen.findByLabelText("Status")) as HTMLSelectElement;
-    expect([...status.options].map((option) => option.textContent)).toEqual(["Active", "Draft", "Both"]);
   });
 
   it("marks a project as a draft and back", async () => {
