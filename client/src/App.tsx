@@ -1,12 +1,15 @@
-// Root App component. Signing in is required: a signed-out visitor sees the landing page, a signed-in user gets the workspace. The workspace is still the pre-redesign compiler screen; the new project workspace replaces it in the next phases.
+// Root App component. Signing in is required: a signed-out visitor sees the landing page, a signed-in user gets the dashboard (/) and project workspaces (/projects/:id). The pre-redesign compiler stays reachable at /classic until the compiler is rebuilt inside projects.
 import { Loader2, PanelLeftOpen } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Navigate, Route, Routes, useMatch } from "react-router-dom";
 import Compiler from "./components/Compiler";
 import LoginModal from "./components/LoginModal";
 import AppHeader from "./components/shell/AppHeader";
 import { useAuth } from "./context/AuthContext";
 import { useToast } from "./context/ToastContext";
+import DashboardPage from "./pages/DashboardPage";
 import LandingPage from "./pages/LandingPage";
+import ProjectPage from "./pages/ProjectPage";
 
 const PENDING_LOGIN_TOAST_KEY = "pendingLoginToast";
 const PENDING_LOGOUT_TOAST_KEY = "pendingLogoutToast";
@@ -14,6 +17,7 @@ const PENDING_LOGOUT_TOAST_KEY = "pendingLogoutToast";
 function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(true);
+  const onClassic = useMatch("/classic") !== null;
   const { currentUser, initializing } = useAuth();
   const { showToast } = useToast();
   const previousAuthKeyRef = useRef<string | null | undefined>(
@@ -81,26 +85,32 @@ function App() {
           <AppHeader
             onSignIn={openLogin}
             leading={
-              <button
-                type="button"
-                onClick={() => setLibraryOpen(true)}
-                className={`rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring ${
-                  libraryOpen ? "hidden" : ""
-                }`}
-                title="Expand Library"
-                aria-label="Expand Library"
-              >
-                <PanelLeftOpen aria-hidden="true" className="h-5 w-5" />
-              </button>
+              onClassic && !libraryOpen ? (
+                <button
+                  type="button"
+                  onClick={() => setLibraryOpen(true)}
+                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+                  title="Expand Library"
+                  aria-label="Expand Library"
+                >
+                  <PanelLeftOpen aria-hidden="true" className="h-5 w-5" />
+                </button>
+              ) : undefined
             }
           />
-          <div id="main" tabIndex={-1} className="legacy-light bg-mesh min-h-screen font-sans antialiased outline-none selection:bg-indigo-200 selection:text-indigo-900">
-            <Compiler
-              onRequireAuth={openLogin}
-              libraryOpen={libraryOpen}
-              onLibraryToggle={setLibraryOpen}
+          <Routes>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/projects/:projectId/*" element={<ProjectPage />} />
+            <Route
+              path="/classic"
+              element={
+                <div id="main" tabIndex={-1} className="legacy-light bg-mesh min-h-screen pt-0 font-sans antialiased outline-none selection:bg-indigo-200 selection:text-indigo-900">
+                  <Compiler onRequireAuth={openLogin} libraryOpen={libraryOpen} onLibraryToggle={setLibraryOpen} />
+                </div>
+              }
             />
-          </div>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </>
       ) : (
         <>

@@ -11,6 +11,7 @@ import { READ_ONLY, makeDetail, makeFolder, makeIcon } from "../../test/fixtures
 import * as zip from "../../utils/zipBundle";
 import IconsTab from "./IconsTab";
 
+vi.mock("../ui/SvgPreview", () => ({ default: () => null }));
 vi.mock("../../api/icons");
 vi.mock("../../api/projects");
 vi.mock("../../api/folders");

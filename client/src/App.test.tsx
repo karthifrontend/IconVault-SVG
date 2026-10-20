@@ -1,6 +1,7 @@
 // Tests for the app shell: loading state, the signed-out landing page, the sign-in dialog, the signed-in workspace, the user menu, and basic accessibility (landmarks, skip link, keyboard).
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { ThemeProvider } from "./context/ThemeProvider";
@@ -27,6 +28,8 @@ const auth: MockAuth = {
 
 vi.mock("./context/AuthContext", () => ({ useAuth: () => auth }));
 vi.mock("./components/Compiler", () => ({ default: () => <div>Legacy compiler screen</div> }));
+vi.mock("./pages/DashboardPage", () => ({ default: () => <main id="main"><h1>Your projects</h1></main> }));
+vi.mock("./pages/ProjectPage", () => ({ default: () => <main id="main"><h1>Project workspace</h1></main> }));
 vi.mock("./lib/navigation", () => ({ reloadPage: vi.fn() }));
 
 const user = (over: Partial<CurrentUser> = {}): CurrentUser => ({
@@ -40,11 +43,13 @@ const user = (over: Partial<CurrentUser> = {}): CurrentUser => ({
   ...over,
 });
 
-function renderApp() {
+function renderApp(path = "/") {
   return render(
     <ThemeProvider>
       <ToastProvider>
-        <App />
+        <MemoryRouter initialEntries={[path]}>
+          <App />
+        </MemoryRouter>
       </ToastProvider>
     </ThemeProvider>,
   );
@@ -144,12 +149,36 @@ describe("signed in", () => {
     auth.currentUser = user();
   });
 
-  it("shows the workspace, not the landing page", () => {
+  it("shows the dashboard, not the landing page or the classic compiler", () => {
     renderApp();
-    expect(screen.getByText("Legacy compiler screen")).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Your projects" })).toBeInTheDocument();
+    expect(screen.queryByText("Legacy compiler screen")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /skip to main content/i })).toHaveAttribute("href", "#main");
+  });
+
+  it("opens a project workspace at /projects/:id", () => {
+    renderApp("/projects/p1/trash");
+    expect(screen.getByRole("heading", { level: 1, name: "Project workspace" })).toBeInTheDocument();
+  });
+
+  it("sends unknown addresses to the dashboard", () => {
+    renderApp("/nope/at/all");
+    expect(screen.getByRole("heading", { level: 1, name: "Your projects" })).toBeInTheDocument();
+  });
+
+  it("keeps the classic compiler at /classic, reachable from the header", async () => {
+    renderApp();
+    await userEvent.click(within(screen.getByRole("banner")).getByRole("link", { name: "Classic compiler" }));
+    expect(screen.getByText("Legacy compiler screen")).toBeInTheDocument();
     expect(document.getElementById("main")).toContainElement(screen.getByText("Legacy compiler screen"));
+    await userEvent.click(within(screen.getByRole("banner")).getByRole("link", { name: /SVG Sprite Compiler/ }));
+    expect(screen.getByRole("heading", { level: 1, name: "Your projects" })).toBeInTheDocument();
+  });
+
+  it("does not offer the classic compiler link to signed-out visitors", () => {
+    auth.currentUser = null;
+    renderApp();
+    expect(screen.queryByRole("link", { name: "Classic compiler" })).not.toBeInTheDocument();
   });
 
   it("shows the user in the header, with a role badge only for admins", async () => {

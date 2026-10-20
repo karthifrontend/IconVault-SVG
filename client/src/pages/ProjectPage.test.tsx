@@ -116,12 +116,12 @@ describe("sections", () => {
     expect(screen.getByRole("button", { name: /^UI/ })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("link", { name: /Trash/ }));
-    expect(screen.getByText("Trash will appear here.")).toBeInTheDocument();
+    expect(await screen.findByText("The trash is empty.")).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Folders" })).not.toBeInTheDocument();
     expect(screen.getByTestId("where")).toHaveTextContent("/projects/p1/trash");
 
     await userEvent.click(screen.getByRole("link", { name: "Settings" }));
-    expect(screen.getByText("Settings will appear here.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Danger zone" })).toBeInTheDocument();
   });
 
   it("sends an unknown section back to the icons", async () => {
