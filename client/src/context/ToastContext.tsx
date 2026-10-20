@@ -154,6 +154,8 @@ function ToastCard({
   );
 }
 
+// The hook lives beside its provider on purpose (see AuthContext).
+// eslint-disable-next-line react-refresh/only-export-components
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error("useToast must be used within a <ToastProvider>");

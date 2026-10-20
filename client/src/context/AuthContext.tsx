@@ -223,7 +223,6 @@ function loadMsal(): Promise<NonNullable<Window["msal"]> | null> {
       }
     };
     const onError = () => {
-      // eslint-disable-next-line no-console
       console.error(
         "[auth] Failed to load MSAL.js from",
         MSAL_SCRIPT_SRC,
@@ -252,7 +251,6 @@ function getMsalInstance(clientId: string): Promise<MsalInstance | null> {
     if (!msal) return null;
     const redirectUri = ensureTrailingSlash(window.location.origin);
     if (typeof console !== "undefined") {
-      // eslint-disable-next-line no-console
       console.info(
         "[auth] Microsoft sign-in redirectUri =",
         redirectUri,
@@ -542,6 +540,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// The hook lives beside its provider on purpose: every screen and test imports both from here. The only cost is that editing this file reloads the page instead of hot-swapping it in development.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within an <AuthProvider>");

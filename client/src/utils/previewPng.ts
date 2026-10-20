@@ -253,6 +253,7 @@ function recolorSymbolInnerPerElement(inner: string): string {
         el.setAttribute("stroke", "currentColor");
         el.setAttribute("fill", "none");
       } else {
+        // Neither fill nor stroke can be recoloured here: keep the icon's own paint.
       }
     } else {
       if (paintableFill && paintableStroke) {
