@@ -1,4 +1,4 @@
-# Audit Report: SVG Sprite Compiler
+# Audit Report: IconVault
 
 Date: 2026-10-21 · Scope: `server/`, `client/`, `cli/`, repo hygiene · Commit audited: 9976c51
 

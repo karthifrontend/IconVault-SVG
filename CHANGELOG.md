@@ -891,6 +891,10 @@ Added `AUDIT_REPORT.md` in the project root: a review of security gaps and error
 - **Tests:** server 145 unit + 198 DB; new `tests/db/limits.db.test.ts` (10), sanitizer tests (5), `lib/svgIds.test.ts`, token page and preview tests.
 - `AUDIT_REPORT.md` marks M1, M2, M3, L3 and L4 fixed and lists what is still open.
 
+## 2026-10-21: Project renamed to IconVault (change request)
+
+The visible name is now **IconVault**: the header, browser tab title, landing page footer, the footer of the generated demo page, the CLI help text and description, the README and `PROJECT_SUMMARY.md`. Internal identifiers were left alone so nothing breaks: the `svgsprite` command and its `SVGSPRITE_*` variables, the project archive format string `svg-sprite-compiler-project` (old exports still import), npm package names and the server's token issuer/audience.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**

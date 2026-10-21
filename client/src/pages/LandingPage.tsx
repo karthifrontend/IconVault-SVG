@@ -67,7 +67,7 @@ export default function LandingPage({ onSignIn }: { onSignIn: () => void }) {
         </section>
       </main>
 
-      <footer className="border-t border-border px-4 py-6 text-center text-sm text-muted-foreground">SVG Sprite Compiler</footer>
+      <footer className="border-t border-border px-4 py-6 text-center text-sm text-muted-foreground">IconVault</footer>
     </>
   );
 }

@@ -1,4 +1,4 @@
-# SVG Sprite Compiler: project summary
+# IconVault: project summary
 
 A web app for collecting SVG icons in **projects**, then turning them into an **SVG sprite** or an **icon font** and downloading the result. It started as a simple sprite compiler and was rebuilt, phase by phase, around the project-first design of the Icon Vault app: projects, folders, an icon library with search and bulk actions, a Font Builder, a Sprite Builder, an admin area, API tokens and a command line.
 

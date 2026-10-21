@@ -12,7 +12,7 @@ const BATCH_SIZE = 100;
 
 export class CliError extends Error {}
 
-const HELP = `svgsprite: command line for SVG Sprite Compiler
+const HELP = `svgsprite: command line for IconVault
 
 Usage: svgsprite <command> [options]
 

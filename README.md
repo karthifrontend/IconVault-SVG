@@ -1,4 +1,4 @@
-# SVG Sprite Compiler
+# IconVault
 
 Keep SVG icons in projects and folders, and compile them into a single `sprite.svg` (`<symbol>` + `<use>`) with a live preview, snippets and a download bundle. Sign-in is required; projects are private or public (public ones are read-only for others, who can copy icons).
 

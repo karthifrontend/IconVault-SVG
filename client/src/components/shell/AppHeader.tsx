@@ -30,7 +30,7 @@ export default function AppHeader({ onSignIn, crumbRef, actionsRef }: AppHeaderP
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <LayoutGrid aria-hidden="true" className="h-4 w-4" />
           </span>
-          <span className="hidden truncate font-bold tracking-tight text-foreground sm:inline">SVG Sprite Compiler</span>
+          <span className="hidden truncate font-bold tracking-tight text-foreground sm:inline">IconVault</span>
         </Link>
       </div>
 
