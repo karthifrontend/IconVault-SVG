@@ -100,7 +100,7 @@ export default function SettingsTab() {
     },
     {
       title: isFont ? "Icon font in React" : "Build the sprite with the command line",
-      code: isFont ? `<i className="${project.prefix}-home" aria-hidden="true" />` : `svgsprite sprite "${project.name}" --out sprite.svg`,
+      code: isFont ? `<i className="${project.prefix}-home" aria-hidden="true" />` : `iconvault sprite "${project.name}" --out sprite.svg`,
     },
   ];
 

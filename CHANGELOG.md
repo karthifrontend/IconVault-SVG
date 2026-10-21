@@ -895,6 +895,14 @@ Added `AUDIT_REPORT.md` in the project root: a review of security gaps and error
 
 The visible name is now **IconVault**: the header, browser tab title, landing page footer, the footer of the generated demo page, the CLI help text and description, the README and `PROJECT_SUMMARY.md`. Internal identifiers were left alone so nothing breaks: the `svgsprite` command and its `SVGSPRITE_*` variables, the project archive format string `svg-sprite-compiler-project` (old exports still import), npm package names and the server's token issuer/audience.
 
+## 2026-10-21: Command and package names renamed to IconVault (change request)
+
+- **Command line:** `svgsprite` is now `iconvault` (`cli/bin/iconvault.mjs`), npm package `iconvault-cli`. Environment variables are `ICONVAULT_URL`, `ICONVAULT_TOKEN` and `ICONVAULT_CONFIG`; the saved login moved to `~/.config/iconvault/config.json`, so run `iconvault login` once again. Update any CI scripts.
+- **Packages:** `client` is `iconvault-client`, `server` is `iconvault-server`.
+- **Project archives:** exports are now `"format": "iconvault-project"`. Archives made before the rename (`svg-sprite-compiler-project`) still import.
+- **Left as they were:** the session token issuer and audience (changing them would sign every user out) and the internal `window.__svgCompilerSessionToken` name.
+- README, project summary, the Settings tab hint and the token dialog use the new command.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**

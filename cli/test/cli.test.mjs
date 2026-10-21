@@ -1,4 +1,4 @@
-// Tests for the svgsprite command line, run against a small mock of the server's API: argument handling, saved settings, every command, project lookup by name, batching, exit codes, and that the token is never printed.
+// Tests for the iconvault command line, run against a small mock of the server's API: argument handling, saved settings, every command, project lookup by name, batching, exit codes, and that the token is never printed.
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { mkdtemp, mkdir, readFile, stat, writeFile } from "node:fs/promises";
@@ -54,7 +54,7 @@ after(() => server.close());
 
 beforeEach(async () => {
   calls = [];
-  dir = await mkdtemp(path.join(tmpdir(), "svgsprite-test-"));
+  dir = await mkdtemp(path.join(tmpdir(), "iconvault-test-"));
   projects = [
     { id: ID_A, name: "Feather", prefix: "fth", iconCount: 3, purpose: "sprite", visibility: "public", owner: { displayName: "Ada" } },
     { id: ID_B, name: "Other", prefix: "oth", iconCount: 0, purpose: "font", visibility: "private", owner: { displayName: "Bob" } },
@@ -67,7 +67,7 @@ async function run(argv, extra = {}) {
   const out = [];
   const err = [];
   const code = await main(argv, {
-    env: { SVGSPRITE_CONFIG: path.join(dir, "config.json"), ...extra.env },
+    env: { ICONVAULT_CONFIG: path.join(dir, "config.json"), ...extra.env },
     home: dir,
     cwd: dir,
     stdout: { write: (s) => out.push(s) },
@@ -76,7 +76,7 @@ async function run(argv, extra = {}) {
   });
   return { code, out: out.join(""), err: err.join("") };
 }
-const withToken = { env: { SVGSPRITE_URL: undefined, SVGSPRITE_TOKEN: TOKEN } };
+const withToken = { env: { ICONVAULT_URL: undefined, ICONVAULT_TOKEN: TOKEN } };
 const cfgArgs = ["--url", "URL", "--token", TOKEN];
 const args = (...a) => a.map((x) => (x === "URL" ? base : x));
 
@@ -105,7 +105,7 @@ describe("help and unknown commands", () => {
   it("prints help, and exits 1 when no command was given", async () => {
     const none = await run([]);
     assert.equal(none.code, 1);
-    assert.match(none.out, /Usage: svgsprite/);
+    assert.match(none.out, /Usage: iconvault/);
     assert.equal((await run(["help"])).code, 0);
     assert.match((await run(["--help"])).out, /login/);
   });
@@ -158,9 +158,9 @@ describe("signing in", () => {
 
   it("settings come from flags, then the environment, then the saved file", async () => {
     await run(["login", ...args("--url", "URL", "--token", TOKEN)]);
-    const viaEnv = await run(["whoami"], { env: { SVGSPRITE_TOKEN: "isv_wrongwrongwrongwrongwrongwrongwrong1234" } });
+    const viaEnv = await run(["whoami"], { env: { ICONVAULT_TOKEN: "isv_wrongwrongwrongwrongwrongwrongwrong1234" } });
     assert.equal(viaEnv.code, 1);
-    const viaFlag = await run(["whoami", "--token", TOKEN], { env: { SVGSPRITE_TOKEN: "isv_wrongwrongwrongwrongwrongwrongwrong1234" } });
+    const viaFlag = await run(["whoami", "--token", TOKEN], { env: { ICONVAULT_TOKEN: "isv_wrongwrongwrongwrongwrongwrongwrong1234" } });
     assert.equal(viaFlag.code, 0, viaFlag.err);
   });
 
@@ -176,7 +176,7 @@ describe("signing in", () => {
     assert.equal(down.code, 1);
     assert.match(down.err, /Could not reach http:\/\/127\.0\.0\.1:1/);
     const bad = await run(["whoami", "--url", base, "--token", "isv_nopenopenopenopenopenopenopenopenopen12"]);
-    assert.match(bad.err, /Run "svgsprite login"/);
+    assert.match(bad.err, /Run "iconvault login"/);
     assert.equal(bad.err.includes("isv_nope"), false);
   });
 

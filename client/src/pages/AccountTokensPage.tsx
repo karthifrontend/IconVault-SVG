@@ -221,7 +221,7 @@ function ShownOnceDialog({ token, onClose }: { token: CreatedApiToken | null; on
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">
-            Use it with the command line: <code className="rounded bg-muted px-1 py-0.5 text-xs">svgsprite login</code> and paste it when asked, or set <code className="rounded bg-muted px-1 py-0.5 text-xs">SVGSPRITE_TOKEN</code>.
+            Use it with the command line: <code className="rounded bg-muted px-1 py-0.5 text-xs">iconvault login</code> and paste it when asked, or set <code className="rounded bg-muted px-1 py-0.5 text-xs">ICONVAULT_TOKEN</code>.
           </p>
           <DialogFooter>
             <Button variant="primary" onClick={onClose}>

@@ -162,18 +162,18 @@ Admins are not stored: a user is an admin when their email is in `ADMIN_EMAILS`.
 
 ## Command line
 
-`cli/` holds `svgsprite`, a dependency-free Node (18+) tool that uses the API with a personal token:
+`cli/` holds `iconvault`, a dependency-free Node (18+) tool that uses the API with a personal token:
 
 ```bash
-node cli/bin/svgsprite.mjs login --url http://localhost:5000   # paste a token from the web app (API tokens)
-node cli/bin/svgsprite.mjs projects
-node cli/bin/svgsprite.mjs upload "Feather" ./icons            # .svg and .zip files; folders are searched
-node cli/bin/svgsprite.mjs sprite "Feather" --out sprite.svg
-node cli/bin/svgsprite.mjs export "Feather" --out feather.zip
-node cli/bin/svgsprite.mjs import feather.zip
+node cli/bin/iconvault.mjs login --url http://localhost:5000   # paste a token from the web app (API tokens)
+node cli/bin/iconvault.mjs projects
+node cli/bin/iconvault.mjs upload "Feather" ./icons            # .svg and .zip files; folders are searched
+node cli/bin/iconvault.mjs sprite "Feather" --out sprite.svg
+node cli/bin/iconvault.mjs export "Feather" --out feather.zip
+node cli/bin/iconvault.mjs import feather.zip
 ```
 
-`svgsprite help` lists everything. For CI, set `SVGSPRITE_URL` and `SVGSPRITE_TOKEN` instead of running `login`. `npm link` inside `cli/` installs the `svgsprite` command. Exit code 0 is success, 1 an error, 2 some files could not be added.
+`iconvault help` lists everything. For CI, set `ICONVAULT_URL` and `ICONVAULT_TOKEN` instead of running `login`. `npm link` inside `cli/` installs the `iconvault` command. Exit code 0 is success, 1 an error, 2 some files could not be added.
 
 ## Maintenance scripts
 

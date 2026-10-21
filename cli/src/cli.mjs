@@ -1,4 +1,4 @@
-// The svgsprite command line. It talks to the server's HTTP API with a personal API token (create one in the web app under API tokens), so it needs no database access and can run anywhere, including CI. No dependencies: Node 18 or newer.
+// The iconvault command line. It talks to the server's HTTP API with a personal API token (create one in the web app under API tokens), so it needs no database access and can run anywhere, including CI. No dependencies: Node 18 or newer.
 //
 // `main(argv, ctx)` returns the exit code and takes everything it touches (fetch, files, streams, environment) through `ctx`, so the tests can run it against a mock server.
 import { mkdir, readFile, readdir, stat, writeFile, chmod, rm } from "node:fs/promises";
@@ -12,9 +12,9 @@ const BATCH_SIZE = 100;
 
 export class CliError extends Error {}
 
-const HELP = `svgsprite: command line for IconVault
+const HELP = `iconvault: command line for IconVault
 
-Usage: svgsprite <command> [options]
+Usage: iconvault <command> [options]
 
 Commands
   login [--url <server>] [--token <token>]   Save the server address and your API token
@@ -33,7 +33,7 @@ Commands
 
 <project> is a project id, or its exact name or prefix.
 
-Settings, strongest first: --url and --token, the SVGSPRITE_URL and SVGSPRITE_TOKEN environment variables, then the file saved by "login" (SVGSPRITE_CONFIG, or ~/.config/svgsprite/config.json). The default server is ${DEFAULT_URL}.
+Settings, strongest first: --url and --token, the ICONVAULT_URL and ICONVAULT_TOKEN environment variables, then the file saved by "login" (ICONVAULT_CONFIG, or ~/.config/iconvault/config.json). The default server is ${DEFAULT_URL}.
 Create tokens in the web app: account menu, API tokens. Tokens never have admin rights.`;
 
 // ---- arguments ----
@@ -55,7 +55,7 @@ export function parseArgs(argv, spec) {
     const [rawName, inline] = arg.slice(2).split(/=(.*)/s, 2);
     const name = rawName.startsWith("no-") && spec[rawName.slice(3)] === false ? rawName.slice(3) : rawName;
     const negated = name !== rawName;
-    if (!(name in spec)) throw new CliError(`Unknown option --${rawName}. Try "svgsprite help".`);
+    if (!(name in spec)) throw new CliError(`Unknown option --${rawName}. Try "iconvault help".`);
     if (spec[name] === true) {
       const value = inline ?? argv[++i];
       if (value === undefined || (inline === undefined && value.startsWith("--"))) throw new CliError(`--${name} needs a value.`);
@@ -70,7 +70,7 @@ export function parseArgs(argv, spec) {
 // ---- settings ----
 
 function configPath(ctx) {
-  return ctx.env.SVGSPRITE_CONFIG || path.join(ctx.home, ".config", "svgsprite", "config.json");
+  return ctx.env.ICONVAULT_CONFIG || path.join(ctx.home, ".config", "iconvault", "config.json");
 }
 
 async function readConfig(ctx) {
@@ -83,13 +83,13 @@ async function readConfig(ctx) {
 
 async function settings(ctx, options) {
   const saved = await readConfig(ctx);
-  const url = (options.url || ctx.env.SVGSPRITE_URL || saved.url || DEFAULT_URL).replace(/\/+$/, "");
-  const token = options.token || ctx.env.SVGSPRITE_TOKEN || saved.token || "";
+  const url = (options.url || ctx.env.ICONVAULT_URL || saved.url || DEFAULT_URL).replace(/\/+$/, "");
+  const token = options.token || ctx.env.ICONVAULT_TOKEN || saved.token || "";
   return { url, token };
 }
 
 function requireToken(cfg) {
-  if (!cfg.token) throw new CliError('Not signed in. Create an API token in the web app (account menu, API tokens), then run "svgsprite login".');
+  if (!cfg.token) throw new CliError('Not signed in. Create an API token in the web app (account menu, API tokens), then run "iconvault login".');
 }
 
 // ---- talking to the server ----
@@ -116,7 +116,7 @@ async function request(ctx, cfg, method, route, { body, form, raw = false } = {}
     } catch {
       // not JSON; keep the status message
     }
-    if (response.status === 401) message = `${message} Run "svgsprite login" with a valid API token.`;
+    if (response.status === 401) message = `${message} Run "iconvault login" with a valid API token.`;
     throw new CliError(message);
   }
   return raw ? response : response.json();
@@ -132,7 +132,7 @@ async function resolveProject(ctx, cfg, reference) {
   const wanted = reference.toLowerCase();
   let matches = projects.filter((p) => p.name.toLowerCase() === wanted);
   if (matches.length === 0) matches = projects.filter((p) => p.prefix.toLowerCase() === wanted);
-  if (matches.length === 0) throw new CliError(`No project named "${reference}". Run "svgsprite projects" to see yours.`);
+  if (matches.length === 0) throw new CliError(`No project named "${reference}". Run "iconvault projects" to see yours.`);
   if (matches.length > 1) throw new CliError(`"${reference}" matches ${matches.length} projects (${matches.map((p) => p.id).join(", ")}). Use the id.`);
   return { id: matches[0].id, label: matches[0].name };
 }
@@ -155,7 +155,7 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 // ---- commands ----
 
 async function askToken(ctx) {
-  if (!ctx.stdin) throw new CliError("Give the token with --token or the SVGSPRITE_TOKEN variable.");
+  if (!ctx.stdin) throw new CliError("Give the token with --token or the ICONVAULT_TOKEN variable.");
   const muted = new Writable({ write: (_chunk, _enc, done) => done() });
   ctx.stderr.write("API token (input is hidden): ");
   const rl = readline.createInterface({ input: ctx.stdin, output: muted, terminal: Boolean(ctx.stdin.isTTY) });
@@ -171,8 +171,8 @@ async function askToken(ctx) {
 const commands = {
   async login(ctx, argv) {
     const { options } = parseArgs(argv, { url: true, token: true });
-    const url = (options.url || ctx.env.SVGSPRITE_URL || (await readConfig(ctx)).url || DEFAULT_URL).replace(/\/+$/, "");
-    const token = options.token || ctx.env.SVGSPRITE_TOKEN || (await askToken(ctx));
+    const url = (options.url || ctx.env.ICONVAULT_URL || (await readConfig(ctx)).url || DEFAULT_URL).replace(/\/+$/, "");
+    const token = options.token || ctx.env.ICONVAULT_TOKEN || (await askToken(ctx));
     if (!token) throw new CliError("No token given.");
     if (!token.startsWith("isv_")) throw new CliError('That does not look like an API token (they start with "isv_"). Create one in the web app under API tokens.');
     const { user } = await request(ctx, { url, token }, "GET", "/api/auth/me");
@@ -345,7 +345,7 @@ export async function main(argv, ctx = {}) {
   }
   const command = commands[name];
   if (!command || !Object.hasOwn(commands, name)) {
-    context.stderr.write(`Unknown command "${name}". Try "svgsprite help".\n`);
+    context.stderr.write(`Unknown command "${name}". Try "iconvault help".\n`);
     return 1;
   }
   try {

@@ -15,14 +15,16 @@ import { getProjectDetail } from "./projectService.js";
 
 type Id = Types.ObjectId;
 
-export const ARCHIVE_FORMAT = "svg-sprite-compiler-project";
+export const ARCHIVE_FORMAT = "iconvault-project";
+// Exports made before the rename carry this name; they still import.
+const LEGACY_ARCHIVE_FORMAT = "svg-sprite-compiler-project";
 export const ARCHIVE_VERSION = 1;
 export const ARCHIVE_LIMITS = { maxIcons: 5000, maxTotalBytes: 100_000_000, maxEntryBytes: 1_000_000, maxFolders: 2000 };
 
 const folderPath = z.array(z.string().trim().min(1).max(100)).max(20);
 
 const manifestSchema = z.object({
-  format: z.literal(ARCHIVE_FORMAT),
+  format: z.enum([ARCHIVE_FORMAT, LEGACY_ARCHIVE_FORMAT]),
   version: z.literal(ARCHIVE_VERSION),
   project: createProjectSchema.pick({ name: true, description: true, prefix: true, color: true, purpose: true }),
   folders: z.array(folderPath).max(ARCHIVE_LIMITS.maxFolders).default([]),

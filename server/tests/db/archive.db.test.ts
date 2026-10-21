@@ -63,7 +63,7 @@ describe("project export, import and sprite (HTTP, throwaway database)", { skip:
       const files = unzipSync(new Uint8Array(zip));
       assert.deepEqual(Object.keys(files).sort(), ["icons/UI/Arrows/left.svg", "icons/UI/star.svg", "icons/home.svg", "project.json"]);
       const manifest = JSON.parse(strFromU8(files["project.json"] as Uint8Array));
-      assert.equal(manifest.format, "svg-sprite-compiler-project");
+      assert.equal(manifest.format, "iconvault-project");
       assert.deepEqual(manifest.project, { name: "Feather", description: "Line icons", prefix: "fth", color: "#7c3aed", purpose: "font" });
       assert.deepEqual(manifest.folders.map((f: string[]) => f.join("/")).sort(), ["Empty", "UI", "UI/Arrows"]);
       const left = manifest.icons.find((i: { name: string }) => i.name === "left");

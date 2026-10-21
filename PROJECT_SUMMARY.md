@@ -33,7 +33,7 @@ Status: all planned phases (0 to 8) and many follow-up changes are done. The cod
 | Tests | Node's built-in test runner with `tsx`; database tests run against throwaway MongoDB databases |
 
 ### Command line (`cli/`)
-`svgsprite`: a dependency-free Node 18+ tool that uses the HTTP API with a personal token (login, list projects, upload icons, build a sprite, export and import projects).
+`iconvault`: a dependency-free Node 18+ tool that uses the HTTP API with a personal token (login, list projects, upload icons, build a sprite, export and import projects).
 
 ### Environment
 - Server `.env`: `MONGODB_URI`, `SESSION_SECRET`, `GOOGLE_CLIENT_ID`, `MS_CLIENT_ID`, `MS_TENANT_ID`, `ADMIN_EMAILS`, `PORT`, `CORS_ORIGINS`, `TRUST_PROXY`, `RATE_LIMIT_DISABLED`.
@@ -49,7 +49,7 @@ Browser (React SPA)  --axios + Bearer session token-->  Express API  -->  MongoD
    |  builds sprites, ZIPs, previews                      |  validates (zod), cleans SVG (DOMPurify/SVGO),
    |  Google / Microsoft sign-in                          |  builds fonts (fantasticon), stores data
    v                                                      v
-Command line `svgsprite` ---- personal API token ----> same API (never admin rights)
+Command line `iconvault` ---- personal API token ----> same API (never admin rights)
 ```
 
 - **Sign-in:** the browser gets an ID token from Google or Microsoft; the server verifies it and returns its own session token. No passwords exist anywhere.
@@ -102,7 +102,7 @@ Command line `svgsprite` ---- personal API token ----> same API (never admin rig
 - Demo data: `npm run seed:demo` adds made-up users and projects for looking at these screens (removable with `-- --remove`).
 
 ### Command line
-`login`, `projects`, `upload`, `sprite`, `export`, `import`; for scripts and CI use `SVGSPRITE_URL` and `SVGSPRITE_TOKEN`.
+`login`, `projects`, `upload`, `sprite`, `export`, `import`; for scripts and CI use `ICONVAULT_URL` and `ICONVAULT_TOKEN`.
 
 ### Quality, accessibility and security
 - Keyboard-friendly menus and dialogs, labelled controls, colour-contrast checks, an `axe` check on every main screen; one 36 px control height; light, dark and system themes; works from phone width up.
