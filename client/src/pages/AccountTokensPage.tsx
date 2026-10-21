@@ -1,18 +1,19 @@
 // Personal API tokens for the command line and scripts: create one (the secret is shown once, with a copy button), see when each was last used, and revoke. A revoked token stops working at once.
 import { Copy, KeyRound, Plus } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { createToken, listTokens, revokeToken } from "../api/tokens";
-import type { ApiTokenItem, CreatedApiToken } from "../api/types";
+import { createToken, listTokens, revokeToken, signOutEverywhere } from "../api/tokens";
+import type { ApiTokenItem, ApiTokenScope, CreatedApiToken } from "../api/types";
 import { Button } from "../components/ui/Button";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 import Dialog from "../components/ui/Dialog";
 import DialogFooter from "../components/ui/DialogFooter";
-import { TextField } from "../components/ui/Fields";
+import { SelectField, TextField } from "../components/ui/Fields";
 import Badge from "../components/ui/Badge";
 import { useToast } from "../context/ToastContext";
 import { useResource } from "../hooks/useResource";
 import { copyText } from "../lib/clipboard";
 import { formatDate, formatRelative } from "../lib/format";
+import { replaceSessionToken } from "../lib/sessionToken";
 
 export default function AccountTokensPage() {
   const { showToast } = useToast();
@@ -20,6 +21,7 @@ export default function AccountTokensPage() {
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<CreatedApiToken | null>(null);
   const [revoking, setRevoking] = useState<ApiTokenItem | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
   const list = tokens.data?.tokens ?? [];
   const active = list.filter((token) => !token.revokedAt).length;
   const max = tokens.data?.maxActive ?? 10;
@@ -33,7 +35,7 @@ export default function AccountTokensPage() {
         </Button>
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
-        A token lets the command line or a script act as you: read and change your own projects and download public ones. It never has admin rights and cannot create other tokens. Treat it like a password, and revoke it if it leaks.
+        A token lets the command line or a script act as you. A read-only token can list and download; a read and write token can also change your projects. It expires after the time you choose, never has admin rights and cannot create other tokens. Treat it like a password, and revoke it if it leaks.
       </p>
 
       {tokens.error && !tokens.data ? (
@@ -62,10 +64,11 @@ export default function AccountTokensPage() {
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
                     {token.name}
-                    {token.revokedAt && <Badge>Revoked</Badge>}
+                    {token.revokedAt ? <Badge>Revoked</Badge> : isExpired(token) ? <Badge>Expired</Badge> : null}
+                    <Badge>{token.scope === "read" ? "Read-only" : "Read and write"}</Badge>
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    <span className="font-mono">{token.prefix}…</span> · created {formatDate(token.createdAt)} · {token.lastUsedAt ? `last used ${formatRelative(token.lastUsedAt)}` : "never used"}
+                    <span className="font-mono">{token.prefix}…</span> · created {formatDate(token.createdAt)} · {token.lastUsedAt ? `last used ${formatRelative(token.lastUsedAt)}` : "never used"} · {token.expiresAt ? `${isExpired(token) ? "expired" : "expires"} ${formatDate(token.expiresAt)}` : "never expires"}
                   </p>
                 </div>
                 {!token.revokedAt && (
@@ -79,6 +82,14 @@ export default function AccountTokensPage() {
         </>
       )}
 
+      <section className="mt-10 rounded-xl border border-border p-4">
+        <h2 className="text-base font-semibold">Sign out everywhere</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Ends every browser session of your account on all devices, for example after losing a laptop. This device stays signed in. API tokens are not affected; revoke them above.</p>
+        <Button className="mt-3" variant="destructive" onClick={() => setSigningOut(true)}>
+          Sign out of all other devices
+        </Button>
+      </section>
+
       <CreateTokenDialog
         open={creating}
         onClose={() => setCreating(false)}
@@ -88,6 +99,18 @@ export default function AccountTokensPage() {
         }}
       />
       <ShownOnceDialog token={created} onClose={() => setCreated(null)} />
+      <ConfirmDialog
+        open={signingOut}
+        title="Sign out of all other devices?"
+        message="Every other browser session of your account ends immediately. You stay signed in here."
+        confirmLabel="Sign out other devices"
+        destructive
+        onClose={() => setSigningOut(false)}
+        onConfirm={async () => {
+          replaceSessionToken(await signOutEverywhere());
+          showToast("Signed out of all other devices.", "success");
+        }}
+      />
       <ConfirmDialog
         open={revoking !== null}
         title={`Revoke “${revoking?.name ?? ""}”?`}
@@ -106,6 +129,17 @@ export default function AccountTokensPage() {
   );
 }
 
+function isExpired(token: ApiTokenItem): boolean {
+  return token.expiresAt !== null && new Date(token.expiresAt).getTime() <= Date.now();
+}
+
+const EXPIRY_CHOICES = [
+  { value: "30", label: "30 days" },
+  { value: "90", label: "90 days" },
+  { value: "365", label: "1 year" },
+  { value: "never", label: "Never" },
+];
+
 function CreateTokenDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (token: CreatedApiToken) => void }) {
   return (
     <Dialog open={open} onClose={onClose} title="New API token" size="sm">
@@ -116,6 +150,8 @@ function CreateTokenDialog({ open, onClose, onCreated }: { open: boolean; onClos
 
 function CreateForm({ onClose, onCreated }: { onClose: () => void; onCreated: (token: CreatedApiToken) => void }) {
   const [name, setName] = useState("");
+  const [scope, setScope] = useState<ApiTokenScope>("read");
+  const [expiry, setExpiry] = useState("90");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -128,7 +164,7 @@ function CreateForm({ onClose, onCreated }: { onClose: () => void; onCreated: (t
     setBusy(true);
     setError(null);
     try {
-      onCreated(await createToken(name.trim()));
+      onCreated(await createToken(name.trim(), scope, expiry === "never" ? null : Number(expiry)));
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create the token.");
@@ -140,6 +176,17 @@ function CreateForm({ onClose, onCreated }: { onClose: () => void; onCreated: (t
   return (
     <form onSubmit={submit} className="space-y-4">
       <TextField label="Name" value={name} maxLength={60} autoComplete="off" autoFocus onChange={(event) => setName(event.target.value)} hint="Helps you recognise it later, e.g. “CI server”." />
+      <SelectField label="Access" value={scope} onChange={(event) => setScope(event.target.value as ApiTokenScope)} hint="Uploading and importing from the command line need read and write.">
+        <option value="read">Read-only</option>
+        <option value="write">Read and write</option>
+      </SelectField>
+      <SelectField label="Expires after" value={expiry} onChange={(event) => setExpiry(event.target.value)} hint="A token that expires limits the damage if it leaks.">
+        {EXPIRY_CHOICES.map((choice) => (
+          <option key={choice.value} value={choice.value}>
+            {choice.label}
+          </option>
+        ))}
+      </SelectField>
       {error && (
         <p role="alert" className="text-sm font-medium text-destructive">
           {error}

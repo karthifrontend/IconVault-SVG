@@ -8,6 +8,7 @@ import Icon, { type IconDoc } from "../models/Icon.js";
 import IconVersion from "../models/IconVersion.js";
 import Project from "../models/Project.js";
 import { deleteIconsAndVersions } from "./cascade.js";
+import { assertIconRoom } from "../lib/quotas.js";
 import { assertFolderInProject, descendantIds, ensureFolderPath } from "./folderService.js";
 import { prepareSvg, type PreparedSvg } from "./svgPipeline.js";
 import { buildZip, readSvgsFromZip } from "./zipService.js";
@@ -127,6 +128,7 @@ export async function importSvg(projectId: Id, input: ImportInput, options: Impo
       finalName = `${name.slice(0, 100 - ` (${free.n})`.length)} (${free.n})`;
     }
 
+    await assertIconRoom(projectId);
     try {
       const icon = await Icon.create({
         projectId,

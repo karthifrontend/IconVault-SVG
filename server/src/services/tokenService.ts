@@ -4,13 +4,15 @@ import { MAX_ACTIVE_TOKENS_PER_USER, TOKEN_DISPLAY_LENGTH, generateToken, hashTo
 import { ConflictError, NotFoundError } from "../lib/errors.js";
 import ApiToken, { type ApiTokenDoc } from "../models/ApiToken.js";
 
-type Row = Pick<ApiTokenDoc, "name" | "prefix" | "lastUsedAt" | "revokedAt"> & { _id: Types.ObjectId; createdAt: Date };
+type Row = Pick<ApiTokenDoc, "name" | "prefix" | "lastUsedAt" | "revokedAt"> & { scope?: ApiTokenDoc["scope"]; expiresAt?: Date | null } & { _id: Types.ObjectId; createdAt: Date };
 
 export function serializeToken(token: Row) {
   return {
     id: String(token._id),
     name: token.name,
     prefix: token.prefix,
+    scope: token.scope ?? "write",
+    expiresAt: token.expiresAt ?? null,
     createdAt: token.createdAt,
     lastUsedAt: token.lastUsedAt ?? null,
     revokedAt: token.revokedAt ?? null,
@@ -22,11 +24,13 @@ export async function listTokens(userId: Types.ObjectId) {
   return { tokens: rows.map((row) => serializeToken(row as Row)), maxActive: MAX_ACTIVE_TOKENS_PER_USER };
 }
 
-export async function createToken(userId: Types.ObjectId, name: string) {
+export type TokenOptions = { scope: "read" | "write"; expiresInDays: number | null };
+
+export async function createToken(userId: Types.ObjectId, name: string, options: TokenOptions) {
   const active = await ApiToken.countDocuments({ userId, revokedAt: null });
   if (active >= MAX_ACTIVE_TOKENS_PER_USER) throw new ConflictError(`You can have ${MAX_ACTIVE_TOKENS_PER_USER} active tokens at most. Revoke one first.`);
   const token = generateToken();
-  const row = await ApiToken.create({ userId, name, tokenHash: hashToken(token), prefix: token.slice(0, TOKEN_DISPLAY_LENGTH) });
+  const row = await ApiToken.create({ userId, name, tokenHash: hashToken(token), scope: options.scope, expiresAt: options.expiresInDays === null ? null : new Date(Date.now() + options.expiresInDays * 86_400_000), prefix: token.slice(0, TOKEN_DISPLAY_LENGTH) });
   return { ...serializeToken(row as unknown as Row), token };
 }
 

@@ -13,7 +13,14 @@ router.use(requireDb, requireUser, (req, _res, next) => {
   next();
 });
 
-const createSchema = z.object({ name: z.string().trim().min(1, "is required").max(60) }).strict();
+// A new token is read-only and lasts 90 days unless the caller asks otherwise; expiresInDays: null means it never expires.
+const createSchema = z
+  .object({
+    name: z.string().trim().min(1, "is required").max(60),
+    scope: z.enum(["read", "write"]).default("read"),
+    expiresInDays: z.number().int().min(1).max(365).nullable().default(90),
+  })
+  .strict();
 const me = (req: Parameters<typeof actorOf>[0]) => parseObjectId(actorOf(req).id);
 
 router.get("/", async (req, res) => {
@@ -21,8 +28,8 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  const { name } = createSchema.parse(req.body ?? {});
-  res.status(201).json(await createToken(me(req), name));
+  const { name, scope, expiresInDays } = createSchema.parse(req.body ?? {});
+  res.status(201).json(await createToken(me(req), name, { scope, expiresInDays }));
 });
 
 router.delete("/:tokenId", async (req, res) => {

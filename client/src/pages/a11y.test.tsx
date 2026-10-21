@@ -66,7 +66,7 @@ beforeEach(() => {
   vi.mocked(iconsApi.getIcon).mockResolvedValue({ ...(icons[0] as ReturnType<typeof makeIcon>), svg: SVG, versions: [{ id: "v1", byteSize: 100, createdAt: "2026-10-10T10:00:00.000Z" }] });
   vi.mocked(adminApi.listUsers).mockResolvedValue({ users: [{ id: "u1", displayName: "Ada Lovelace", email: "ada@example.com", provider: "google", picture: null, createdAt: "2026-10-01T10:00:00.000Z", lastLoginAt: "2026-10-19T10:00:00.000Z", projectCount: 2, iconCount: 9, activeTokens: 1, isAdmin: true, isSelf: true }, { id: "u2", displayName: "Bob", email: "bob@example.com", provider: "microsoft", picture: null, createdAt: "2026-10-01T10:00:00.000Z", lastLoginAt: null, projectCount: 1, iconCount: 2, activeTokens: 0, isAdmin: false, isSelf: false }], total: 2, page: 1, limit: 25 });
   vi.mocked(adminApi.getAdminStats).mockResolvedValue({ users: 5, admins: 1, members: 4, googleUsers: 3, microsoftUsers: 1, projects: 7, publicProjects: 3, privateProjects: 4, spriteProjects: 4, fontProjects: 3, draftProjects: 1, icons: 42, fontBuilds: 2, activeTokens: 3 });
-  vi.mocked(tokensApi.listTokens).mockResolvedValue({ tokens: [{ id: "t1", name: "CI", prefix: "isv_AbCd", createdAt: "2026-10-01T10:00:00.000Z", lastUsedAt: null, revokedAt: null }, { id: "t2", name: "Old", prefix: "isv_ZzZz", createdAt: "2026-10-01T10:00:00.000Z", lastUsedAt: "2026-10-05T10:00:00.000Z", revokedAt: "2026-10-10T10:00:00.000Z" }], maxActive: 10 });
+  vi.mocked(tokensApi.listTokens).mockResolvedValue({ tokens: [{ id: "t1", name: "CI", prefix: "isv_AbCd", scope: "read", expiresAt: null, createdAt: "2026-10-01T10:00:00.000Z", lastUsedAt: null, revokedAt: null }, { id: "t2", name: "Old", prefix: "isv_ZzZz", scope: "read", expiresAt: null, createdAt: "2026-10-01T10:00:00.000Z", lastUsedAt: "2026-10-05T10:00:00.000Z", revokedAt: "2026-10-10T10:00:00.000Z" }], maxActive: 10 });
   vi.mocked(fontsApi.buildFont).mockResolvedValue({ fontName: "Feather", prefix: "fth", iconCount: 2, warnings: [{ icon: "Home", message: "Uses strokes." }], css: "@font-face{}", preview: { format: "woff2", base64: "AA==" }, sizes: { woff2: 1000 }, codepoints: [{ id: "i1", name: "Home", slug: "home", codepoint: "E001", className: "fth-home", isNew: true }, { id: "i2", name: "Star", slug: "star", codepoint: "E002", className: "fth-star", isNew: false }] });
   vi.mocked(fontsApi.listFontBuilds).mockResolvedValue([{ id: "b1", version: 1, fontName: "Feather", iconCount: 2, formats: ["woff2", "ttf"], size: 4600, createdAt: "2026-10-20T12:00:00.000Z" }]);
   vi.mocked(spritesApi.listSpriteBuilds).mockResolvedValue([{ id: "s1", version: 1, mode: "symbol", iconCount: 2, size: 2100, createdAt: "2026-10-20T12:00:00.000Z" }]);
@@ -295,7 +295,7 @@ describe("admin and tokens", () => {
   });
 
   it("the one-time token dialog", async () => {
-    vi.mocked(tokensApi.createToken).mockResolvedValue({ id: "t3", name: "New", prefix: "isv_Nnnn", createdAt: "2026-10-20T10:00:00.000Z", lastUsedAt: null, revokedAt: null, token: "isv_SECRETSECRETSECRETSECRETSECRETSECRETSECRET1" });
+    vi.mocked(tokensApi.createToken).mockResolvedValue({ id: "t3", name: "New", prefix: "isv_Nnnn", scope: "read", expiresAt: null, createdAt: "2026-10-20T10:00:00.000Z", lastUsedAt: null, revokedAt: null, token: "isv_SECRETSECRETSECRETSECRETSECRETSECRETSECRET1" });
     renderAt("/account/tokens", <AccountTokensPage />);
     await userEvent.click(await screen.findByRole("button", { name: "New token" }));
     const dialog = screen.getByRole("dialog");

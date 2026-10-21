@@ -25,17 +25,17 @@ Date: 2026-10-21 · Scope: `server/`, `client/`, `cli/`, repo hygiene · Commit 
 
 ## Medium
 
-### M1. Sessions are bearer JWTs in `localStorage` and cannot be revoked
+### M1. Sessions are bearer JWTs in `localStorage` and cannot be revoked — FIXED 2026-10-21 (`User.tokensValidAfter` plus `POST /api/auth/me/sign-out-everywhere`; button on the API tokens page. Still in `localStorage`, and the 7-day TTL is unchanged)
 - **Evidence:** `AuthContext.tsx` stores `sessionToken` in `localStorage`; `lib/session.ts` issues a 7-day HS256 JWT with no server-side session record. Signing out only deletes the browser copy.
 - **Impact:** any XSS (or a stolen laptop profile) yields a 7-day credential that the server cannot invalidate. Deleting or demoting a user takes effect only because `requireUser` reloads the user, not because the token dies.
 - **Fix:** shorten the TTL (e.g. 1 day) with refresh, or add a `sessionVersion` / `tokenValidAfter` on `User` checked in `requireUser` so "sign out everywhere" and password-less revocation work. Longer term, move to an `HttpOnly; SameSite=Lax` cookie.
 
-### M2. API tokens have full user write access, no scopes, no expiry
+### M2. API tokens have full user write access, no scopes, no expiry — FIXED 2026-10-21 (tokens are `read` or `write`, default read-only and 90 days; older tokens keep full access and no expiry)
 - **Evidence:** `requireUser` accepts an `isv_…` token as the user for every route except token management and admin. `ApiToken` has no `expiresAt` or scope field; limit is 10 active per user.
 - **Impact:** a leaked CI token can edit or delete every project the user owns, forever, until noticed.
 - **Fix:** add `scopes` (`read`, `write`) and an optional `expiresAt` (default 90 days); show last-used IP/date; reject write routes for read tokens.
 
-### M3. No per-user quotas on storage or object counts
+### M3. No per-user quotas on storage or object counts — FIXED 2026-10-21 (200 projects per user, 5000 icons and 2000 folders per project, changeable with `MAX_PROJECTS_PER_USER`, `MAX_ICONS_PER_PROJECT`, `MAX_FOLDERS_PER_PROJECT`. No byte budget per user yet)
 - **Evidence:** limits exist per request (1 MB per SVG, 500 SVGs per ZIP, 5000 icons per project import, 20 sprite builds × 12 MB per project) but not per user. There is no cap on projects per user, icons per project, folders per project, or total bytes.
 - **Impact:** one account can fill the MongoDB Atlas cluster (importing 100 MB archives repeatedly, creating unlimited projects). Sign-up is open to anyone with a Google/Microsoft account.
 - **Fix:** add `MAX_PROJECTS_PER_USER`, `MAX_ICONS_PER_PROJECT`, `MAX_FOLDERS_PER_PROJECT` and a per-user byte budget enforced in `createProject`, `importSvg`, `importProject`, history uploads; return 409/413 with a clear message.
@@ -65,12 +65,12 @@ Date: 2026-10-21 · Scope: `server/`, `client/`, `cli/`, repo hygiene · Commit 
 - **Evidence:** the repo root has a `package-lock.json` with no `package.json`; `npm audit` flags `brace-expansion` and `braces` there.
 - **Fix:** delete it (it is not used by `client/`, `server/` or `cli/`).
 
-### L3. SVG sanitizer allows `<use href="#…">` and `style` attributes
+### L3. SVG sanitizer allows `<use href="#…">` and `style` attributes — FIXED 2026-10-21 (position, z-index, inset, pointer-events, filter, animation and similar style properties removed; limits of 5000 elements, 32 levels and 50,000 drawn elements after `<use>` expansion)
 - **Evidence:** `svgSanitizer.ts` strips external `href`s, `url()` that is not `#…`, `expression(`, `@import`, `javascript:`; allows `use`, `style`, `mask`, `pattern`, `text`.
 - **Impact:** no script execution path was found (scripts, event handlers, `foreignObject`, `image`, `filter`, `<style>` are removed; entities rejected). Remaining risk is visual only: a hostile icon can use huge `transform`/`pattern` sizes to slow rendering, and `style="position:fixed;..."` can overlay UI if an icon is ever inlined into the app page (see L4).
 - **Fix:** drop `position`, `z-index`, `top/left`, `pointer-events` declarations in `cleanStyleAttribute`; cap element count (e.g. 5000) and nesting depth after parsing.
 
-### L4. `SvgPreview` injects sanitized markup with `dangerouslySetInnerHTML`
+### L4. `SvgPreview` injects sanitized markup with `dangerouslySetInnerHTML` — FIXED 2026-10-21 (ids are renamed per preview and the box clips and contains its content. Kept inline instead of `<img>` so `currentColor` icons still follow the theme)
 - **Evidence:** `client/src/components/ui/SvgPreview.tsx:26`. The input is server-sanitized, but `id`s inside icons are not namespaced, so two icons on one page with the same `id` (`a`, `clip0`) can steal each other's gradients/clip-paths.
 - **Fix:** render previews in `<img src="data:image/svg+xml,…">` (scripts and external loads are disabled in image context and ids are isolated), or namespace ids per icon like the sprite builder does.
 
@@ -102,6 +102,14 @@ Date: 2026-10-21 · Scope: `server/`, `client/`, `cli/`, repo hygiene · Commit 
 6. **NoSQL injection:** search input goes through `escapeRegExp`; ids are parsed with `parseObjectId`; request bodies use zod (several `.strict()`).
 
 ---
+
+## Still open after the 2026-10-21 fixes
+
+- M4 rate limiting store and `TRUST_PROXY` (deployment setting; shared store only needed with several instances)
+- M6 regression test for multi-tenant Microsoft admin
+- L1, L5, L7, L8
+- Sessions still live in `localStorage` (move to an `HttpOnly` cookie if XSS risk matters more than convenience)
+- No per-user byte budget; the admin bulk transfer does not check the recipient's project limit
 
 ## Suggested order of work
 

@@ -56,19 +56,27 @@ export async function signSession(claims: SessionClaims): Promise<string> {
     .sign(getSecret());
 }
 
-// Verifies the session token and returns the claims if valid.
-export async function verifySession(token: string): Promise<SessionClaims> {
+// Verifies the session token and returns the claims and the time it was issued (seconds since 1970).
+export async function verifySessionToken(token: string): Promise<{ claims: SessionClaims; issuedAt: number }> {
   const { payload } = await jwtVerify(token, getSecret(), {
     issuer: ISSUER,
     audience: AUDIENCE,
   });
-  if (!isSessionClaims(payload)) {
+  if (!isSessionClaims(payload) || typeof payload.iat !== "number") {
     throw new Error("Session token is malformed.");
   }
   return {
-    sub: payload.sub,
-    email: payload.email,
-    provider: payload.provider,
-    providerId: payload.providerId,
+    claims: {
+      sub: payload.sub,
+      email: payload.email,
+      provider: payload.provider,
+      providerId: payload.providerId,
+    },
+    issuedAt: payload.iat,
   };
+}
+
+// Verifies the session token and returns the claims if valid.
+export async function verifySession(token: string): Promise<SessionClaims> {
+  return (await verifySessionToken(token)).claims;
 }

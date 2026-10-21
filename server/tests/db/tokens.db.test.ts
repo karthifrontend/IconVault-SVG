@@ -20,7 +20,7 @@ describe("API tokens (HTTP, throwaway database)", { skip: hasDatabase ? false : 
   after(() => h?.stop());
 
   const create = async (user: TestUser, name = "CI") => {
-    const r = await h.call(user.token, "POST", "/api/tokens", { name });
+    const r = await h.call(user.token, "POST", "/api/tokens", { name, scope: "write" });
     assert.equal(r.status, 201, JSON.stringify(r.body));
     return r.body as { id: string; token: string; prefix: string; name: string };
   };

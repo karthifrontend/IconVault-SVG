@@ -4,6 +4,7 @@ import mongoose, { type HydratedDocument, type Types } from "mongoose";
 import { z } from "zod";
 import { BadRequestError } from "../lib/errors.js";
 import type { SignedInActor } from "../lib/http.js";
+import { assertProjectRoom } from "../lib/quotas.js";
 import { codepointSchema, createProjectSchema } from "../lib/validation.js";
 import Folder from "../models/Folder.js";
 import Icon from "../models/Icon.js";
@@ -133,6 +134,7 @@ export function readArchive(buffer: Buffer): { manifest: Manifest; files: Map<st
 export async function importProject(actor: SignedInActor, buffer: Buffer): Promise<ImportResult> {
   const { manifest, files } = readArchive(buffer);
   const ownerId = new mongoose.Types.ObjectId(actor.id);
+  await assertProjectRoom(ownerId);
   const sameName = await Project.exists({ ownerId, name: manifest.project.name });
   const project = await Project.create({
     ...manifest.project,

@@ -55,6 +55,11 @@ const userSchema = new Schema(
       type: String,
       default: null,
     },
+    // Session tokens issued before this moment are refused ("sign out everywhere"). Null means none were revoked.
+    tokensValidAfter: {
+      type: Date,
+      default: null,
+    },
     // The date and time when the user last logged in.
     lastLoginAt: {
       type: Date,

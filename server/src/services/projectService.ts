@@ -7,6 +7,7 @@ import Folder from "../models/Folder.js";
 import Icon from "../models/Icon.js";
 import Project, { type ProjectDoc } from "../models/Project.js";
 import User from "../models/User.js";
+import { assertProjectRoom } from "../lib/quotas.js";
 import { deleteIconsAndVersions } from "./cascade.js";
 import { deleteFontBuilds } from "./fontHistory.js";
 import { deleteSpriteBuilds } from "./spriteHistory.js";
@@ -164,6 +165,7 @@ export async function getProjectDetail(project: HydratedDocument<ProjectDoc>, ac
 }
 
 export async function createProject(actor: SignedInActor, input: CreateProjectInput) {
+  await assertProjectRoom(actor.id);
   const project = await Project.create({ ...input, ownerId: new mongoose.Types.ObjectId(actor.id) });
   return getProjectDetail(project, actor);
 }
@@ -188,6 +190,7 @@ export async function deleteProject(project: HydratedDocument<ProjectDoc>) {
 
 // Copies a project the actor can view into a new private project they own: folders (parents first) and active icons. Versions, the trash and build history are not copied.
 export async function duplicateProject(source: HydratedDocument<ProjectDoc>, actor: SignedInActor) {
+  await assertProjectRoom(actor.id);
   const copy = await Project.create({
     ownerId: new mongoose.Types.ObjectId(actor.id),
     name: `${source.name} (Copy)`.slice(0, 100),

@@ -163,3 +163,34 @@ describe("inspectSvg", () => {
     assert.throws(() => inspectSvg("<div/>"), /could not be parsed/);
   });
 });
+
+describe("sanitizeSvg: shape limits and style properties", () => {
+  it("removes style properties that could move an icon out of its box", () => {
+    const { svg } = sanitizeSvg(wrap('<path d="M0 0h1v1z" style="fill:red;position:fixed;top:0;left:0;z-index:9999;pointer-events:none;filter:blur(2px)"/>'));
+    assert.match(svg, /fill:red/);
+    assert.doesNotMatch(svg, /position|z-index|top:|left:|pointer-events|filter/i);
+  });
+
+  it("refuses more than 5000 elements", () => {
+    assert.throws(() => sanitizeSvg(wrap('<path d="M0 0h1v1z"/>'.repeat(5001))), /more than 5000 elements/);
+    assert.doesNotThrow(() => sanitizeSvg(wrap('<path d="M0 0h1v1z"/>'.repeat(200))));
+  });
+
+  it("refuses elements nested too deeply", () => {
+    const deep = "<g>".repeat(40) + '<path d="M0 0h1v1z"/>' + "</g>".repeat(40);
+    assert.throws(() => sanitizeSvg(wrap(deep)), /nested more than 32/);
+    const fine = "<g>".repeat(10) + '<path d="M0 0h1v1z"/>' + "</g>".repeat(10);
+    assert.doesNotThrow(() => sanitizeSvg(wrap(fine)));
+  });
+
+  it("refuses <use> chains that multiply", () => {
+    let defs = '<g id="l0"><path d="M0 0h1v1z"/></g>';
+    for (let i = 1; i <= 12; i += 1) defs += `<g id="l${i}"><use href="#l${i - 1}"/><use href="#l${i - 1}"/><use href="#l${i - 1}"/><use href="#l${i - 1}"/></g>`;
+    assert.throws(() => sanitizeSvg(wrap(`<defs>${defs}</defs><use href="#l12"/>`)), /too many repeated <use>/);
+  });
+
+  it("refuses an element that uses itself, and still accepts an ordinary <use>", () => {
+    assert.throws(() => sanitizeSvg(wrap('<g id="a"><use href="#a"/></g>')), /uses itself/);
+    assert.doesNotThrow(() => sanitizeSvg(wrap('<defs><path id="p" d="M0 0h1v1z"/></defs><use href="#p"/><use href="#p" x="5"/>')));
+  });
+});

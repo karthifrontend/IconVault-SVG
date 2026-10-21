@@ -1,6 +1,7 @@
 // Folder rules: names are unique among siblings, a folder can never move into itself or its own subfolder, and deleting a folder moves its icons to the project root instead of deleting them.
 import mongoose, { type HydratedDocument, type Types } from "mongoose";
 import { BadRequestError, ConflictError } from "../lib/errors.js";
+import { assertFolderRoom } from "../lib/quotas.js";
 import Folder, { type FolderDoc } from "../models/Folder.js";
 import Icon from "../models/Icon.js";
 
@@ -54,6 +55,7 @@ export async function listFolders(projectId: Id) {
 export async function createFolder(projectId: Id, input: { name: string; parentId: Id | null }): Promise<FolderDocument> {
   await assertFolderInProject(projectId, input.parentId);
   await assertNameFree(projectId, input.parentId, input.name);
+  await assertFolderRoom(projectId);
   return Folder.create({
     projectId,
     parentId: input.parentId,
@@ -138,6 +140,7 @@ export async function ensureFolderPath(
     if (existing) {
       id = existing._id;
     } else {
+      await assertFolderRoom(projectId);
       const created = await Folder.create({ projectId, parentId, name, orderIndex: await nextOrderIndex(projectId, parentId) });
       id = created._id;
       state.created += 1;

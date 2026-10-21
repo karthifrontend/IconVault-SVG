@@ -194,7 +194,8 @@ export type AdminStats = { users: number; admins: number; members: number; googl
 export type BulkProjectsResult = { requested: number; done: number; failed: { id: string; name: string; message: string }[]; deletedIcons?: number };
 export type DeleteUserResult = { deletedProjects: number; deletedIcons: number; transferredProjects: number; revokedTokens: number };
 
-export type ApiTokenItem = { id: string; name: string; prefix: string; createdAt: string; lastUsedAt: string | null; revokedAt: string | null };
+export type ApiTokenScope = "read" | "write";
+export type ApiTokenItem = { id: string; name: string; prefix: string; scope: ApiTokenScope; expiresAt: string | null; createdAt: string; lastUsedAt: string | null; revokedAt: string | null };
 export type ApiTokenList = { tokens: ApiTokenItem[]; maxActive: number };
 // Returned once, when the token is created; it cannot be shown again.
 export type CreatedApiToken = ApiTokenItem & { token: string };

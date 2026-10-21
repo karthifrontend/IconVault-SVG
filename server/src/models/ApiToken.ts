@@ -10,6 +10,10 @@ const apiTokenSchema = new Schema(
     tokenHash: { type: String, required: true, unique: true },
     // The first characters of the token, so the user can tell tokens apart in a list.
     prefix: { type: String, required: true },
+    // "read" tokens may only read; "write" tokens may also change data. Tokens made before scopes existed keep full access.
+    scope: { type: String, enum: ["read", "write"], default: "write" },
+    // After this moment the token stops working. Null means it never expires (only tokens made before expiry existed, or made with "never").
+    expiresAt: { type: Date, default: null },
     lastUsedAt: { type: Date, default: null },
     revokedAt: { type: Date, default: null },
   },

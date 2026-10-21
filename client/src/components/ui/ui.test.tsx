@@ -253,6 +253,26 @@ describe("SvgPreview", () => {
     expect(wrapper).toHaveAttribute("aria-hidden", "true");
   });
 
+  it("gives each preview its own ids, so two icons with the same id cannot take each other's gradients", () => {
+    const gradient = '<svg viewBox="0 0 24 24"><defs><linearGradient id="a"><stop offset="0"/></linearGradient></defs><path fill="url(#a)" d="M0 0h24v24z"/></svg>';
+    const { container } = render(
+      <>
+        <SvgPreview svg={gradient} />
+        <SvgPreview svg={gradient} />
+      </>,
+    );
+    const ids = Array.from(container.querySelectorAll("linearGradient")).map((el) => el.id);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+    const fills = Array.from(container.querySelectorAll("path")).map((el) => el.getAttribute("fill"));
+    expect(fills).toEqual(ids.map((id) => `url(#${id})`));
+  });
+
+  it("clips and contains its content to its own box", () => {
+    const { container } = render(<SvgPreview svg={svg} />);
+    expect(container.firstElementChild).toHaveClass("overflow-hidden");
+  });
+
   it("becomes an image with a name when given a label", () => {
     render(<SvgPreview svg={svg} label="Arrow left" />);
     expect(screen.getByRole("img", { name: "Arrow left" })).toBeInTheDocument();

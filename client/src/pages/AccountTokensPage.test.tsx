@@ -7,13 +7,15 @@ import * as tokensApi from "../api/tokens";
 import type { ApiTokenItem } from "../api/types";
 import { ToastProvider } from "../context/ToastContext";
 import * as clipboard from "../lib/clipboard";
+import * as sessionToken from "../lib/sessionToken";
 import AccountTokensPage from "./AccountTokensPage";
 
 vi.mock("../api/tokens");
 vi.mock("../lib/clipboard");
+vi.mock("../lib/sessionToken");
 
 const listTokens = vi.mocked(tokensApi.listTokens);
-const token = (over: Partial<ApiTokenItem> = {}): ApiTokenItem => ({ id: "t1", name: "CI server", prefix: "isv_AbCd", createdAt: "2026-10-01T10:00:00.000Z", lastUsedAt: null, revokedAt: null, ...over });
+const token = (over: Partial<ApiTokenItem> = {}): ApiTokenItem => ({ id: "t1", name: "CI server", prefix: "isv_AbCd", scope: "read", expiresAt: null, createdAt: "2026-10-01T10:00:00.000Z", lastUsedAt: null, revokedAt: null, ...over });
 const SECRET = "isv_SECRETSECRETSECRETSECRETSECRETSECRETSECRET1";
 
 function renderPage() {
@@ -78,7 +80,7 @@ describe("creating", () => {
 
   it("shows the secret once, lets you copy it, and reloads the list", async () => {
     await createOne();
-    expect(tokensApi.createToken).toHaveBeenCalledWith("Build box");
+    expect(tokensApi.createToken).toHaveBeenCalledWith("Build box", "read", 90);
     const dialog = await screen.findByRole("dialog", { name: "Copy your new token" });
     expect(within(dialog).getByLabelText("Your new token")).toHaveValue(SECRET);
     await userEvent.click(within(dialog).getByRole("button", { name: "Copy" }));
@@ -101,6 +103,56 @@ describe("creating", () => {
     await userEvent.type(within(dialog).getByLabelText("Name"), "x");
     await userEvent.click(within(dialog).getByRole("button", { name: "Create token" }));
     expect(await within(dialog).findByText(/10 active tokens at most/)).toBeInTheDocument();
+  });
+});
+
+describe("access and expiry", () => {
+  it("creates a read and write token that never expires when asked", async () => {
+    vi.mocked(tokensApi.createToken).mockResolvedValue({ ...token({ id: "t3", name: "Deploy" }), token: SECRET });
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: "New token" }));
+    const dialog = screen.getByRole("dialog", { name: "New API token" });
+    expect(within(dialog).getByLabelText("Access")).toHaveValue("read");
+    expect(within(dialog).getByLabelText("Expires after")).toHaveValue("90");
+    await userEvent.type(within(dialog).getByLabelText("Name"), "Deploy");
+    await userEvent.selectOptions(within(dialog).getByLabelText("Access"), "write");
+    await userEvent.selectOptions(within(dialog).getByLabelText("Expires after"), "never");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create token" }));
+    await waitFor(() => expect(tokensApi.createToken).toHaveBeenCalledWith("Deploy", "write", null));
+  });
+
+  it("shows each token's access and when it expires", async () => {
+    listTokens.mockResolvedValue({
+      tokens: [
+        token({ id: "a", name: "Reader", scope: "read", expiresAt: "2099-01-01T00:00:00.000Z" }),
+        token({ id: "b", name: "Writer", scope: "write", expiresAt: null }),
+        token({ id: "c", name: "Stale", scope: "read", expiresAt: "2020-01-01T00:00:00.000Z" }),
+      ],
+      maxActive: 10,
+    });
+    renderPage();
+    const reader = (await screen.findByText("Reader")).closest("li") as HTMLElement;
+    expect(within(reader).getByText("Read-only")).toBeInTheDocument();
+    expect(within(reader).getByText(/expires/)).toBeInTheDocument();
+    const writer = screen.getByText("Writer").closest("li") as HTMLElement;
+    expect(within(writer).getByText("Read and write")).toBeInTheDocument();
+    expect(within(writer).getByText(/never expires/)).toBeInTheDocument();
+    const stale = screen.getByText("Stale").closest("li") as HTMLElement;
+    expect(within(stale).getByText("Expired")).toBeInTheDocument();
+  });
+});
+
+describe("sign out everywhere", () => {
+  it("asks first, then signs the other devices out and keeps this one on the new token", async () => {
+    vi.mocked(tokensApi.signOutEverywhere).mockResolvedValue("fresh-session-token");
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: "Sign out of all other devices" }));
+    const dialog = screen.getByRole("dialog", { name: "Sign out of all other devices?" });
+    expect(tokensApi.signOutEverywhere).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Sign out other devices" }));
+    expect(tokensApi.signOutEverywhere).toHaveBeenCalledTimes(1);
+    expect(sessionToken.replaceSessionToken).toHaveBeenCalledWith("fresh-session-token");
+    expect(await screen.findByText("Signed out of all other devices.")).toBeInTheDocument();
   });
 });
 

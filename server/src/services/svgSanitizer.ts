@@ -19,6 +19,11 @@ export type SanitizedSvg = SvgInfo & { svg: string };
 // Largest markup accepted for one icon, in bytes.
 export const MAX_SVG_BYTES = 1_000_000;
 
+// Shape limits, so one icon cannot make a browser stall. MAX_EXPANDED counts the elements drawn once every <use> is replaced by what it points to (nested <use> can multiply: ten levels that each use the one below make a thousand copies).
+export const MAX_ELEMENTS = 5_000;
+export const MAX_DEPTH = 32;
+export const MAX_EXPANDED = 50_000;
+
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 const window = new JSDOM("").window;
@@ -48,6 +53,8 @@ const ALLOWED_ATTR = [
 // Style declarations and attribute values that must never survive.
 const BAD_STYLE_DECLARATION = /url\(\s*['"]?\s*(?!#)|expression\s*\(|javascript:|@import|behavior\s*:|-moz-binding/i;
 const EXTERNAL_URL_VALUE = /url\(\s*['"]?\s*(?!#)/i;
+// Style properties an icon has no business setting: they could pull it out of its box and over the page, or are expensive to draw.
+const BAD_STYLE_PROPERTY = /^\s*(position|z-index|top|right|bottom|left|inset[\w-]*|pointer-events|filter|backdrop-filter|animation[\w-]*|transition[\w-]*|will-change|content)\s*:/i;
 const EXTERNAL_HREF = /^\s*(https?:|\/\/|javascript:|data:)/i;
 
 // Runs the stylesheet rules from <style> blocks into style="" attributes, so colours survive when the blocks are removed. Failure is harmless: the markup just goes on unchanged.
@@ -88,7 +95,7 @@ function splitDeclarations(style: string): string[] {
 
 function cleanStyleAttribute(style: string): string {
   return splitDeclarations(style)
-    .filter((declaration) => !BAD_STYLE_DECLARATION.test(declaration))
+    .filter((declaration) => !BAD_STYLE_DECLARATION.test(declaration) && !BAD_STYLE_PROPERTY.test(declaration))
     .join(";");
 }
 
@@ -114,6 +121,45 @@ function parseSvgDocument(markup: string): Document {
     throw new BadRequestError("Invalid SVG: the markup could not be parsed.");
   }
   return doc;
+}
+
+function elementDepth(el: Element): number {
+  let depth = 0;
+  for (let node: Element | null = el; node; node = node.parentElement) depth += 1;
+  return depth;
+}
+
+// Rejects icons that are absurdly large, deeply nested or that multiply through <use>. Throws BadRequestError.
+export function assertReasonableShape(root: Element): void {
+  const all = [root, ...Array.from(root.querySelectorAll("*"))];
+  if (all.length > MAX_ELEMENTS) throw new BadRequestError(`Invalid SVG: more than ${MAX_ELEMENTS} elements.`);
+  if (all.some((el) => elementDepth(el) > MAX_DEPTH)) throw new BadRequestError(`Invalid SVG: elements are nested more than ${MAX_DEPTH} levels deep.`);
+
+  const byId = new Map<string, Element>();
+  for (const el of all) {
+    const id = el.getAttribute("id");
+    if (id && !byId.has(id)) byId.set(id, el);
+  }
+  const memo = new Map<Element, number>();
+  const active = new Set<Element>();
+  const size = (el: Element): number => {
+    const known = memo.get(el);
+    if (known !== undefined) return known;
+    if (active.has(el)) throw new BadRequestError("Invalid SVG: an element uses itself.");
+    active.add(el);
+    let total = 1;
+    if (el.localName === "use") {
+      const href = (el.getAttribute("href") ?? el.getAttribute("xlink:href") ?? "").trim();
+      const target = href.startsWith("#") ? byId.get(href.slice(1)) : undefined;
+      if (target) total += size(target);
+    }
+    for (const child of Array.from(el.children)) total += size(child);
+    active.delete(el);
+    if (total > MAX_EXPANDED) throw new BadRequestError("Invalid SVG: too many repeated <use> copies.");
+    memo.set(el, total);
+    return total;
+  };
+  size(root);
 }
 
 function strokeValueIsPaint(value: string | null): boolean {
@@ -205,6 +251,7 @@ export function sanitizeSvg(raw: string | Buffer): SanitizedSvg {
     }
   }
 
+  assertReasonableShape(root);
   const info = analyze(doc);
 
   let svg = root.outerHTML;

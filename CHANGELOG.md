@@ -881,6 +881,16 @@ Added `AUDIT_REPORT.md` in the project root: a review of security gaps and error
 - **Production startup checks:** new `server/src/config/production.ts`, called first in `index.ts`. With `NODE_ENV=production` the server refuses to start unless `SESSION_SECRET` is at least 32 characters and `CORS_ORIGINS` is set. Development is unaffected. Tests: `tests/productionConfig.test.ts` (4). **Deploy note:** set both variables before deploying to production.
 - `AUDIT_REPORT.md` marks H1, M5 and L2 as fixed.
 
+## 2026-10-21: Audit fixes: limits, sign out everywhere, token scopes and expiry, sanitizer and preview hardening (change request)
+
+- **Limits** (`server/src/lib/quotas.ts`): 200 projects per user, 5000 icons (the trash counts) and 2000 folders per project. Creating, duplicating or importing a project, adding icons by upload, paste, copy, font import or archive import, and creating folders answer **409** with a clear message when full. Override with `MAX_PROJECTS_PER_USER`, `MAX_ICONS_PER_PROJECT`, `MAX_FOLDERS_PER_PROJECT`.
+- **Sign out everywhere:** new `tokensValidAfter` on users; session tokens issued before it are refused. `POST /api/auth/me/sign-out-everywhere` (real session only) sets it and returns a fresh token so the asking device stays signed in. Button on the API tokens page. API tokens are not affected.
+- **API token scopes and expiry:** a token is `read` or `write` and has an optional expiry. New tokens default to read-only and 90 days (`expiresInDays` 1 to 365, or `null` for never). A read token gets 403 on anything that changes data (it may still use the icon download POST); an expired token gets 401. Tokens made before this change keep write access and never expire. The create dialog has Access and Expires after fields; the list shows both. **Note:** a CLI token that uploads or imports must be created with Read and write.
+- **Sanitizer:** removes `position`, `z-index`, `top/right/bottom/left/inset`, `pointer-events`, `filter`, `animation`, `transition` and similar from `style`; refuses icons with more than 5000 elements, nesting deeper than 32, a `<use>` that loops, or `<use>` chains that expand to more than 50,000 elements.
+- **Preview:** `SvgPreview` renames the ids inside each icon per preview (`lib/svgIds.ts`) and clips and contains its content. It stays inline (not `<img>`) so `currentColor` icons keep following the theme.
+- **Tests:** server 145 unit + 198 DB; new `tests/db/limits.db.test.ts` (10), sanitizer tests (5), `lib/svgIds.test.ts`, token page and preview tests.
+- `AUDIT_REPORT.md` marks M1, M2, M3, L3 and L4 fixed and lists what is still open.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
