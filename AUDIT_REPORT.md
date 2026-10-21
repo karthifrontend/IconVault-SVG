@@ -18,7 +18,7 @@ Date: 2026-10-21 · Scope: `server/`, `client/`, `cli/`, repo hygiene · Commit 
 
 ## High
 
-### H1. Client dependency `follow-redirects` has a known high-severity advisory
+### H1. Client dependency `follow-redirects` has a known high-severity advisory — FIXED 2026-10-21 (`npm audit fix`, now 0 vulnerabilities)
 - **Evidence:** `npm audit` in `client/` reports `follow-redirects` (high), pulled in by `axios`, plus a moderate `vite` advisory. `server/` reports 0.
 - **Impact:** follow-redirects can leak the `Authorization`/cookie headers to another host on a cross-domain redirect. In the browser axios uses XHR, not follow-redirects, so real exposure is small, but the CLI and any Node-side use are affected.
 - **Fix:** `cd client && npm audit fix` (then re-run the client tests and build). Update Vite to the patched release.
@@ -45,7 +45,7 @@ Date: 2026-10-21 · Scope: `server/`, `client/`, `cli/`, repo hygiene · Commit 
 - **Impact:** behind a reverse proxy without `TRUST_PROXY`, every request appears to come from the proxy IP, so one noisy user trips the limit for everyone (or, if mis-set, clients can spoof `X-Forwarded-For` and bypass it). With several server instances the limits multiply. Limits also reset on every restart.
 - **Fix:** set `TRUST_PROXY` to the exact hop count in production; use a shared store (Redis / Mongo) if you run more than one instance; also key heavy endpoints by user id, not only IP.
 
-### M5. CORS and production configuration are permissive by default
+### M5. CORS and production configuration are permissive by default — FIXED 2026-10-21 (server refuses to start in production without `CORS_ORIGINS` and a 32+ character `SESSION_SECRET`; `config/production.ts`)
 - **Evidence:** `CORS_ORIGINS` is optional; when unset the server falls back to development behaviour. `SESSION_SECRET` strength is not enforced at startup (only presence).
 - **Impact:** a production deploy that forgets these two variables runs with open CORS or a weak signing secret, which would make forged admin sessions possible.
 - **Fix:** in production (`NODE_ENV=production`) refuse to start unless `CORS_ORIGINS` is set and `SESSION_SECRET` is at least 32 characters; document both in the README.
@@ -61,7 +61,7 @@ Date: 2026-10-21 · Scope: `server/`, `client/`, `cli/`, repo hygiene · Commit 
 - **Evidence:** `routes/authRoutes.ts` returns provider/exchange failure messages in some 5xx responses.
 - **Fix:** log the detail server-side, return a generic "Sign-in failed, please try again." to the client.
 
-### L2. Stray root `package-lock.json`
+### L2. Stray root `package-lock.json` — FIXED 2026-10-21 (deleted)
 - **Evidence:** the repo root has a `package-lock.json` with no `package.json`; `npm audit` flags `brace-expansion` and `braces` there.
 - **Fix:** delete it (it is not used by `client/`, `server/` or `cli/`).
 

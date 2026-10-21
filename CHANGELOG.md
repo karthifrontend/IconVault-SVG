@@ -874,6 +874,13 @@ The **Sprite** tab is now **Sprite Builder** (sprite projects), matching **Font 
 
 Added `AUDIT_REPORT.md` in the project root: a review of security gaps and errors with severity, evidence and recommended fixes (0 critical, 1 high, 6 medium, 8 low). Documentation only; no code changed. Highlights: update the client dependencies (`npm audit fix`), require `CORS_ORIGINS`/`SESSION_SECRET`/`TRUST_PROXY` in production, add per-user quotas, make sessions revocable, and give API tokens scopes and expiry.
 
+## 2026-10-21: Audit fixes: dependencies, stray lockfile, production checks (change request)
+
+- **Client dependencies:** `npm audit fix` in `client/` (follow-redirects and vite advisories); `npm audit` now reports 0. Build and `src/lib` tests pass.
+- **Removed** the unused root `package-lock.json`.
+- **Production startup checks:** new `server/src/config/production.ts`, called first in `index.ts`. With `NODE_ENV=production` the server refuses to start unless `SESSION_SECRET` is at least 32 characters and `CORS_ORIGINS` is set. Development is unaffected. Tests: `tests/productionConfig.test.ts` (4). **Deploy note:** set both variables before deploying to production.
+- `AUDIT_REPORT.md` marks H1, M5 and L2 as fixed.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
