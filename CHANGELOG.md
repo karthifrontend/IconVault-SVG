@@ -870,6 +870,10 @@ The **Sprite** tab is now **Sprite Builder** (sprite projects), matching **Font 
 ### Not tested, or open
 - The browser pane cannot open the downloaded file, so what is inside the ZIP was checked by tests (the file names and the sprite text for each architecture), not by opening it.
 
+## 2026-10-21: Project audit report (change request)
+
+Added `AUDIT_REPORT.md` in the project root: a review of security gaps and errors with severity, evidence and recommended fixes (0 critical, 1 high, 6 medium, 8 low). Documentation only; no code changed. Highlights: update the client dependencies (`npm audit fix`), require `CORS_ORIGINS`/`SESSION_SECRET`/`TRUST_PROXY` in production, add per-user quotas, make sessions revocable, and give API tokens scopes and expiry.
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
