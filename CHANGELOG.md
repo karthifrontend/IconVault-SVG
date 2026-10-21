@@ -903,6 +903,11 @@ The visible name is now **IconVault**: the header, browser tab title, landing pa
 - **Left as they were:** the session token issuer and audience (changing them would sign every user out) and the internal `window.__svgCompilerSessionToken` name.
 - README, project summary, the Settings tab hint and the token dialog use the new command.
 
+## 2026-10-21: .gitignore and env example cleaned before publishing (change request)
+
+- `server/.env.example` held real-looking values (a MongoDB connection string with a password and the session secret) and was already tracked, although `.gitignore` listed it. The values are now placeholders. The two `.env.example` files are no longer ignored (they are templates); `.env.*` is ignored except `.env.example`. Also ignored: `.claude/`, `.vercel`, `coverage`, `*.tsbuildinfo`.
+- **Action needed:** the old values stay in git history and were pushed to GitHub. Change the session secret and the MongoDB password (see the notes in the chat).
+
 ## Known issues
 - `server/.env` holds the database password and session secret in plain text. `SVG-sprite-react-db-fixed.zip` (in `compiler project/`) contains an older `.env` with the previous credentials; do not share it. (The zip has since been moved to `astro tool/`, together with an extracted copy that also holds that `.env`.)
 - Folder `server/package.json` scripts `backfill:owner`, `backfill:version-updated-at` and `cleanup:orphans` point to files that do not exist; the zip has the corrected names. **Resolved in Phase 0 (`63eb4c8`).**
