@@ -10,6 +10,7 @@ import { useLocation } from "react-router-dom";
 import { useWorkspace } from "../../context/workspaceContext";
 import { copyText } from "../../lib/clipboard";
 import { clearCachedBuild, peekCachedBuild } from "../../lib/fontBuildCache";
+import { embeddedFontCss } from "../../lib/fontCss";
 import { fontAutoBuild } from "../../lib/fontAutoBuild";
 import { defaultFontOptions } from "../../lib/fontDefaults";
 import { loadPreviewFont, nextPreviewFamily, unloadPreviewFont } from "../../lib/fontPreview";
@@ -169,6 +170,15 @@ export default function FontTab() {
     showToast(ok ? `Copied ${what}.` : "Could not copy to the clipboard.", ok ? "success" : "error");
   }
 
+  async function copyEmbeddedCss() {
+    if (!built) return;
+    try {
+      await copy(embeddedFontCss(built.css, built.preview.base64), "the stylesheet");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not prepare the embedded stylesheet.", "error");
+    }
+  }
+
   const toggleFormat = (format: FontFormat) => setFormats((current) => (current.includes(format) ? current.filter((f) => f !== format) : [...current, format]));
   const built = result?.build;
   const shown = built ? built.codepoints.filter((glyph) => `${glyph.name} ${glyph.className} ${glyph.codepoint}`.toLowerCase().includes(filter.trim().toLowerCase())) : [];
@@ -196,7 +206,7 @@ export default function FontTab() {
       <Button variant="primary" className="h-9" icon={<Download aria-hidden="true" className="h-4 w-4" />} onClick={download} loading={downloading} disabled={!result}>
         Download font
       </Button>
-      <Button className="h-9" icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={() => built && copy(built.css, "the stylesheet")} disabled={!built}>
+      <Button className="h-9" icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={copyEmbeddedCss} disabled={!built}>
         Copy CSS
       </Button>
     </div>

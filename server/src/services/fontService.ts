@@ -1,4 +1,4 @@
-// Building an icon font from a project's icons. Icons keep a stable codepoint (so a font rebuilt later puts every glyph on the same character): icons that already have one keep it, the others get the next free Private Use character, and for editors those new codepoints are saved on the icons. The fonts, CSS, SCSS, glyph map and specimen page come from `fantasticon`; ZIP packaging uses fflate. Builds run in a temporary folder that is removed afterwards; a package an editor downloads is also kept in the font build history (see fontHistory.ts).
+// Building an icon font from a project's icons. Icons keep a stable codepoint (so a font rebuilt later puts every glyph on the same character): icons that already have one keep it, the others get the next free Private Use character, and for editors those new codepoints are saved on the icons. The fonts, CSS, SCSS and glyph map come from `fantasticon`; ZIP packaging uses fflate and builds its own specimen page. Builds run in a temporary folder that is removed afterwards; a package an editor downloads is also kept in the font build history (see fontHistory.ts).
 import { zipSync } from "fflate";
 import { FontAssetType, OtherAssetType, generateFonts } from "fantasticon";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
@@ -207,9 +207,103 @@ function readme(fontName: string, prefix: string, icons: FontIcon[], formats: st
   return `# ${fontName}\n\nAn icon font with ${icons.length} icons. Formats: ${formats.join(", ")}.\n\n## Use it\n\n1. Link the stylesheet:\n\n   <link rel="stylesheet" href="${fontName}.css">\n\n2. Add an icon:\n\n   <i class="${baseClass ? `${baseClass} ` : ""}${prefix}-${sample}"></i>\n\nOpen ${fontName}.html to see every icon with its class name. ${fontName}.json maps each icon to its character code, and stays the same when the font is rebuilt.\n`;
 }
 
-// A ZIP of the build's files (fonts, stylesheet, specimen and so on).
+const FONT_FORMATS: Record<string, { mime: string; format: string }> = {
+  eot: { mime: "application/vnd.ms-fontobject", format: "embedded-opentype" },
+  svg: { mime: "image/svg+xml", format: "svg" },
+  ttf: { mime: "font/ttf", format: "truetype" },
+  woff: { mime: "font/woff", format: "woff" },
+  woff2: { mime: "font/woff2", format: "woff2" },
+};
+
+function fontFaceCss(css: string, sources: string[]): string {
+  const result = css.replace(/src\s*:[^;]*;/i, `src:\n  ${sources.join(",\n  ")};`);
+  if (result === css) throw new Error("The generated font stylesheet has no @font-face source.");
+  return result;
+}
+
+function escapeHtml(value: string): string {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+}
+
+function fontDemoHtml(build: FontBuild): string {
+  const tiles = build.codepoints.map((icon) => `
+<li class="litile">
+<div class="innerTile">
+<div class="iconouterdiv"><div class="iconinnerdiv"><i aria-hidden="true" class="${escapeHtml(build.baseClass ? `${build.baseClass} ` : "")}${escapeHtml(icon.className)} icon"></i></div></div>
+<div class="txtouterdiv"><div class="txtinnerdiv"><span class="nametxt">Name</span><span class="valuetxt">${escapeHtml(icon.slug)}</span></div></div>
+<div class="txtouterdiv"><div class="txtinnerdiv"><span class="nametxt">Unicode</span><span class="valuetxt">${escapeHtml(icon.codepoint.toLowerCase())}</span></div></div>
+</div>
+</li>`).join("");
+
+  return `<!doctype html>
+<html>
+<head>
+<title>Font Icon</title>
+<link rel="stylesheet" href="style.css">
+<style>
+#wrapper {width: 500px; margin: 0 auto; }
+p {margin: 0px; }
+.ultile { display: inline-block; list-style-type: none; margin: 0; padding: 0; width: 100%; list-style-position: outside; }
+.litile { float: left; height: 150px; width: 150px; padding: 15px 8px 0 8px; display: list-item; text-align: -webkit-match-parent;}
+.innerTile {background-color: white; width: 100%; height: 100%; -webkit-box-sizing: content-box; -moz-box-sizing: content-box; box-sizing: content-box; -moz-box-shadow: rgba(0, 0, 0, 0.6) 1px 1px 1px; -webkit-box-shadow: rgba(0, 0, 0, 0.6) 1px 1px 1px; box-shadow: rgba(0, 0, 0, 0.6) 1px 1px 1px; border-color: gray; border-radius: 10px; }
+.iconouterdiv {height: 43%; width: 100%; position: relative; margin: 0 auto;}
+.iconinnerdiv {height: 100%; width: 100%; display: block; text-align: center; vertical-align: middle;}
+.txtouterdiv {height: 22%; width: 100%;}
+.txtinnerdiv {text-align: left; margin-left: 10px; margin-top: 5px}
+.nametxt {color: #4791F9; display: block; font-size: 12px; font-family: Segoe UI;}
+.valuetxt {display: block; font-size: 15px; font-family: Segoe UI; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.icon {display: inline-block; vertical-align: middle; line-height: 1; margin-top: 10%; font-size: 40px;}
+</style>
+</head>
+<body style="background-color:#F4F4F4">
+<div style="width:100%;text-align:center;height:100%;display:block;top:30px;position:absolute">
+<div id="headingDiv" style="width:80%;text-align:center;position:relative;margin:0 auto;">
+<div style="text-align:left;margin-left:10px;">
+<p style="color:darkblue;">Font Name : ${escapeHtml(build.fontName)}</p></div></div>
+<div id="tileDiv" style="width:80%;text-align:center;position:relative;margin:0 auto;">
+<ul class="ultile">
+${tiles}
+</ul></div></div>
+</body>
+</html>`;
+}
+
+// A ZIP matching the familiar font-editor layout: linked assets in Fonts/, plus an embedded-font variant.
 export function zipFontBuild(build: FontBuild): Buffer {
-  const input: Record<string, Uint8Array> = {};
-  for (const file of build.files) input[file.name] = new Uint8Array(file.data);
+  const fonts = build.files.filter((file) => FONT_FORMATS[path.extname(file.name).slice(1).toLowerCase()]);
+  const css = build.files.find((file) => path.extname(file.name).toLowerCase() === ".css");
+  const library = build.files.find((file) => path.extname(file.name).toLowerCase() === ".json");
+  if (fonts.length === 0 || !css || !library) throw new Error("The font build is missing files required for its ZIP package.");
+
+  const available = new Set(fonts.map((file) => file.name));
+  const faceSources = [...css.data.toString("utf8").matchAll(/url\((['"]?)([^)'"]+)\1\)\s*format\((['"]?)([^)'"]+)\3\)/g)]
+    .flatMap((match) => {
+      const url = match[2] as string;
+      const name = path.basename(url.split(/[?#]/, 1)[0] ?? url);
+      if (!available.has(name)) return [];
+      const suffix = url.slice(url.indexOf(name) + name.length);
+      return [`url("Fonts/${name}${suffix}") format("${match[4]}")`];
+    });
+  if (faceSources.length === 0) throw new Error("The generated font stylesheet has no available font files.");
+
+  const mainCss = fontFaceCss(css.data.toString("utf8"), faceSources);
+  const embeddedFont = ["ttf", "woff", "woff2", "eot", "svg"]
+    .map((extension) => fonts.find((file) => path.extname(file.name).toLowerCase() === `.${extension}`))
+    .find((file) => file !== undefined);
+  if (!embeddedFont) throw new Error("The font build has no font file to embed.");
+  const embeddedType = FONT_FORMATS[path.extname(embeddedFont.name).slice(1).toLowerCase()];
+  if (!embeddedType) throw new Error(`The font format ${path.extname(embeddedFont.name)} cannot be embedded.`);
+  const dataUri = `url("data:${embeddedType.mime};base64,${embeddedFont.data.toString("base64")}") format("${embeddedType.format}")`;
+  const embeddedCss = fontFaceCss(css.data.toString("utf8"), [dataUri]);
+  const demoHtml = fontDemoHtml(build);
+
+  const input: Record<string, Uint8Array> = {
+    "demo.html": new Uint8Array(Buffer.from(demoHtml)),
+    "library.json": new Uint8Array(library.data),
+    "style.css": new Uint8Array(Buffer.from(mainCss)),
+    "Embed Font in CSS/demo.html": new Uint8Array(Buffer.from(demoHtml)),
+    "Embed Font in CSS/style.css": new Uint8Array(Buffer.from(embeddedCss)),
+  };
+  for (const font of fonts) input[`Fonts/${font.name}`] = new Uint8Array(font.data);
   return Buffer.from(zipSync(input, { level: 6 }));
 }
