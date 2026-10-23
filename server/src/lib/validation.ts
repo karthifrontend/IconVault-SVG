@@ -228,6 +228,7 @@ export const buildFontSchema = z
       .refine((value) => parseInt(value, 16) >= 0xe000 && parseInt(value, 16) <= 0xf8ff, "must be between E000 and F8FF")
       .transform((value) => value.toUpperCase())
       .default("E001"),
+    reassignCodepoints: z.boolean().default(false),
     fontHeight: z.number().int().min(300).max(2048).default(1000),
     descent: z.number().int().min(-1000).max(1000).default(0),
     normalize: z.boolean().default(true),

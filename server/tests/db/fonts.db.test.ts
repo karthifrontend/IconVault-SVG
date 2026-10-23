@@ -61,6 +61,26 @@ describe("icon fonts (HTTP, throwaway database)", { skip: hasDatabase ? false : 
       assert.deepEqual(again.body.codepoints.map((c: { codepoint: string; isNew: boolean }) => [c.codepoint, c.isNew]), [["E001", false], ["E002", false], ["E003", false]]);
     });
 
+    it("rebases and saves every included icon from the new starting codepoint", async () => {
+      const p = await makeProject(owner.token);
+      await upload(owner.token, p.id, { star: STAR, box: BOX, circle: CIRCLE });
+      await build(owner.token, p.id);
+
+      const rebased = await build(owner.token, p.id, { startCodepoint: "E100", reassignCodepoints: true });
+      assert.equal(rebased.status, 200, JSON.stringify(rebased.body));
+      assert.deepEqual(rebased.body.codepoints.map((c: { slug: string; codepoint: string; isNew: boolean }) => [c.slug, c.codepoint, c.isNew]), [
+        ["box", "E100", true],
+        ["circle", "E101", true],
+        ["star", "E102", true],
+      ]);
+      assert.deepEqual(await codepointsOf(p.id), { box: "E100", circle: "E101", star: "E102" });
+
+      const downloaded = await h.call(owner.token, "POST", `/api/projects/${p.id}/font/download`, { startCodepoint: "E100", formats: ["ttf"], fontName: "Rebased" });
+      const files = unzipSync(new Uint8Array(await downloaded.raw.arrayBuffer()));
+      assert.deepEqual(JSON.parse(Buffer.from(files["library.json"] as Uint8Array).toString("utf8")), { box: 57600, circle: 57601, star: 57602 });
+      assert.match(Buffer.from(files["style.css"] as Uint8Array).toString("utf8"), /\\e100/);
+    });
+
     it("gives only the new icon a codepoint when one is added later", async () => {
       const p = await makeProject(owner.token);
       await upload(owner.token, p.id, { a: STAR, b: BOX });

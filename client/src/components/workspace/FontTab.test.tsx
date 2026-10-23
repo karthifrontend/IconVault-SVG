@@ -102,6 +102,48 @@ describe("building", () => {
     expect(preview.loadPreviewFont).toHaveBeenCalledWith(expect.stringMatching(/^iconfont-preview-/), "d09GMg==");
   });
 
+  it("rebases every glyph when the starting codepoint changes and uses the rebased values for downloads", async () => {
+    setup();
+    await builtAutomatically();
+    buildFont.mockResolvedValue(built({
+      codepoints: [
+        { id: "a", name: "Home", slug: "home", codepoint: "E100", className: "fth-home", isNew: true },
+        { id: "b", name: "Star", slug: "star", codepoint: "E101", className: "fth-star", isNew: true },
+      ],
+      css: '@font-face { font-family: Feather; src: url("Feather.woff2") format("woff2"); } .fth-home:before { content: "\\e100"; }',
+    }));
+    await userEvent.clear(screen.getByLabelText("Starting codepoint (hex)"));
+    await userEvent.type(screen.getByLabelText("Starting codepoint (hex)"), "E100");
+
+    await waitFor(() => expect(buildFont).toHaveBeenLastCalledWith("p1", expect.objectContaining({ startCodepoint: "E100", reassignCodepoints: true })));
+    expect(await screen.findByRole("textbox", { name: "Codepoint for Home" })).toHaveValue("E100");
+    expect(screen.getByRole("textbox", { name: "Codepoint for Star" })).toHaveValue("E101");
+    expect(screen.getByText("\\e100")).toBeInTheDocument();
+
+    vi.mocked(fontsApi.downloadFont).mockResolvedValue({ blob: new Blob(["rebased"]), filename: "Rebased.zip" });
+    await userEvent.click(screen.getByRole("button", { name: "Download font" }));
+    await waitFor(() => expect(fontsApi.downloadFont).toHaveBeenCalledWith("p1", expect.objectContaining({ startCodepoint: "E100" })));
+    expect(fontsApi.downloadFont).toHaveBeenLastCalledWith("p1", expect.not.objectContaining({ reassignCodepoints: true }));
+  });
+
+  it("keeps the rebasing option for viewers so their download matches the preview", async () => {
+    setup({ project: makeDetail({ id: "p1", purpose: "font", iconCount: 2, access: READ_ONLY }) });
+    await builtAutomatically();
+    buildFont.mockResolvedValue(built({
+      codepoints: [
+        { id: "a", name: "Home", slug: "home", codepoint: "E100", className: "fth-home", isNew: true },
+        { id: "b", name: "Star", slug: "star", codepoint: "E101", className: "fth-star", isNew: true },
+      ],
+    }));
+    await userEvent.clear(screen.getByLabelText("Starting codepoint (hex)"));
+    await userEvent.type(screen.getByLabelText("Starting codepoint (hex)"), "E100");
+
+    await waitFor(() => expect(buildFont).toHaveBeenLastCalledWith("p1", expect.objectContaining({ startCodepoint: "E100", reassignCodepoints: true })));
+    vi.mocked(fontsApi.downloadFont).mockResolvedValue({ blob: new Blob(["rebased"]), filename: "Rebased.zip" });
+    await userEvent.click(screen.getByRole("button", { name: "Download font" }));
+    expect(fontsApi.downloadFont).toHaveBeenCalledWith("p1", expect.objectContaining({ startCodepoint: "E100", reassignCodepoints: true }));
+  });
+
   it("sends a folder, other formats and advanced values as chosen", async () => {
     setup();
     await userEvent.click(screen.getByRole("radio", { name: "Selected folder" }));
@@ -116,7 +158,7 @@ describe("building", () => {
     await userEvent.clear(screen.getByLabelText("Font height"));
     await userEvent.type(screen.getByLabelText("Font height"), "1200");
     await userEvent.click(screen.getByLabelText("Normalize glyph bounds to height"));
-    await waitFor(() => expect(buildFont).toHaveBeenLastCalledWith("p1", { scope: "folder", folderId: "ui", formats: ["woff2", "ttf", "eot"], fontName: "Mine", prefix: "fth", baseClass: "fth", startCodepoint: "E100", fontHeight: 1200, descent: 0, normalize: false }));
+    await waitFor(() => expect(buildFont).toHaveBeenLastCalledWith("p1", { scope: "folder", folderId: "ui", formats: ["woff2", "ttf", "eot"], fontName: "Mine", prefix: "fth", baseClass: "fth", startCodepoint: "E100", reassignCodepoints: true, fontHeight: 1200, descent: 0, normalize: false }));
   });
 
   it("waits, without a message, while an option is not valid, and builds once it is", async () => {

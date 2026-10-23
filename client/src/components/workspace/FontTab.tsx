@@ -57,6 +57,8 @@ export default function FontTab() {
   // Bumped when a package was downloaded, so the build history reloads.
   const [historyVersion, setHistoryVersion] = useState(0);
   const [startCodepoint, setStartCodepoint] = useState(defaults.startCodepoint);
+  const startCodepointRef = useRef(startCodepoint);
+  const [reassignCodepoints, setReassignCodepoints] = useState(false);
   const [formats, setFormats] = useState<FontFormat[]>(defaults.formats);
   const [fontHeight, setFontHeight] = useState(String(defaults.fontHeight));
   const [descent, setDescent] = useState(String(defaults.descent));
@@ -104,6 +106,7 @@ export default function FontTab() {
       prefix: prefix.trim(),
       baseClass: baseClass.trim(),
       startCodepoint: startCodepoint.trim().toUpperCase(),
+      ...(reassignCodepoints ? { reassignCodepoints: true } : {}),
       fontHeight: height,
       descent: down,
       normalize,
@@ -112,6 +115,7 @@ export default function FontTab() {
 
   // Which settings the shown build was made with, and a counter so only the newest build's answer is used.
   const builtSignature = useRef<string | null>(null);
+  const [displayedBuildSignature, setDisplayedBuildSignature] = useState<string | null>(null);
   const buildCount = useRef(0);
 
   async function runBuild(override?: string[]) {
@@ -126,9 +130,13 @@ export default function FontTab() {
       const family = nextPreviewFamily();
       const loaded = await loadPreviewFont(family, built.preview.base64);
       if (mine !== buildCount.current) return;
-      builtSignature.current = JSON.stringify(input);
+      const completedInput = { ...input };
+      if (canEdit && input.reassignCodepoints) delete completedInput.reassignCodepoints;
+      builtSignature.current = JSON.stringify(completedInput);
+      setDisplayedBuildSignature(builtSignature.current);
       setResult({ build: built, family, loaded });
       setFilter("");
+      if (canEdit && input.reassignCodepoints && startCodepointRef.current === input.startCodepoint) setReassignCodepoints(false);
       // New characters were saved on the icons: show them in the other lists too.
       if (canEdit && built.codepoints.some((glyph) => glyph.isNew)) {
         refreshIcons();
@@ -191,7 +199,10 @@ export default function FontTab() {
   const signature = typeof planned === "string" ? null : JSON.stringify(planned);
   useEffect(() => {
     // A build handed over from the Icons screen was made with these very settings.
-    if (adopted && builtSignature.current === null && signature) builtSignature.current = signature;
+    if (adopted && builtSignature.current === null && signature) {
+      builtSignature.current = signature;
+      setDisplayedBuildSignature(signature);
+    }
   }, [adopted, signature]);
   const buildAutomatically = useEffectEvent(() => void runBuild());
   useEffect(() => {
@@ -203,7 +214,7 @@ export default function FontTab() {
   // The three actions sit in the project bar (like Upload icons on the Icons screen); without a bar they show above the settings.
   const actions = (
     <div role="group" aria-label="Font actions" className="flex flex-wrap items-center gap-2">
-      <Button variant="primary" className="h-9" icon={<Download aria-hidden="true" className="h-4 w-4" />} onClick={download} loading={downloading} disabled={!result}>
+      <Button variant="primary" className="h-9" icon={<Download aria-hidden="true" className="h-4 w-4" />} onClick={download} loading={downloading} disabled={!result || building || signature !== displayedBuildSignature}>
         Download font
       </Button>
       <Button className="h-9" icon={<Copy aria-hidden="true" className="h-4 w-4" />} onClick={copyEmbeddedCss} disabled={!built}>
@@ -308,7 +319,18 @@ export default function FontTab() {
               <TextField label="Class prefix" value={prefix} maxLength={20} autoComplete="off" hint="Classes look like prefix-name." onChange={(event) => setPrefix(event.target.value)} />
               <TextField label="Base class" value={baseClass} maxLength={30} autoComplete="off" hint="Optional. Then use class=&quot;base prefix-name&quot;." onChange={(event) => setBaseClass(event.target.value)} />
             </div>
-            <TextField label="Starting codepoint (hex)" value={startCodepoint} maxLength={4} autoComplete="off" hint="Default: E001 (Private Use Area). New icons count up from here (E000 to F8FF)." onChange={(event) => setStartCodepoint(event.target.value)} />
+            <TextField
+              label="Starting codepoint (hex)"
+              value={startCodepoint}
+              maxLength={4}
+              autoComplete="off"
+              hint="Default: E001 (Private Use Area). Changing this rebases included icons from the new value (E000 to F8FF)."
+              onChange={(event) => {
+                startCodepointRef.current = event.target.value;
+                setStartCodepoint(event.target.value);
+                setReassignCodepoints(true);
+              }}
+            />
           </section>
 
           <section aria-labelledby="font-metrics" className="space-y-3">
@@ -368,7 +390,7 @@ export default function FontTab() {
               {built.codepoints.length > 10 && <input type="search" aria-label="Filter characters" placeholder="Filter" value={filter} onChange={(event) => setFilter(event.target.value)} className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm" />}
             </div>
             <div className="mt-3">
-              <CodepointTable glyphs={shown.slice(0, 300)} family={result?.loaded ? result.family : null} canEdit={canEdit} busy={building} onSave={saveCodepoint} onCopyClass={(className) => {
+              <CodepointTable glyphs={shown.slice(0, 300)} family={result?.loaded ? result.family : null} canEdit={canEdit} busy={building || reassignCodepoints} onSave={saveCodepoint} onCopyClass={(className) => {
                   const classes = built.baseClass ? `${built.baseClass} ${className}` : className;
                   void copy(classes, `the class ${classes}`);
                 }} />

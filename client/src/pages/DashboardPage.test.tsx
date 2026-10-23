@@ -73,14 +73,6 @@ describe("importing a project", () => {
     await userEvent.upload(await screen.findByLabelText("Project export file"), zip());
     expect(await screen.findByText(/no project\.json/)).toBeInTheDocument();
   });
-
-  it("opens the file picker from the button", async () => {
-    renderPage();
-    const input = (await screen.findByLabelText("Project export file")) as HTMLInputElement;
-    const click = vi.spyOn(input, "click");
-    await userEvent.click(screen.getByRole("button", { name: "Import project" }));
-    expect(click).toHaveBeenCalled();
-  });
 });
 
 describe("listing", () => {
@@ -263,7 +255,7 @@ describe("private and public", () => {
 });
 
 describe("the top bar", () => {
-  it("has no visible Projects heading, and puts New project and Import project into the top bar when there is one", async () => {
+  it("has no visible Projects heading, and puts New project into the top bar when there is one", async () => {
     const slot = document.createElement("div");
     document.body.appendChild(slot);
     render(
@@ -277,7 +269,7 @@ describe("the top bar", () => {
     );
     await screen.findByText("You have no projects yet.");
     expect(within(slot).getByRole("button", { name: "New project" })).toBeInTheDocument();
-    expect(within(slot).getByRole("button", { name: "Import project" })).toBeInTheDocument();
+    expect(within(slot).queryByRole("button", { name: "Import project" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1, name: "Projects" })).toHaveClass("sr-only");
     slot.remove();
   });
@@ -296,6 +288,26 @@ describe("search", () => {
     expect(screen.getByText("Arrow Left")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Feather" })).toHaveAttribute("href", "/projects/p9");
     expect(screen.getByRole("status")).toHaveTextContent("1 icon found");
+  });
+
+  it("shows each icon's project type badge in the search results", async () => {
+    searchIcons.mockResolvedValue({
+      icons: [
+        { ...makeIcon({ id: "font-icon", name: "Font Icon" }), project: { id: "font-project", name: "Font set", prefix: "font", color: "#000000", visibility: "private", purpose: "font" } },
+        { ...makeIcon({ id: "sprite-icon", name: "Sprite Icon" }), project: { id: "sprite-project", name: "Sprite set", prefix: "sprite", color: "#000000", visibility: "public", purpose: "sprite" } },
+      ],
+      total: 2,
+      page: 1,
+      limit: 24,
+    });
+    renderPage();
+    await screen.findByText("You have no projects yet.");
+
+    await userEvent.type(screen.getByRole("searchbox", { name: "Search projects and icons" }), "ar");
+
+    expect(await screen.findByText("Font Icon")).toBeInTheDocument();
+    expect(screen.getByText("Font")).toBeInTheDocument();
+    expect(screen.getByText("Sprite")).toBeInTheDocument();
   });
 
   it("does not search icons for a single character", async () => {
