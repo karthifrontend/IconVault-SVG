@@ -112,10 +112,10 @@ function ToastCard({
   toast: Toast;
   onDismiss: (id: string) => void;
 }) {
-  const { cfg, message, buttons } = toast;
+  const { cfg, message, buttons, type } = toast;
   return (
     <div
-      role="alert"
+      role={type === "success" ? "status" : "alert"}
       aria-live="polite"
       className={`${cfg.bg} text-white px-5 py-3.5 rounded-xl toast-shadow flex items-center min-w-65 max-w-md pointer-events-auto animate-slide-in`}
     >

@@ -69,10 +69,15 @@ export default function FontTab() {
   // A font that was just built on the Icons screen ("Build font" on the bulk bar) is shown at once, without building it again.
   const [result, setResult] = useState<{ build: FontBuildResult; family: string; loaded: boolean } | null>(() => (handed?.built ? peekCachedBuild(project.id) : null));
   const adopted = handed?.built === true;
+  const handoffToastShown = useRef(false);
   useEffect(() => {
     // The page owns the build and its preview font now.
     if (adopted) clearCachedBuild();
-  }, [adopted]);
+    if (adopted && result && !handoffToastShown.current) {
+      handoffToastShown.current = true;
+      showToast("Font generated successfully.", "success");
+    }
+  }, [adopted, result, showToast]);
   const [filter, setFilter] = useState("");
 
   // Make sure the preview font of the shown build is registered (a build handed over from the Icons screen registered it there), and take it out again when the build is replaced or the section closes.
@@ -136,6 +141,7 @@ export default function FontTab() {
       setDisplayedBuildSignature(builtSignature.current);
       setResult({ build: built, family, loaded });
       setFilter("");
+      showToast("Font generated successfully.", "success");
       if (canEdit && input.reassignCodepoints && startCodepointRef.current === input.startCodepoint) setReassignCodepoints(false);
       // New characters were saved on the icons: show them in the other lists too.
       if (canEdit && built.codepoints.some((glyph) => glyph.isNew)) {
