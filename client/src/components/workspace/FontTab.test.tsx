@@ -29,7 +29,7 @@ const built = (over: Partial<FontBuildResult> = {}): FontBuildResult => ({
   prefix: "fth",
   iconCount: 2,
   warnings: [],
-  css: "@font-face { font-family: Feather; }",
+  css: '@font-face { font-family: Feather; src: url("Feather.woff2") format("woff2"); }',
   preview: { format: "woff2", base64: "d09GMg==" },
   sizes: { woff2: 1200, ttf: 3400 },
   codepoints: [
@@ -213,7 +213,7 @@ describe("the codepoint mapping table", () => {
     vi.mocked(iconsApi.updateIcon).mockResolvedValue(makeIcon({ id: "a" }) as never);
     vi.mocked(fontsApi.downloadFont).mockResolvedValue({ blob: new Blob(["z"]), filename: "x.zip" });
     await open();
-    buildFont.mockResolvedValue({ ...rebuilt("E701"), css: ".fth-home:before { content: \"\\e701\"; }" });
+    buildFont.mockResolvedValue({ ...rebuilt("E701"), css: '@font-face { font-family: Feather; src: url("Feather.woff2") format("woff2"); }\n.fth-home:before { content: "\\e701"; }' });
     const home = screen.getByRole("textbox", { name: "Codepoint for Home" });
     await userEvent.clear(home);
     await userEvent.type(home, "E701{Enter}");
@@ -474,7 +474,8 @@ describe("the built font", () => {
   it("copies the stylesheet and a class", async () => {
     await open();
     await userEvent.click(screen.getByRole("button", { name: "Copy CSS" }));
-    expect(clipboard.copyText).toHaveBeenCalledWith("@font-face { font-family: Feather; }");
+    expect(clipboard.copyText).toHaveBeenCalledWith(expect.stringContaining('url("data:font/woff2;base64,d09GMg==") format("woff2")'));
+    expect(clipboard.copyText).toHaveBeenCalledWith(expect.not.stringContaining("Feather.woff2"));
     await userEvent.click(screen.getByRole("button", { name: "Copy class fth-star" }));
     expect(clipboard.copyText).toHaveBeenLastCalledWith("fth-star");
     expect(await screen.findByText("Copied the class fth-star.")).toBeInTheDocument();

@@ -4,8 +4,9 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
+import { unzipSync } from "fflate";
 import { generateFonts, type FontAssetType } from "fantasticon";
-import { conversionWarnings, planCodepoints, safeFontName, toHex } from "../src/services/fontService.js";
+import { conversionWarnings, planCodepoints, safeFontName, toHex, zipFontBuild } from "../src/services/fontService.js";
 import { MAX_FONT_BYTES, parseMapping, privateUseOnly, readFontGlyphs } from "../src/services/fontImport.js";
 import { buildFontSchema } from "../src/lib/validation.js";
 
@@ -76,6 +77,57 @@ describe("small helpers", () => {
     for (const bad of [{ formats: [] }, { startCodepoint: "0041" }, { startCodepoint: "E0" }, { scope: "folder" }, { scope: "selected" }, { fontHeight: 10 }, { formats: ["pdf"] }, { surprise: 1 }, { prefix: "a b" }]) {
       assert.equal(buildFontSchema.safeParse(bad).success, false, JSON.stringify(bad));
     }
+  });
+});
+
+describe("font ZIP layout", () => {
+  it("packages font assets in the project folder structure, with an embedded stylesheet", () => {
+    const buildFiles = [
+      { name: "MetroStudio.ttf", data: Buffer.from("font-data") },
+      { name: "MetroStudio.woff", data: Buffer.from("woff-data") },
+      { name: "MetroStudio.css", data: Buffer.from('@font-face { font-family: "MetroStudio"; src: url("MetroStudio.woff2") format("woff2"), url("MetroStudio.ttf") format("truetype"); } i[class^="icon-"]:before, i[class*=" icon-"]:before { font-family: MetroStudio !important; } .icon-one:before { content: "\\e001"; }') },
+      { name: "MetroStudio.scss", data: Buffer.from("$font: MetroStudio;") },
+      { name: "MetroStudio.json", data: Buffer.from('{"one":57345}') },
+      { name: "README.md", data: Buffer.from("Build notes") },
+    ];
+    const archive = unzipSync(zipFontBuild({
+      fontName: "MetroStudio",
+      prefix: "icon",
+      iconCount: 1,
+      warnings: [],
+      baseClass: "",
+      codepoints: [{ id: "one", name: "One", slug: "one", codepoint: "E001", className: "icon-one", isNew: false }],
+      css: "",
+      files: buildFiles,
+      preview: { format: "woff2", base64: "" },
+      sizes: {},
+    }));
+
+    assert.deepEqual(Object.keys(archive).sort(), [
+      "Embed Font in CSS/demo.html",
+      "Embed Font in CSS/style.css",
+      "Fonts/MetroStudio.ttf",
+      "Fonts/MetroStudio.woff",
+      "demo.html",
+      "library.json",
+      "style.css",
+    ]);
+    assert.equal(Object.hasOwn(archive, "MetroStudio.ttf"), false);
+    assert.equal(Buffer.from(archive["Fonts/MetroStudio.ttf"] ?? []).toString(), "font-data");
+    assert.match(Buffer.from(archive["style.css"] ?? []).toString(), /Fonts\/MetroStudio\.ttf/);
+    assert.doesNotMatch(Buffer.from(archive["style.css"] ?? []).toString(), /MetroStudio\.woff2/);
+    assert.match(Buffer.from(archive["demo.html"] ?? []).toString(), /href="style\.css"/);
+    const demo = Buffer.from(archive["demo.html"] ?? []).toString();
+    assert.match(demo, /Font Name : MetroStudio/);
+    assert.match(demo, /<i aria-hidden="true" class="icon-one icon"><\/i>/);
+    assert.match(Buffer.from(archive["style.css"] ?? []).toString(), /i\[class\^="icon-"\]:before/);
+    assert.match(demo, /<span class="valuetxt">one<\/span>/);
+    assert.match(demo, /<span class="valuetxt">e001<\/span>/);
+    assert.match(demo, /\.litile\s*\{\s*float:\s*left;\s*height:\s*150px;\s*width:\s*150px;/);
+    assert.match(demo, /\.icon\s*\{[^}]*font-size:\s*40px;/);
+    assert.match(Buffer.from(archive["Embed Font in CSS\/style.css"] ?? []).toString(), /url\("data:font\/ttf;base64,/);
+    assert.equal(Buffer.from(archive["Embed Font in CSS\/demo.html"] ?? []).toString(), demo);
+    assert.equal(Buffer.from(archive["library.json"] ?? []).toString(), '{"one":57345}');
   });
 });
 
