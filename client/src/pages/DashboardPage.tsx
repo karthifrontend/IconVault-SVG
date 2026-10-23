@@ -1,12 +1,13 @@
 // The signed-in home screen: every project the user can see, with filters (kept in the address, so Back works and links can be shared), create, edit, duplicate, archive and delete, plus a search that also finds icons across projects and can copy them into one of the user's projects.
-import { ChevronDown, Filter, Globe, Layers, Lock, Plus, Search, Shapes, Type, Upload } from "lucide-react";
-import { useContext, useRef, useState, type ChangeEvent } from "react";
+import { ChevronDown, Filter, Globe, Layers, Lock, Plus, Search, Shapes, Type } from "lucide-react";
+import { useContext, useState, type ChangeEvent } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { searchIcons } from "../api/icons";
 import { deleteProject, duplicateProject, importProject, listProjects, updateProject } from "../api/projects";
 import type { IconSearchResult, ListProjectsParams, ProjectSummary } from "../api/types";
 import CopyToProjectDialog from "../components/projects/CopyToProjectDialog";
+import { PurposeBadge } from "../components/projects/ProjectBadges";
 import ProjectCard from "../components/projects/ProjectCard";
 import ProjectFormDialog from "../components/projects/ProjectFormDialog";
 import { Button } from "../components/ui/Button";
@@ -64,15 +65,11 @@ export default function DashboardPage() {
     );
   }
 
-  const importRef = useRef<HTMLInputElement | null>(null);
-  const [importing, setImporting] = useState(false);
-
   // Creates a new private project from an export ZIP and says what was left out.
   async function handleImportChosen(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-    setImporting(true);
     try {
       const result = await importProject(file);
       projects.reload();
@@ -80,8 +77,6 @@ export default function DashboardPage() {
       showToast(`Imported “${result.project.name}” with ${pluralize(result.imported, "icon")}.${skipped}`, result.problems.length > 0 ? "warning" : "success", [{ label: "Open", type: "primary", onClick: () => navigate(`/projects/${result.project.id}`) }]);
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Could not import the project.", "error");
-    } finally {
-      setImporting(false);
     }
   }
 
@@ -122,12 +117,9 @@ export default function DashboardPage() {
   const filtersActive = scope !== "all" || status !== "active" || purpose !== "all" || search !== "";
   const headerButtons = (
     <div className="flex flex-wrap items-center gap-2">
-      <input ref={importRef} type="file" accept=".zip,application/zip" aria-label="Project export file" className="hidden" onChange={handleImportChosen} />
+      <input type="file" accept=".zip,application/zip" aria-label="Project export file" className="hidden" onChange={handleImportChosen} />
       <Button variant="primary" className="h-9" icon={<Plus aria-hidden="true" className="h-4 w-4" />} onClick={() => setForm({ mode: "create" })}>
         New project
-      </Button>
-      <Button className="h-9" icon={<Upload aria-hidden="true" className="h-4 w-4" />} onClick={() => importRef.current?.click()} loading={importing}>
-        Import project
       </Button>
     </div>
   );
@@ -217,9 +209,12 @@ export default function DashboardPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{icon.name}</p>
                     {icon.project && (
-                      <Link to={`/projects/${icon.project.id}`} className="block truncate rounded-sm text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-ring">
-                        {icon.project.name}
-                      </Link>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Link to={`/projects/${icon.project.id}`} className="min-w-0 truncate rounded-sm text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+                          {icon.project.name}
+                        </Link>
+                        <PurposeBadge purpose={icon.project.purpose} />
+                      </div>
                     )}
                   </div>
                   <Button size="sm" onClick={() => setCopying(icon)} aria-label={`Copy ${icon.name} to a project`}>

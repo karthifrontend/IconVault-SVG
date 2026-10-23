@@ -222,6 +222,7 @@ export type BuildFontInput = {
   // Optional shared class: with it the stylesheet needs class="base prefix-name".
   baseClass?: string;
   startCodepoint?: string;
+  reassignCodepoints?: boolean;
   fontHeight?: number;
   descent?: number;
   normalize?: boolean;

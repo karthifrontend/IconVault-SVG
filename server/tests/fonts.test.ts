@@ -27,6 +27,17 @@ describe("planCodepoints", () => {
     assert.equal(plan.assigned.has("a"), false);
   });
 
+  it("reassigns every icon from the requested start when rebasing existing codepoints", () => {
+    const plan = planCodepoints([{ id: "a", codepoint: "E001" }, { id: "b", codepoint: "E002" }], "E100", [], true);
+    assert.deepEqual([...plan.all].map(([id, n]) => [id, toHex(n)]), [["a", "E100"], ["b", "E101"]]);
+    assert.deepEqual([...plan.assigned].map(([id, n]) => [id, toHex(n)]), [["a", "E100"], ["b", "E101"]]);
+  });
+
+  it("does not take codepoints already used outside the rebased selection", () => {
+    const plan = planCodepoints([{ id: "a", codepoint: "E001" }, { id: "b", codepoint: "E002" }], "E001", [0xe001], true);
+    assert.deepEqual([...plan.all.values()].map(toHex), ["E002", "E003"]);
+  });
+
   it("avoids codepoints used by icons outside the build", () => {
     const plan = planCodepoints(ids("a", "b"), "E001", [0xe001, 0xe002]);
     assert.deepEqual([...plan.all.values()].map(toHex), ["E003", "E004"]);
@@ -72,7 +83,7 @@ describe("small helpers", () => {
 
   it("validates build options", () => {
     const ok = buildFontSchema.parse({});
-    assert.deepEqual({ scope: ok.scope, formats: ok.formats, start: ok.startCodepoint, h: ok.fontHeight }, { scope: "all", formats: ["woff2", "woff", "ttf"], start: "E001", h: 1000 });
+    assert.deepEqual({ scope: ok.scope, formats: ok.formats, start: ok.startCodepoint, reassign: ok.reassignCodepoints, h: ok.fontHeight }, { scope: "all", formats: ["woff2", "woff", "ttf"], start: "E001", reassign: false, h: 1000 });
     assert.equal(buildFontSchema.parse({ startCodepoint: "e100" }).startCodepoint, "E100");
     for (const bad of [{ formats: [] }, { startCodepoint: "0041" }, { startCodepoint: "E0" }, { scope: "folder" }, { scope: "selected" }, { fontHeight: 10 }, { formats: ["pdf"] }, { surprise: 1 }, { prefix: "a b" }]) {
       assert.equal(buildFontSchema.safeParse(bad).success, false, JSON.stringify(bad));
