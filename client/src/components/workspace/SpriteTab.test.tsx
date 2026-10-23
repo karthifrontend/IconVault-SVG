@@ -63,6 +63,7 @@ describe("building the sprite", () => {
     setup();
     expect(screen.getByLabelText("Building the sprite")).toHaveAttribute("aria-busy", "true");
     expect(await screen.findByText("2 symbols")).toBeInTheDocument();
+    expect(await screen.findByText("Sprite generated successfully.", { exact: true })).toBeInTheDocument();
     expect(listIcons).toHaveBeenCalledWith("p1", { sort: "name", limit: 1000, page: 1 });
   });
 

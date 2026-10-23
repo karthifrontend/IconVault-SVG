@@ -90,6 +90,7 @@ describe("building", () => {
     await builtAutomatically();
     expect(buildFont).toHaveBeenCalledWith("p1", { scope: "all", formats: ["woff2", "woff", "ttf"], fontName: "FeatherIcons", prefix: "fth", baseClass: "", startCodepoint: "E001", fontHeight: 1000, descent: 0, normalize: true });
     expect(await screen.findByText("2 icons")).toBeInTheDocument();
+    expect(await screen.findByText("Font generated successfully.", { exact: true })).toBeInTheDocument();
     expect(screen.getByText(/WOFF2 1\.2 KB, TTF 3\.3 KB/)).toBeInTheDocument();
     // One table lists every glyph: character, CSS entity, class. There is no second grid repeating the same icons.
     expect(screen.getAllByRole("table")).toHaveLength(1);
@@ -312,6 +313,7 @@ describe("a font built on the Icons screen", () => {
     cacheBuild({ projectId: "p1", build: built(), family: "iconfont-preview-77", loaded: true });
     setup({}, { iconIds: ["a", "b"], built: true });
     expect(await screen.findByRole("table", { name: "Stable Unicode codepoints mapping" })).toBeInTheDocument();
+    expect(await screen.findByText("Font generated successfully.", { exact: true })).toBeInTheDocument();
     expect(screen.getByText(/WOFF2 1\.2 KB, TTF 3\.3 KB/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy CSS" })).toBeEnabled();
     expect(screen.getByRole("radio", { name: "Selected icons (2)" })).toBeInTheDocument();

@@ -1,6 +1,6 @@
 // The Sprite Builder, laid out like the Font Builder and like Icon Vault's sprite page: the actions in the project bar (Download sprite ZIP is the main one, with Copy sprite), then three columns: 1. Scope selection (whole project, a folder or the chosen icons, with the icon checklist), 2. Sprite architecture (symbols, a stack, or symbols with a CSS stylesheet), 3. Processing options (the symbol id pattern, colours to currentColor, namespaced ids). The sprite builds by itself in the browser whenever the icons or an option change, so the ZIP (sprite, grid sprite, demo page, preview image) is ready to download as soon as the page shows it. Below: the symbol ids with the code for each, and the sprite build history (there is no preview panel; the demo page is inside the ZIP). Anyone who can see the project can build and download; the ZIPs editors download are kept in the history.
 import { CheckSquare, Copy, FileArchive } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
 import { uploadSpriteBuild } from "../../api/sprites";
@@ -67,6 +67,10 @@ export default function SpriteTab() {
   const ready = built !== null && built.ids.length > 0;
   const folderNode = folderOptions.find((folder) => folder.id === folderChoice);
   const inScope = scopeKind === "selected" ? (chosen?.length ?? 0) : scopeKind === "all" ? project.iconCount : folderNode ? totalIconCount(folderNode) : 0;
+
+  useEffect(() => {
+    if (ready) showToast("Sprite generated successfully.", "success");
+  }, [built, ready, showToast]);
 
   async function copyAndToast(text: string, what: string) {
     const ok = await copyText(text);
