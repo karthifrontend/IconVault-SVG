@@ -73,7 +73,7 @@ cd server && npm run build && npm start
 cd client && npm run build && npm run preview
 ```
 
-The server also ships a `vercel.json` for deployment on Vercel.
+The server also ships a `vercel.json` for deployment on Vercel. Vercel invokes the Express handler exported by `server/src/api.ts`; `server/src/index.ts` starts the local HTTP server.
 
 ## API
 
