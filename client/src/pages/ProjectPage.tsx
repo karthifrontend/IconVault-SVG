@@ -100,13 +100,13 @@ export default function ProjectPage() {
 
   return (
     <WorkspaceContext.Provider value={context}>
-      <main id="main" tabIndex={-1} className="pt-[57px] outline-none">
+      <main id="main" tabIndex={-1} className="flex min-h-screen flex-col pt-[57px] outline-none">
         <ProjectHeader project={project.data} actionsRef={setActionsSlot} />
 
-        <div>
+        <div className="flex flex-1 flex-col">
           {onIconsSection ? (
             // Split view: the folders on the left, the icons on the right, divided by a line, using the whole width.
-            <div className="grid lg:min-h-[calc(100vh-12rem)] lg:grid-cols-[17rem_minmax(0,1fr)]">
+            <div className="grid flex-1 lg:grid-cols-[17rem_minmax(0,1fr)]">
               <aside aria-label="Folders" className="border-b border-border p-3 lg:border-b-0 lg:border-r lg:p-4">
                 <button
                   type="button"

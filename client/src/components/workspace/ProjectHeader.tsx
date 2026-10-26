@@ -44,7 +44,7 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
     <header className="border-b border-border bg-background">
       {crumbSlot ? createPortal(breadcrumb, crumbSlot) : <div className="px-4 pt-3 sm:px-6">{breadcrumb}</div>}
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr]">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3  py-3 px-4 lg:grid lg:grid-cols-[1fr_auto_1fr]">
         <div className="flex min-w-0 items-center gap-3">
           <ProjectAvatar name={project.name} color={project.color} />
           <h1 title={project.name} className="min-w-0 truncate text-base font-bold leading-6 tracking-tight">{project.name}</h1>
@@ -65,13 +65,13 @@ export default function ProjectHeader({ project, actionsRef }: { project: Projec
             {isFont ? <Type aria-hidden="true" className="h-4 w-4" /> : <Shapes aria-hidden="true" className="h-4 w-4" />}
             {isFont ? "Font Builder" : "Sprite Builder"}
           </NavLink>
+          <NavLink to={`/projects/${project.id}/trash`} className={pillClass}>
+            <Trash2 aria-hidden="true" className="h-4 w-4" />
+            Trash
+          </NavLink>
           <NavLink to={`/projects/${project.id}/settings`} className={pillClass}>
             <Settings aria-hidden="true" className="h-4 w-4" />
             Project Settings
-          </NavLink>
-          <NavLink to={`/projects/${project.id}/trash`} className={pillClass}>
-            <Trash2 aria-hidden="true" className="h-4 w-4" />
-            <span className="sr-only">Trash</span>
           </NavLink>
         </nav>
 
