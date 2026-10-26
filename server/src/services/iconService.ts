@@ -99,38 +99,6 @@ export type ImportOutcome =
 export type ImportInput = { name: string; raw: string | Buffer; folderId: Id | null; tags: string[] };
 export type ImportOptions = { strategy: Strategy; optimize: boolean };
 
-// Keep the active font project's stored defaults compact after icons leave the library.
-async function compactFontCodepoints(projectId: Id): Promise<void> {
-  const project = await Project.findById(projectId).select({ purpose: 1 }).lean();
-  if (project?.purpose !== "font") return;
-
-  const icons = await Icon.find({ projectId, deletedAt: null }).select({ _id: 1, slug: 1, codepoint: 1 }).lean();
-  icons.sort((a, b) => {
-    if (!a.codepoint) return b.codepoint ? 1 : a.slug.localeCompare(b.slug);
-    if (!b.codepoint) return -1;
-    return parseInt(a.codepoint, 16) - parseInt(b.codepoint, 16) || a.slug.localeCompare(b.slug);
-  });
-  if (icons.length > 0xf8ff - DEFAULT_CODEPOINT_START + 1) {
-    throw new ConflictError("The Private Use Area has no free characters left. Remove some icons before adding more.");
-  }
-
-  const changes = icons.flatMap((icon, index) => {
-    const codepoint = (DEFAULT_CODEPOINT_START + index).toString(16).toUpperCase().padStart(4, "0");
-    return icon.codepoint === codepoint ? [] : [{ id: icon._id, codepoint }];
-  });
-  if (changes.length === 0) return;
-
-  // Stage the changed characters outside the BMP so shifting down cannot collide with
-  // the unique active-project codepoint index.
-  const temporary = changes.map((_, index) => (0xf0000 + index).toString(16).toUpperCase());
-  await Icon.bulkWrite(changes.map(({ id }, index) => ({
-    updateOne: { filter: { _id: id, projectId, deletedAt: null }, update: { $set: { codepoint: temporary[index] } } },
-  })));
-  await Icon.bulkWrite(changes.map(({ id, codepoint }, index) => ({
-    updateOne: { filter: { _id: id, projectId, deletedAt: null, codepoint: temporary[index] }, update: { $set: { codepoint } } },
-  })));
-}
-
 // Adds one SVG to a project. Throws BadRequestError when the markup is unusable. What happens when an active icon already has the same slug depends on the strategy.
 export async function importSvg(projectId: Id, input: ImportInput, options: ImportOptions): Promise<ImportOutcome> {
   const prepared = prepareSvg(input.raw, { optimize: options.optimize });
@@ -343,7 +311,6 @@ export async function moveToTrash(icon: IconDocument): Promise<IconDocument> {
   if (!icon.deletedAt) {
     icon.deletedAt = new Date();
     await icon.save();
-    await compactFontCodepoints(icon.projectId);
   }
   return icon;
 }
@@ -369,7 +336,6 @@ export async function restoreFromTrash(icon: IconDocument): Promise<{ icon: Icon
   }
   icon.deletedAt = null;
   await icon.save();
-  await compactFontCodepoints(icon.projectId);
   return { icon, adjusted };
 }
 
@@ -402,7 +368,6 @@ export async function batchDelete(projectId: Id, ids: Id[], permanent: boolean) 
     return { requested: ids.length, matched: deleted };
   }
   const result = await Icon.updateMany({ projectId, _id: { $in: ids }, deletedAt: null }, { $set: { deletedAt: new Date() } });
-  if (result.modifiedCount > 0) await compactFontCodepoints(projectId);
   return { requested: ids.length, matched: result.matchedCount };
 }
 
@@ -412,7 +377,6 @@ export async function trashUncategorized(projectId: Id) {
   const ids = icons.map((icon) => String(icon._id));
   if (ids.length > 0) {
     await Icon.updateMany({ projectId, _id: { $in: icons.map((icon) => icon._id) }, deletedAt: null }, { $set: { deletedAt: new Date() } });
-    await compactFontCodepoints(projectId);
   }
   return { ids, matched: ids.length };
 }

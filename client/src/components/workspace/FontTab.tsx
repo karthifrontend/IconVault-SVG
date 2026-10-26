@@ -55,7 +55,9 @@ export default function FontTab() {
   const [baseClass, setBaseClass] = useState(defaults.baseClass);
   // Bumped when a package was downloaded, so the build history reloads.
   const [historyVersion, setHistoryVersion] = useState(0);
-  const [startCodepoint, setStartCodepoint] = useState(defaults.startCodepoint);
+  // A build handed over from a random icon selection has no user-chosen start;
+  // keep the field blank while retaining the normal allocator fallback.
+  const [startCodepoint, setStartCodepoint] = useState(handed && handed.iconIds.length < project.iconCount ? "" : defaults.startCodepoint);
   const startCodepointRef = useRef(startCodepoint);
   const [reassignCodepoints, setReassignCodepoints] = useState(false);
   const [formats, setFormats] = useState<FontFormat[]>(defaults.formats);
@@ -97,7 +99,8 @@ export default function FontTab() {
     if (formats.length === 0) return "Choose at least one format.";
     if (!/^([a-zA-Z][a-zA-Z0-9_-]*)?$/.test(baseClass.trim())) return "The base class must start with a letter and use only letters, digits, - or _.";
     if (effectiveScope === "folder-empty") return "Choose a folder.";
-    if (!/^[0-9a-fA-F]{4}$/.test(startCodepoint.trim())) return "The first character must be 4 hex digits, for example E001.";
+    const requestedStart = startCodepoint.trim() || defaults.startCodepoint;
+    if (!/^[0-9a-fA-F]{4}$/.test(requestedStart)) return "The first character must be 4 hex digits, for example E001.";
     if (!Number.isInteger(height) || height < 300 || height > 2048) return "Font height must be a whole number from 300 to 2048.";
     if (!Number.isInteger(down) || down < -1000 || down > 1000) return "Descent must be a whole number from -1000 to 1000.";
     if (effectiveScope === "selected" && (!picked || picked.length === 0)) return "Choose at least one icon.";
@@ -109,7 +112,7 @@ export default function FontTab() {
       fontName: fontName.trim(),
       prefix: prefix.trim(),
       baseClass: baseClass.trim(),
-      startCodepoint: startCodepoint.trim().toUpperCase(),
+      startCodepoint: requestedStart.toUpperCase(),
       ...(reassignCodepoints ? { reassignCodepoints: true } : {}),
       fontHeight: height,
       descent: down,
@@ -237,7 +240,7 @@ export default function FontTab() {
               </legend>
               <div className="mt-3 space-y-2 text-sm">
                 <label className="flex cursor-pointer items-center gap-2">
-                  <input type="radio" name="font-scope" checked={scopeKind === "all"} onChange={() => setScopeKind("all")} className="h-4 w-4 accent-[hsl(var(--primary))]" />
+                  <input type="radio" name="font-scope" checked={scopeKind === "all"} onChange={() => { setScopeKind("all"); setStartCodepoint(defaults.startCodepoint); startCodepointRef.current = defaults.startCodepoint; }} className="h-4 w-4 accent-[hsl(var(--primary))]" />
                   {`Whole project (${pluralize(project.iconCount, "icon")})`}
                 </label>
                 <label className="flex cursor-pointer items-center gap-2">
@@ -261,6 +264,9 @@ export default function FontTab() {
                     checked={scopeKind === "selected"}
                     onChange={() => {
                       setScopeKind("selected");
+                      const nextStart = chosen?.length === project.iconCount ? defaults.startCodepoint : "";
+                      setStartCodepoint(nextStart);
+                      startCodepointRef.current = nextStart;
                       // Nothing chosen yet: open the checklist to choose.
                       if (!chosen) setChoosing(true);
                     }}
@@ -316,7 +322,7 @@ export default function FontTab() {
               value={startCodepoint}
               maxLength={4}
               autoComplete="off"
-              hint="Default: E001 (Private Use Area). Changing this rebases included icons from the new value (E000 to F8FF)."
+              hint="Blank uses E001. Changing this rebases included icons from the new value (E000 to F8FF)."
               onChange={(event) => {
                 startCodepointRef.current = event.target.value;
                 setStartCodepoint(event.target.value);
