@@ -158,7 +158,7 @@ describe("search, sort and view", () => {
     await screen.findByRole("button", { name: "Open Alpha" });
     await userEvent.selectOptions(screen.getByLabelText("Sort by"), "name");
     await waitFor(() => expect(listIcons).toHaveBeenLastCalledWith("p1", expect.objectContaining({ sort: "name" })));
-    expect(window.localStorage.getItem("iconSort")).toBe("name");
+    expect(window.localStorage.getItem("project:p1:iconSort")).toBe("name");
   });
 
   it("switches to the table view and remembers it", async () => {
@@ -166,12 +166,12 @@ describe("search, sort and view", () => {
     await screen.findByRole("button", { name: "Open Alpha" });
     await userEvent.click(screen.getByRole("button", { name: "List view" }));
     expect(screen.getByRole("table", { name: "Icons" })).toBeInTheDocument();
-    expect(window.localStorage.getItem("iconView")).toBe("list");
+    expect(window.localStorage.getItem("project:p1:iconView")).toBe("list");
   });
 
   it("starts in the saved view and background", async () => {
-    window.localStorage.setItem("iconView", "list");
-    window.localStorage.setItem("iconSurface", "dark");
+    window.localStorage.setItem("project:p1:iconView", "list");
+    window.localStorage.setItem("project:p1:iconSurface", "dark");
     setup();
     expect(await screen.findByRole("table", { name: "Icons" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "More" }));
@@ -458,7 +458,7 @@ describe("opening an icon", () => {
   });
 
   it("opens from the table view too", async () => {
-    window.localStorage.setItem("iconView", "list");
+    window.localStorage.setItem("project:p1:iconView", "list");
     vi.mocked(iconsApi.getIcon).mockResolvedValue({ ...makeIcon({ id: "a", name: "Alpha", slug: "alpha" }), svg: "<svg viewBox='0 0 1 1'/>", versions: [] });
     setup();
     await userEvent.click(await screen.findByRole("button", { name: "Alpha" }));

@@ -1,10 +1,9 @@
-// The Font section, laid out like Icon Vault's: the actions at the top (they sit in the project bar: Download font, the main action, and Copy CSS switch on once a font is built, which happens automatically), then three columns: 1. Scope selection (whole project, a folder or the chosen icons, with the icon checklist) and the target formats, 2. Font and CSS settings (name, prefix, base class, starting codepoint), 3. Font metrics and normalization. Below them the result (a summary, conversion warnings and the "Stable Unicode codepoints mapping" table with every glyph, its character (editable), CSS entity and CSS class) and the font build history. The font builds by itself on the server when the page opens and shortly after any setting changes (there is no Build font button; a failed build offers Try again); for editors, new characters are saved on the icons so rebuilding later keeps every glyph on the same character.
+// The Font section, laid out like Icon Vault's: the actions at the top (they sit in the project bar: Download font, the main action, and Copy CSS switch on once a font is built, which happens automatically), then three columns: 1. Scope selection (whole project, a folder or the chosen icons, with the icon checklist) and the target formats, 2. Font and CSS settings (name, prefix, base class, starting codepoint), 3. Font metrics and normalization. Below them the result (a summary, conversion warnings and the "Stable Unicode codepoints mapping" table with every glyph, its character, CSS entity and CSS class) and the font build history. The font builds by itself on the server when the page opens and shortly after any setting changes (there is no Build font button; a failed build offers Try again); project codepoints remain unchanged by font generation.
 import { CheckSquare, Copy, Download } from "lucide-react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { buildFont, downloadFont } from "../../api/fonts";
-import { updateIcon } from "../../api/icons";
-import type { BuildFontInput, FontBuildResult, FontCodepoint, FontFormat } from "../../api/types";
+import type { BuildFontInput, FontBuildResult, FontFormat } from "../../api/types";
 import { useToast } from "../../context/ToastContext";
 import { useLocation } from "react-router-dom";
 import { useWorkspace } from "../../context/workspaceContext";
@@ -36,7 +35,7 @@ const FORMATS: { value: FontFormat; label: string; hint: string }[] = [
 const columnHeading = "text-xs font-semibold uppercase tracking-wide text-muted-foreground";
 
 export default function FontTab() {
-  const { project, folderList, refreshIcons, refreshProject, actionsSlot } = useWorkspace();
+  const { project, folderList, actionsSlot } = useWorkspace();
   const { showToast } = useToast();
   const canEdit = project.access.canEdit;
   const folderOptions = flattenFolderTree(buildFolderTree(folderList.folders));
@@ -143,11 +142,6 @@ export default function FontTab() {
       setFilter("");
       showToast("Font generated successfully.", "success");
       if (canEdit && input.reassignCodepoints && startCodepointRef.current === input.startCodepoint) setReassignCodepoints(false);
-      // New characters were saved on the icons: show them in the other lists too.
-      if (canEdit && built.codepoints.some((glyph) => glyph.isNew)) {
-        refreshIcons();
-        refreshProject();
-      }
     } catch (err) {
       if (mine === buildCount.current) setError(err instanceof Error ? err.message : "Could not build the font.");
     } finally {
@@ -169,14 +163,6 @@ export default function FontTab() {
     } finally {
       setDownloading(false);
     }
-  }
-
-  // Saves a new character on the icon, then rebuilds with the same options so the preview, the stylesheet and the download all use it. Rejects with the server's reason (for example that another icon has that character) so the table can show it next to the box.
-  async function saveCodepoint(glyph: FontCodepoint, codepoint: string | null) {
-    await updateIcon(glyph.id, { codepoint });
-    refreshIcons();
-    showToast(codepoint ? `${glyph.name} now uses U+${codepoint}. Rebuilding the font.` : `Cleared the character of ${glyph.name}. Rebuilding the font.`, "success");
-    await runBuild();
   }
 
   async function copy(text: string, what: string) {
@@ -241,7 +227,7 @@ export default function FontTab() {
             </button>
           </p>
         )}
-        {!canEdit && <p className="text-xs text-muted-foreground">You can build and download this font. The characters are not saved on the project because you cannot change it.</p>}
+        {!canEdit && <p className="text-xs text-muted-foreground">You can build and download this font. Its character mapping applies to this build only.</p>}
 
         <div className="grid gap-4 rounded-2xl border border-border p-4 md:grid-cols-3 md:gap-6">
           <section aria-labelledby="font-scope" className="space-y-4">
@@ -391,12 +377,12 @@ export default function FontTab() {
                 <h3 id="font-mapping" className="text-base font-semibold">
                   Stable Unicode codepoints mapping
                 </h3>
-                <p className="mt-0.5 text-sm text-muted-foreground">Each icon keeps its character when the font is rebuilt, so CSS you already published keeps working.{canEdit ? " Change a value (E000 to F8FF) and the font is rebuilt with it." : ""}</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">Project codepoints stay fixed. Changing the starting codepoint above affects this font generation session.</p>
               </div>
               {built.codepoints.length > 10 && <input type="search" aria-label="Filter characters" placeholder="Filter" value={filter} onChange={(event) => setFilter(event.target.value)} className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm" />}
             </div>
             <div className="mt-3">
-              <CodepointTable glyphs={shown.slice(0, 300)} family={result?.loaded ? result.family : null} canEdit={canEdit} busy={building || reassignCodepoints} onSave={saveCodepoint} onCopyClass={(className) => {
+              <CodepointTable glyphs={shown.slice(0, 300)} family={result?.loaded ? result.family : null} onCopyClass={(className) => {
                   const classes = built.baseClass ? `${built.baseClass} ${className}` : className;
                   void copy(classes, `the class ${classes}`);
                 }} />

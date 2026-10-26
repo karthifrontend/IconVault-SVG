@@ -158,7 +158,7 @@ describe("project workspace", () => {
   });
 
   it("icons as a table", async () => {
-    window.localStorage.setItem("iconView", "list");
+    window.localStorage.setItem("project:p1:iconView", "list");
     project("/projects/p1");
     await screen.findByRole("table", { name: "Icons" });
     await clean();

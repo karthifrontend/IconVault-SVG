@@ -9,7 +9,6 @@ import { useResource } from "../../hooks/useResource";
 import { usePersistentChoice } from "../../hooks/usePersistentChoice";
 import { cn } from "../../lib/cn";
 import { copyText } from "../../lib/clipboard";
-import { codepointProblem } from "../../lib/codepoint";
 import { buildFolderTree, flattenFolderTree, folderPath } from "../../lib/folderTree";
 import { formatBytes, formatDate, formatRelative, savingsPercent } from "../../lib/format";
 import { iconWarnings } from "../../lib/iconInfo";
@@ -27,6 +26,7 @@ import Tabs from "../ui/Tabs";
 type IconDrawerProps = {
   // The icon to show, or null when the drawer is closed.
   iconId: string | null;
+  projectId?: string;
   canEdit: boolean;
   folders: FolderWithCount[];
   // Used to show the icon's id as it will appear in a sprite or font, for example "feather-arrow-left".
@@ -71,10 +71,11 @@ function DrawerBody({ iconId, onClose, ...rest }: Omit<IconDrawerProps, "iconId"
 
 type PanelProps = Omit<IconDrawerProps, "iconId"> & { icon: IconDetail; tab: Tab; onTab: (tab: Tab) => void; reload: () => void };
 
-function IconPanel({ icon, tab, onTab, reload, canEdit, folders, idPrefix, onClose, onChanged }: PanelProps) {
+function IconPanel({ icon, tab, onTab, reload, canEdit, folders, idPrefix, projectId, onClose, onChanged }: PanelProps) {
   const { showToast } = useToast();
-  const [surface] = usePersistentChoice<Surface>("iconSurface", SURFACES, "theme");
-  const [appearance] = useIconAppearance();
+  const settingsProjectId = projectId ?? "default";
+  const [surface] = usePersistentChoice(settingsProjectId, "iconSurface", SURFACES, "theme");
+  const [appearance] = useIconAppearance(settingsProjectId);
   const size = appearance.size;
   const [busy, setBusy] = useState<string | null>(null);
   const warnings = iconWarnings(icon);
@@ -203,17 +204,14 @@ function DetailsTab({ icon, canEdit, folders, saved, onSaved }: { icon: IconDeta
   const [name, setName] = useState(icon.name);
   const [folderId, setFolderId] = useState(icon.folderId ?? "");
   const [tagText, setTagText] = useState(icon.tags.join(", "));
-  const [codepoint, setCodepoint] = useState(icon.codepoint ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const options = flattenFolderTree(buildFolderTree(folders));
-  const problem = codepointProblem(codepoint);
 
   const patch = {
     ...(name.trim() !== icon.name ? { name: name.trim() } : {}),
     ...((folderId || null) !== icon.folderId ? { folderId: folderId || null } : {}),
     ...(parseTags(tagText).join(",") !== icon.tags.join(",") ? { tags: parseTags(tagText) } : {}),
-    ...((codepoint.trim().toUpperCase() || null) !== icon.codepoint ? { codepoint: codepoint.trim().toUpperCase() || null } : {}),
   };
   const changed = Object.keys(patch).length > 0;
 
@@ -223,7 +221,7 @@ function DetailsTab({ icon, canEdit, folders, saved, onSaved }: { icon: IconDeta
       setError("Enter a name.");
       return;
     }
-    if (problem || !changed) return;
+    if (!changed) return;
     setBusy(true);
     setError(null);
     try {
@@ -251,13 +249,17 @@ function DetailsTab({ icon, canEdit, folders, saved, onSaved }: { icon: IconDeta
             ))}
           </SelectField>
           <TextField label="Tags" value={tagText} autoComplete="off" hint="Separated by commas." onChange={(event) => setTagText(event.target.value)} />
-          <TextField label="Font codepoint" value={codepoint} autoComplete="off" spellCheck={false} maxLength={4} className="font-mono" hint="Optional: 4 hex digits from E000 to F8FF, for example E001. Kept the same every time a font is built." error={problem ?? undefined} onChange={(event) => setCodepoint(event.target.value)} />
+          <div className="space-y-1">
+            <div className="text-sm font-medium">Font codepoint</div>
+            <div className="rounded-md border border-input bg-muted px-3 py-2 font-mono text-sm" aria-label="Font codepoint">{icon.codepoint ?? "Not set"}</div>
+            <p className="text-xs text-muted-foreground">Assigned automatically when the icon is added.</p>
+          </div>
           {error && (
             <p role="alert" className="text-sm font-medium text-destructive">
               {error}
             </p>
           )}
-          <Button type="submit" variant="primary" loading={busy} disabled={!changed || problem !== null}>
+          <Button type="submit" variant="primary" loading={busy} disabled={!changed}>
             Save changes
           </Button>
         </form>

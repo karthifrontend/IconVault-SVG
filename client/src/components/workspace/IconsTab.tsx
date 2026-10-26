@@ -47,12 +47,15 @@ export default function IconsTab() {
   const navigate = useNavigate();
   const canEdit = project.access.canEdit;
 
-  const [searchText, setSearchText] = useState("");
-  const search = useDebounced(searchText.trim(), 300);
-  const [sort, setSort] = usePersistentChoice<IconSort>("iconSort", SORTS, "newest");
-  const [view, setView] = usePersistentChoice<IconView>("iconView", VIEWS, "grid");
-  const [surface, setSurface] = usePersistentChoice<Surface>("iconSurface", SURFACES, "theme");
-  const [appearance, setAppearance] = useIconAppearance();
+  const [searchState, setSearchState] = useState({ projectId: project.id, text: "" });
+  const searchText = searchState.projectId === project.id ? searchState.text : "";
+  const setSearchText = (text: string) => setSearchState({ projectId: project.id, text });
+  const debouncedSearch = useDebounced(searchText.trim(), 300);
+  const search = searchState.projectId === project.id ? debouncedSearch : "";
+  const [sort, setSort] = usePersistentChoice<IconSort>(project.id, "iconSort", SORTS, "newest");
+  const [view, setView] = usePersistentChoice<IconView>(project.id, "iconView", VIEWS, "grid");
+  const [surface, setSurface] = usePersistentChoice<Surface>(project.id, "iconSurface", SURFACES, "theme");
+  const [appearance, setAppearance] = useIconAppearance(project.id);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -105,11 +108,6 @@ export default function IconsTab() {
       const family = nextPreviewFamily();
       const loaded = await loadPreviewFont(family, build.preview.base64);
       cacheBuild({ projectId: project.id, build, family, loaded });
-      // New characters were saved on the icons: the totals and lists elsewhere should show them.
-      if (canEdit && build.codepoints.some((glyph) => glyph.isNew)) {
-        refreshIcons();
-        refreshProject();
-      }
       navigate(`/projects/${project.id}/font`, { state: { iconIds, built: true } });
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Could not build the font.", "error");
@@ -320,7 +318,7 @@ export default function IconsTab() {
         }}
       />
 
-      <IconDrawer iconId={openId} canEdit={canEdit} folders={folderList.folders} idPrefix={project.prefix} onClose={() => setOpenId(null)} onChanged={refreshAll} />
+      <IconDrawer iconId={openId} projectId={project.id} canEdit={canEdit} folders={folderList.folders} idPrefix={project.prefix} onClose={() => setOpenId(null)} onChanged={refreshAll} />
     </div>
   );
 }

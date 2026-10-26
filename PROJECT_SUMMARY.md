@@ -76,7 +76,7 @@ Command line `iconvault` ---- personal API token ----> same API (never admin rig
 - **Upload icons** menu: files or ZIP (drag and drop), from another project, **import an SVG sprite**, **import an icon font**, paste SVG code.
 - Folders: nested, create / rename / move / delete (icons move to Uncategorized), drag icons onto folders; the **Uncategorized** row has its own menu (rename the label, move all to the trash, with Undo).
 - Icon list: grid or table, search by name or tag, sort, **preview size / colour / style** controls (Natural, Flat, Wireframe; only a preview), preview background (Match theme, Light, Dark, Checkerboard), select all above the list.
-- Icon details panel: name, folder, tags, codepoint (font projects), code editor with live preview, copy as SVG / React / Vue, download, optimize, versions with restore, move to trash.
+- Icon details panel: name, folder, tags, read-only codepoint (font projects), code editor with live preview, copy as SVG / React / Vue, download, optimize, versions with restore, move to trash.
 - Bulk actions: move, tag, optimize, download, **Build sprite / Build font** from the selection, trash with Undo.
 - Trash: restore (one or all, with notes when a name or codepoint changed), delete for good, empty.
 - Uploads are cleaned (scripts and unsafe content removed), optimized, size-limited, and duplicate names are handled (keep both, skip or replace).
@@ -84,7 +84,7 @@ Command line `iconvault` ---- personal API token ----> same API (never admin rig
 ### Font Builder (font projects)
 - Actions in the project bar: **Download font** (main) and **Copy CSS**. **The font builds by itself** when the page opens and shortly after any setting changes.
 - Three columns: **scope** (whole project, a folder, selected icons, with the icon checklist), **font and CSS settings** (name, class prefix, optional base class, starting codepoint), **metrics** (height, descent, normalize). Target formats: WOFF2, WOFF, TTF, EOT, SVG.
-- **Stable Unicode codepoints mapping** table: every icon keeps its character (E000 to F8FF) between builds; editors can change a value and the font rebuilds with it.
+- **Stable Unicode codepoints mapping** table: every icon keeps its automatically assigned character (E000 to F8FF) between builds. Changing Starting Codepoint affects only the current font generation session; mappings remain read-only.
 - **Font build history:** every package an editor downloads is kept with a version number (v1, v2, ...); download again or delete (last 20 per project).
 
 ### Sprite Builder (sprite projects)

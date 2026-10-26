@@ -1,4 +1,4 @@
-// Building an icon font from a project's icons. Icons keep a stable codepoint across builds unless `reassignCodepoints` requests a fresh series; for editors, assigned codepoints are saved on the icons. The fonts, CSS, SCSS and glyph map come from `fantasticon`; ZIP packaging uses fflate and builds its own specimen page. Builds run in a temporary folder that is removed afterwards; a package an editor downloads is also kept in the font build history (see fontHistory.ts).
+// Building an icon font from a project's icons. Project codepoints stay fixed; `reassignCodepoints` changes only the current build mapping. The fonts, CSS, SCSS and glyph map come from `fantasticon`; ZIP packaging uses fflate and builds its own specimen page. Builds run in a temporary folder that is removed afterwards; a package an editor downloads is also kept in the font build history (see fontHistory.ts).
 import { zipSync } from "fflate";
 import { FontAssetType, OtherAssetType, generateFonts } from "fantasticon";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
@@ -115,110 +115,8 @@ export function safeFontName(name: string): string {
   return name.replace(/[^a-zA-Z0-9_-]/g, "") || "IconFont";
 }
 
-async function persistReassignedCodepoints(projectId: Id, icons: FontIcon[], plan: CodepointPlan): Promise<void> {
-  const changes = [...plan.assigned].flatMap(([id, value]) => {
-    const icon = icons.find((candidate) => candidate.id === id);
-    if (!icon) return [];
-    const codepoint = toHex(value);
-    const previous = icon.codepoint ?? null;
-    return previous === codepoint ? [] : [{ id, previous, codepoint }];
-  });
-  if (changes.length === 0) return;
-
-  const projectCodepoints = await Icon.find({ projectId, deletedAt: null, codepoint: { $type: "string" } }).select({ codepoint: 1 }).lean();
-  const used = new Set(projectCodepoints.map((icon) => icon.codepoint));
-  const temporaryCodepoints: string[] = [];
-  for (let candidate = 0xf0000; candidate <= 0xffffd && temporaryCodepoints.length < changes.length; candidate += 1) {
-    const codepoint = toHex(candidate);
-    if (used.has(codepoint)) continue;
-    used.add(codepoint);
-    temporaryCodepoints.push(codepoint);
-  }
-  if (temporaryCodepoints.length !== changes.length) {
-    throw new ConflictError("There are not enough temporary codepoints available to update this font mapping. Please try again.");
-  }
-
-  const changesWithTemporary = changes.map((change, index) => ({ ...change, temporary: temporaryCodepoints[index] as string }));
-  try {
-    const staged = await Icon.bulkWrite(
-      changesWithTemporary.map(({ id, previous, temporary }) => ({
-        updateOne: {
-          filter: { _id: id, projectId, deletedAt: null, codepoint: previous },
-          update: { $set: { codepoint: temporary } },
-        },
-      })),
-      { ordered: true },
-    );
-    if (staged.matchedCount !== changesWithTemporary.length) {
-      throw new ConflictError("An icon changed while the font was being rebuilt. Please try again.");
-    }
-
-    const reassigned = await Icon.bulkWrite(
-      changesWithTemporary.map(({ id, codepoint, temporary }) => ({
-        updateOne: {
-          filter: { _id: id, projectId, deletedAt: null, codepoint: temporary },
-          update: { $set: { codepoint } },
-        },
-      })),
-      { ordered: true },
-    );
-    if (reassigned.matchedCount !== changesWithTemporary.length) {
-      throw new ConflictError("An icon changed while the font was being rebuilt. Please try again.");
-    }
-  } catch (err) {
-    let mappingCouldNotBeFullyRestored = false;
-    try {
-      const current = await Icon.find({ projectId, _id: { $in: changesWithTemporary.map(({ id }) => id) }, deletedAt: null }).select({ codepoint: 1 }).lean();
-      const currentById = new Map(current.map((icon) => [String(icon._id), icon.codepoint ?? null]));
-      const recoverable = changesWithTemporary.filter(({ id, previous, temporary, codepoint }) => {
-        const value = currentById.get(id);
-        return value === previous || value === temporary || value === codepoint;
-      });
-      mappingCouldNotBeFullyRestored = recoverable.length !== changesWithTemporary.length;
-
-      if (recoverable.length > 0) {
-        const stagedForRestore = await Icon.bulkWrite(
-          recoverable.map(({ id, temporary }) => ({
-            updateOne: {
-              filter: { _id: id, projectId, deletedAt: null, codepoint: currentById.get(id) ?? null },
-              update: { $set: { codepoint: temporary } },
-            },
-          })),
-          { ordered: true },
-        );
-        if (stagedForRestore.matchedCount !== recoverable.length) {
-          throw new Error("Some icons changed concurrently, so their previous codepoints cannot be restored safely.");
-        }
-
-        const restored = await Icon.bulkWrite(
-          recoverable.map(({ id, previous, temporary }) => ({
-            updateOne: {
-              filter: { _id: id, projectId, deletedAt: null, codepoint: temporary },
-              update: { $set: { codepoint: previous } },
-            },
-          })),
-          { ordered: true },
-        );
-        if (restored.matchedCount !== recoverable.length) {
-          throw new Error("Some icons changed concurrently, so their previous codepoints cannot be restored safely.");
-        }
-      }
-    } catch (rollbackError) {
-      throw new Error("Font codepoint reassignment failed and the previous mapping could not be restored.", { cause: rollbackError });
-    }
-
-    if (mappingCouldNotBeFullyRestored) {
-      throw new ConflictError("Some icons changed while the font was being rebuilt. Please refresh and try again.");
-    }
-    if (typeof err === "object" && err !== null && "code" in err && err.code === 11000) {
-      throw new ConflictError("Another change took a codepoint while the font was being rebuilt. Please try again.");
-    }
-    throw err;
-  }
-}
-
-// Builds the font in a temporary folder. When `reassignCodepoints` is true, editors' existing mappings are replaced with a fresh series and saved on the icons.
-export async function buildFont(projectId: Id, icons: FontIcon[], input: BuildFontInput, persist: boolean): Promise<FontBuild> {
+// Builds the font in a temporary folder. Reassignment changes only this build's character map.
+export async function buildFont(projectId: Id, icons: FontIcon[], input: BuildFontInput, _persist: boolean): Promise<FontBuild> {
   // A character outside E000 to F8FF would be written to the wrong place in the font, so the CSS and the font would disagree. Such values can only exist from before this rule; say which icons to fix instead of building something wrong.
   const outside = icons.filter((icon) => icon.codepoint && !isFontCodepoint(icon.codepoint));
   if (outside.length > 0) {
@@ -226,17 +124,6 @@ export async function buildFont(projectId: Id, icons: FontIcon[], input: BuildFo
   }
   const inProject = await Icon.find({ projectId, deletedAt: null, codepoint: { $type: "string" }, _id: { $nin: icons.map((icon) => icon.id) } }).select({ codepoint: 1 }).lean();
   const plan = planCodepoints(icons, input.startCodepoint, inProject.map((row) => parseInt(row.codepoint as string, 16)), input.reassignCodepoints);
-
-  if (persist && !input.reassignCodepoints) {
-    for (const [id, codepoint] of plan.assigned) {
-      try {
-        await Icon.updateOne({ _id: id, projectId, codepoint: null }, { $set: { codepoint: toHex(codepoint) } });
-      } catch (err) {
-        if ((err as { code?: number }).code === 11000) throw new ConflictError("Another change took a codepoint while the font was being built. Please try again.");
-        throw err;
-      }
-    }
-  }
 
   const fontName = safeFontName(input.fontName);
   const prefix = input.prefix.replace(/-+$/, "") || "icon";
@@ -289,9 +176,6 @@ export async function buildFont(projectId: Id, icons: FontIcon[], input: BuildFo
     files.push({ name: "README.md", data: Buffer.from(readme(fontName, prefix, icons, wanted, input.baseClass)) });
 
     const css = files.find((file) => file.name === `${fontName}.css`)?.data.toString("utf8") ?? "";
-    if (persist && input.reassignCodepoints) {
-      await persistReassignedCodepoints(projectId, icons, plan);
-    }
     return {
       fontName,
       prefix,

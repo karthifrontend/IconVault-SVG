@@ -182,19 +182,19 @@ describe("preview", () => {
   });
 
   it("uses the background chosen in the Icons toolbar", async () => {
-    window.localStorage.setItem("iconSurface", "dark");
+    window.localStorage.setItem("project:default:iconSurface", "dark");
     setup();
     await ready();
     expect(screen.getByRole("img", { name: /at 40 pixels/ }).parentElement?.className).toContain("bg-neutral-900");
-    window.localStorage.removeItem("iconSurface");
+    window.localStorage.removeItem("project:default:iconSurface");
   });
 
   it("follows the size chosen in the Icons toolbar", async () => {
-    window.localStorage.setItem("iconAppearance", JSON.stringify({ size: 72, color: "", style: "natural" }));
+    window.localStorage.setItem("project:default:iconAppearance", JSON.stringify({ size: 72, color: "", style: "natural" }));
     setup();
     await ready();
     expect(screen.getByRole("img", { name: "Arrow Left at 72 pixels" })).toBeInTheDocument();
-    window.localStorage.removeItem("iconAppearance");
+    window.localStorage.removeItem("project:default:iconAppearance");
   });
 });
 

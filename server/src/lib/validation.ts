@@ -70,7 +70,6 @@ export const updateIconSchema = z
     name: projectName,
     folderId: nullableId,
     tags,
-    codepoint: codepointSchema.nullable(),
     rawSvg: z.string().min(1).max(1_000_000),
   })
   .partial()
