@@ -13,7 +13,7 @@ import { codepointProblem } from "../../lib/codepoint";
 import { buildFolderTree, flattenFolderTree, folderPath } from "../../lib/folderTree";
 import { formatBytes, formatDate, formatRelative, savingsPercent } from "../../lib/format";
 import { iconWarnings } from "../../lib/iconInfo";
-import { SURFACES, surfaceClass, surfaceStyle, type Surface } from "../../lib/previewSurface";
+import { SURFACES, surfaceClass, surfaceStyle } from "../../lib/previewSurface";
 import { toReactComponent, toVueComponent } from "../../lib/svgSnippets";
 import { parseTags } from "../../lib/upload";
 import { triggerBrowserDownload } from "../../utils/zipBundle";
