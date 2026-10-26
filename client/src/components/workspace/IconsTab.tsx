@@ -49,10 +49,10 @@ export default function IconsTab() {
 
   const [searchText, setSearchText] = useState("");
   const search = useDebounced(searchText.trim(), 300);
-  const [sort, setSort] = usePersistentChoice<IconSort>("iconSort", SORTS, "newest");
-  const [view, setView] = usePersistentChoice<IconView>("iconView", VIEWS, "grid");
-  const [surface, setSurface] = usePersistentChoice<Surface>("iconSurface", SURFACES, "theme");
-  const [appearance, setAppearance] = useIconAppearance();
+  const [sort, setSort] = usePersistentChoice<IconSort>(project.id, "iconSort", SORTS, "newest");
+  const [view, setView] = usePersistentChoice<IconView>(project.id, "iconView", VIEWS, "grid");
+  const [surface, setSurface] = usePersistentChoice<Surface>(project.id, "iconSurface", SURFACES, "theme");
+  const [appearance, setAppearance] = useIconAppearance(project.id);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -320,7 +320,7 @@ export default function IconsTab() {
         }}
       />
 
-      <IconDrawer iconId={openId} canEdit={canEdit} folders={folderList.folders} idPrefix={project.prefix} onClose={() => setOpenId(null)} onChanged={refreshAll} />
+      <IconDrawer projectId={project.id} iconId={openId} canEdit={canEdit} folders={folderList.folders} idPrefix={project.prefix} onClose={() => setOpenId(null)} onChanged={refreshAll} />
     </div>
   );
 }

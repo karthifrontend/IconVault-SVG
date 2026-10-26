@@ -61,6 +61,13 @@ export const iconSchema = new Schema(
       match: /^[0-9A-F]{4,6}$/,
       default: null,
     },
+    // Font Builder's project-specific mapping. Kept separate from the uploaded icon's codepoint shown in the Icons section.
+    fontCodepoint: {
+      type: String,
+      uppercase: true,
+      match: /^[0-9A-F]{4,6}$/,
+      default: null,
+    },
     width: {
       type: Number,
       default: 24,
@@ -104,6 +111,10 @@ export const iconSchema = new Schema(
 iconSchema.index(
   { projectId: 1, slug: 1 },
   { unique: true, partialFilterExpression: { deletedAt: null } },
+);
+iconSchema.index(
+  { projectId: 1, fontCodepoint: 1 },
+  { unique: true, partialFilterExpression: { deletedAt: null, fontCodepoint: { $type: "string" } } },
 );
 // A codepoint is unique per project among active icons that have one.
 iconSchema.index(

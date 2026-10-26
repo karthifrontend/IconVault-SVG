@@ -142,8 +142,8 @@ describe("header", () => {
 
     const nav = screen.getByRole("navigation", { name: "Project sections" });
     expect(within(nav).getByRole("link", { name: /Icons/ })).toHaveTextContent("7");
-    // The Trash tab is an icon with no count.
-    expect(within(nav).getByRole("link", { name: "Trash" })).toHaveTextContent(/^Trash$/);
+    // The Trash tab shows its label alongside the icon and has no count.
+    expect(within(nav).getByText("Trash")).not.toHaveClass("sr-only");
     expect(within(nav).getByRole("link", { name: "Project Settings" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: /Icons/ })).toHaveAttribute("aria-current", "page");
   });
@@ -170,6 +170,18 @@ describe("header", () => {
 });
 
 describe("sections", () => {
+  it("lets the folder sidebar fill the remaining viewport height", async () => {
+    renderPage();
+    await screen.findByRole("heading", { level: 1 });
+
+    const main = screen.getByRole("main");
+    const folderSidebar = screen.getByRole("complementary", { name: "Folders" });
+
+    expect(main).toHaveClass("flex", "min-h-screen", "flex-col");
+    expect(folderSidebar.parentElement).toHaveClass("flex-1");
+    expect(folderSidebar.parentElement?.parentElement).toHaveClass("flex", "flex-1", "flex-col");
+  });
+
   it("shows the folder tree with the Icons section, and hides it on Trash and Settings", async () => {
     renderPage();
     await screen.findByRole("heading", { level: 1 });

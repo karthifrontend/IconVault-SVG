@@ -12,6 +12,7 @@ import { assertIconRoom } from "../lib/quotas.js";
 import { assertFolderInProject, descendantIds, ensureFolderPath } from "./folderService.js";
 import { prepareSvg, type PreparedSvg } from "./svgPipeline.js";
 import { buildZip, readSvgsFromZip } from "./zipService.js";
+import { allocateNextCodepoint } from "./codepointService.js";
 
 type Id = Types.ObjectId;
 export type IconDocument = HydratedDocument<IconDoc>;
@@ -112,11 +113,12 @@ export async function importSvg(projectId: Id, input: ImportInput, options: Impo
     }
 
     if (existing && options.strategy === "replace") {
+      if (!existing.codepoint) existing.codepoint = await allocateNextCodepoint(projectId);
       if (existing.svg !== prepared.svg) {
         await saveVersion(existing);
         applyPrepared(existing, prepared);
-        await existing.save();
       }
+      if (existing.isModified()) await existing.save();
       return { status: "replaced", icon: existing };
     }
 
@@ -130,12 +132,14 @@ export async function importSvg(projectId: Id, input: ImportInput, options: Impo
 
     await assertIconRoom(projectId);
     try {
+      const codepoint = await allocateNextCodepoint(projectId);
       const icon = await Icon.create({
         projectId,
         folderId: input.folderId,
         name: finalName,
         slug,
         tags,
+        codepoint,
         svg: prepared.svg,
         byteSize: prepared.byteSize,
         originalByteSize: prepared.originalByteSize,
