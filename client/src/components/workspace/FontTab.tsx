@@ -1,13 +1,13 @@
-// The Font section, laid out like Icon Vault's: the actions at the top (they sit in the project bar: Download font, the main action, and Copy CSS switch on once a font is built, which happens automatically), then three columns: 1. Scope selection (whole project, a folder or the chosen icons, with the icon checklist) and the target formats, 2. Font and CSS settings (name, prefix, base class, starting codepoint), 3. Font metrics and normalization. Below them the result (a summary, conversion warnings and the "Stable Unicode codepoints mapping" table with every glyph, its character (editable), CSS entity and CSS class) and the font build history. The font builds by itself on the server when the page opens and shortly after any setting changes (there is no Build font button; a failed build offers Try again); for editors, new characters are saved on the icons so rebuilding later keeps every glyph on the same character.
+// The Font section: font-only codepoint edits last for the current visit. Opening it resets the table to uploaded codepoints, then builds the preview and downloads from that mapping.
 import { CheckSquare, Copy, Download } from "lucide-react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { buildFont, downloadFont } from "../../api/fonts";
-import { updateIcon } from "../../api/icons";
 import type { BuildFontInput, FontBuildResult, FontCodepoint, FontFormat } from "../../api/types";
 import { useToast } from "../../context/ToastContext";
 import { useLocation } from "react-router-dom";
 import { useWorkspace } from "../../context/workspaceContext";
+import { useResource } from "../../hooks/useResource";
 import { copyText } from "../../lib/clipboard";
 import { clearCachedBuild, peekCachedBuild } from "../../lib/fontBuildCache";
 import { embeddedFontCss } from "../../lib/fontCss";
@@ -15,7 +15,7 @@ import { fontAutoBuild } from "../../lib/fontAutoBuild";
 import { defaultFontOptions } from "../../lib/fontDefaults";
 import { loadPreviewFont, nextPreviewFamily, unloadPreviewFont } from "../../lib/fontPreview";
 import { buildFolderTree, flattenFolderTree, totalIconCount } from "../../lib/folderTree";
-import { readBuildSelection } from "../../lib/loadAllIcons";
+import { loadAllIcons, readBuildSelection } from "../../lib/loadAllIcons";
 import { formatBytes, pluralize } from "../../lib/format";
 import { triggerBrowserDownload } from "../../utils/zipBundle";
 import { Button } from "../ui/Button";
@@ -36,7 +36,7 @@ const FORMATS: { value: FontFormat; label: string; hint: string }[] = [
 const columnHeading = "text-xs font-semibold uppercase tracking-wide text-muted-foreground";
 
 export default function FontTab() {
-  const { project, folderList, refreshIcons, refreshProject, actionsSlot } = useWorkspace();
+  const { project, folderList, actionsSlot } = useWorkspace();
   const { showToast } = useToast();
   const canEdit = project.access.canEdit;
   const folderOptions = flattenFolderTree(buildFolderTree(folderList.folders));
@@ -51,6 +51,7 @@ export default function FontTab() {
   const scope = scopeKind === "folder" ? folderChoice : scopeKind;
   // The same starting settings the Icons screen uses when it builds a font straight from a selection.
   const [defaults] = useState(() => defaultFontOptions(project));
+  const availableIcons = useResource(`font-codepoints:${project.id}`, () => loadAllIcons(project.id));
   const [fontName, setFontName] = useState(defaults.fontName);
   const [prefix, setPrefix] = useState(defaults.prefix);
   const [baseClass, setBaseClass] = useState(defaults.baseClass);
@@ -64,6 +65,7 @@ export default function FontTab() {
   const [descent, setDescent] = useState(String(defaults.descent));
   const [normalize, setNormalize] = useState(defaults.normalize);
   const [building, setBuilding] = useState(false);
+  const [fontCodepointOverrides, setFontCodepointOverrides] = useState<Record<string, string>>({});
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // A font that was just built on the Icons screen ("Build font" on the bulk bar) is shown at once, without building it again.
@@ -80,6 +82,20 @@ export default function FontTab() {
   }, [adopted, result, showToast]);
   const [filter, setFilter] = useState("");
 
+  useEffect(() => {
+    if (!chosen || !availableIcons.data) return;
+    const selectedCodepoints = availableIcons.data
+      .filter((icon) => chosen.includes(icon.id) && icon.codepoint)
+      .map((icon) => Number.parseInt(icon.codepoint as string, 16))
+      .filter((codepoint) => Number.isInteger(codepoint))
+      .sort((a, b) => a - b);
+    if (selectedCodepoints.length === 0) return;
+    const next = selectedCodepoints[0].toString(16).toUpperCase().padStart(4, "0");
+    startCodepointRef.current = next;
+    setStartCodepoint(next);
+    setReassignCodepoints(false);
+  }, [chosen, availableIcons.data]);
+
   // Make sure the preview font of the shown build is registered (a build handed over from the Icons screen registered it there), and take it out again when the build is replaced or the section closes.
   const family = result?.family;
   const previewBase64 = result?.build.preview.base64;
@@ -89,7 +105,7 @@ export default function FontTab() {
     return () => unloadPreviewFont(family);
   }, [family, previewBase64]);
 
-  function options(override?: string[]): BuildFontInput | string {
+  function options(override?: string[], codepointOverrides = fontCodepointOverrides): BuildFontInput | string {
     const picked = override ?? chosen;
     const effectiveScope = override ? "selected" : scopeKind === "folder" && !folderChoice ? "folder-empty" : scope;
     const height = Number(fontHeight);
@@ -112,6 +128,7 @@ export default function FontTab() {
       baseClass: baseClass.trim(),
       startCodepoint: startCodepoint.trim().toUpperCase(),
       ...(reassignCodepoints ? { reassignCodepoints: true } : {}),
+      ...(Object.keys(codepointOverrides).length > 0 ? { codepointOverrides: Object.entries(codepointOverrides).map(([iconId, codepoint]) => ({ iconId, codepoint })) } : {}),
       fontHeight: height,
       descent: down,
       normalize,
@@ -123,8 +140,8 @@ export default function FontTab() {
   const [displayedBuildSignature, setDisplayedBuildSignature] = useState<string | null>(null);
   const buildCount = useRef(0);
 
-  async function runBuild(override?: string[]) {
-    const input = options(override);
+  async function runBuild(override?: string[], codepointOverrides = fontCodepointOverrides) {
+    const input = options(override, codepointOverrides);
     if (typeof input === "string") return setError(input);
     const mine = ++buildCount.current;
     setBuilding(true);
@@ -142,11 +159,10 @@ export default function FontTab() {
       setResult({ build: built, family, loaded });
       setFilter("");
       showToast("Font generated successfully.", "success");
-      if (canEdit && input.reassignCodepoints && startCodepointRef.current === input.startCodepoint) setReassignCodepoints(false);
-      // New characters were saved on the icons: show them in the other lists too.
-      if (canEdit && built.codepoints.some((glyph) => glyph.isNew)) {
-        refreshIcons();
-        refreshProject();
+      if (input.reassignCodepoints || built.codepoints.some((glyph) => glyph.isNew)) {
+        const nextOverrides = { ...codepointOverrides, ...Object.fromEntries(built.codepoints.map((glyph) => [glyph.id, glyph.codepoint])) };
+        setFontCodepointOverrides(nextOverrides);
+        if (input.reassignCodepoints && startCodepointRef.current === input.startCodepoint) setReassignCodepoints(false);
       }
     } catch (err) {
       if (mine === buildCount.current) setError(err instanceof Error ? err.message : "Could not build the font.");
@@ -171,12 +187,14 @@ export default function FontTab() {
     }
   }
 
-  // Saves a new character on the icon, then rebuilds with the same options so the preview, the stylesheet and the download all use it. Rejects with the server's reason (for example that another icon has that character) so the table can show it next to the box.
+  // Saves a font-only character mapping, then rebuilds with the same options so the preview, stylesheet and download all use it.
   async function saveCodepoint(glyph: FontCodepoint, codepoint: string | null) {
-    await updateIcon(glyph.id, { codepoint });
-    refreshIcons();
+    const nextOverrides = { ...fontCodepointOverrides };
+    if (codepoint) nextOverrides[glyph.id] = codepoint;
+    else delete nextOverrides[glyph.id];
+    setFontCodepointOverrides(nextOverrides);
     showToast(codepoint ? `${glyph.name} now uses U+${codepoint}. Rebuilding the font.` : `Cleared the character of ${glyph.name}. Rebuilding the font.`, "success");
-    await runBuild();
+    await runBuild(undefined, nextOverrides);
   }
 
   async function copy(text: string, what: string) {
@@ -420,8 +438,6 @@ export default function FontTab() {
           setChosen(iconIds);
           setScopeKind("selected");
           setChoosing(false);
-          // Build with the new choice right away (the state above is not visible to this call yet).
-          void runBuild(iconIds);
         }}
       />
     </div>

@@ -1,6 +1,7 @@
 // Project operations: list (with the icon counts and sample icons the dashboard shows), detail, create, update, delete with cascade, and duplicate.
 import mongoose, { type HydratedDocument, type Types } from "mongoose";
 import { escapeRegExp, type SignedInActor } from "../lib/http.js";
+import { isFontCodepoint } from "../lib/codepoint.js";
 import { describeAccess, type AccessFlags } from "../lib/permissions.js";
 import type { CreateProjectInput, ListProjectsQuery, UpdateProjectInput } from "../lib/validation.js";
 import Folder from "../models/Folder.js";
@@ -199,6 +200,7 @@ export async function duplicateProject(source: HydratedDocument<ProjectDoc>, act
     color: source.color ?? "#3b82f6",
     purpose: source.purpose ?? "sprite",
     visibility: "private",
+    ...(source.uploadCodepointHighWatermark != null ? { uploadCodepointHighWatermark: source.uploadCodepointHighWatermark } : {}),
   });
 
   try {
@@ -244,6 +246,13 @@ export async function duplicateProject(source: HydratedDocument<ProjectDoc>, act
           hasText: icon.hasText,
         })),
       );
+    }
+    if (source.uploadCodepointHighWatermark == null) {
+      const lastAssigned = [...icons].reverse().find((icon) => icon.codepoint && isFontCodepoint(icon.codepoint))?.codepoint;
+      if (lastAssigned) {
+        copy.uploadCodepointHighWatermark = Number.parseInt(lastAssigned, 16);
+        await copy.save();
+      }
     }
   } catch (err) {
     // Do not leave a half-copied project behind.

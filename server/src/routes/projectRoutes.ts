@@ -70,12 +70,14 @@ router.get("/:projectId/export", heavyLimit, async (req, res) => {
 });
 
 // Builds an icon font and returns what the page needs to preview it (a small WOFF2 plus the stylesheet and the character for every icon). Anyone who can see the project may build; only editors get the new codepoints saved on the icons.
+// Saves a Font Builder-only codepoint override without changing the codepoint shown in the Icons section.
+// Builds a font using the separate Font Builder mappings.
 router.post("/:projectId/font/build", heavyLimit, async (req, res) => {
   const actor = actorOf(req);
   const project = await loadProject(actor, req.params.projectId, "view");
   const input = buildFontSchema.parse(req.body ?? {});
   const icons = await iconsForFont(project._id, input);
-  const build = await buildFont(project._id, icons, input, canEdit(actor, project));
+  const build = await buildFont(project._id, icons, input);
   res.json({ fontName: build.fontName, prefix: build.prefix, baseClass: build.baseClass, iconCount: build.iconCount, warnings: build.warnings, codepoints: build.codepoints, css: build.css, preview: build.preview, sizes: build.sizes });
 });
 
@@ -85,7 +87,7 @@ router.post("/:projectId/font/download", heavyLimit, async (req, res) => {
   const project = await loadProject(actor, req.params.projectId, "view");
   const input = buildFontSchema.parse(req.body ?? {});
   const icons = await iconsForFont(project._id, input);
-  const build = await buildFont(project._id, icons, input, canEdit(actor, project));
+  const build = await buildFont(project._id, icons, input);
   const zip = zipFontBuild(build);
   // Editors' downloads are kept in the build history (best effort: a failure here must not lose the download).
   if (canEdit(actor, project)) await recordFontBuild(project._id, actor.id, build, input.formats, zip).catch(() => false);

@@ -1,8 +1,7 @@
-// One icon in the grid: a checkbox to select it, a button that opens it, a preview on the chosen surface, its name, size and any font-conversion warnings. Editors can drag it (or the whole selection) onto a folder.
+// One icon in the grid: a checkbox to select it, a button that opens it, a preview on the chosen surface, its name, Unicode codepoint and any font-conversion warnings. Editors can drag it (or the whole selection) onto a folder.
 import { setDraggedIcons } from "../../lib/dragIcons";
 import type { IconItem } from "../../api/types";
 import { cn } from "../../lib/cn";
-import { formatBytes } from "../../lib/format";
 import type { IconAppearance } from "../../lib/iconAppearance";
 import { iconWarnings } from "../../lib/iconInfo";
 import { surfaceClass, surfaceStyle, type Surface } from "../../lib/previewSurface";
@@ -45,7 +44,7 @@ export default function IconCard({ icon, selected, surface, appearance, canDrag,
       </button>
       {/* Outside the button, so its visible text is just the name and matches its accessible name ("Open <name>"). */}
       <div className="flex flex-col items-center gap-2 px-3 pb-3 text-center">
-        <span className="text-xs text-muted-foreground">{formatBytes(icon.byteSize)}</span>
+        <span className="font-mono text-xs text-muted-foreground">{icon.codepoint ? `U+${icon.codepoint}` : "No codepoint"}</span>
         {warnings.length > 0 && (
           <span className="flex flex-wrap justify-center gap-1" title="These will not convert cleanly to an icon font.">
             {warnings.map((warning) => (

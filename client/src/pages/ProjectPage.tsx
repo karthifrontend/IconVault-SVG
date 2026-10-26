@@ -195,7 +195,7 @@ export default function ProjectPage() {
                 </div>
               </aside>
               <div className="min-w-0">
-                <IconsTab />
+                <IconsTab key={projectId} />
               </div>
             </div>
           ) : (
@@ -203,7 +203,7 @@ export default function ProjectPage() {
             <Routes>
               {/* A project is a sprite project or a font project, chosen at creation: each has only its own section. */}
               <Route path="sprite" element={project.data.purpose === "sprite" ? <SpriteTab /> : <Navigate to={`/projects/${projectId}`} replace />} />
-              <Route path="font" element={project.data.purpose === "font" ? <FontTab /> : <Navigate to={`/projects/${projectId}`} replace />} />
+              <Route path="font" element={project.data.purpose === "font" ? <FontTab key={projectId} /> : <Navigate to={`/projects/${projectId}`} replace />} />
               <Route path="trash" element={<TrashTab />} />
               <Route path="settings" element={<SettingsTab />} />
               <Route path="*" element={<Navigate to={`/projects/${projectId}`} replace />} />

@@ -223,6 +223,7 @@ export type BuildFontInput = {
   baseClass?: string;
   startCodepoint?: string;
   reassignCodepoints?: boolean;
+  codepointOverrides?: { iconId: string; codepoint: string }[];
   fontHeight?: number;
   descent?: number;
   normalize?: boolean;

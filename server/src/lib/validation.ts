@@ -229,6 +229,7 @@ export const buildFontSchema = z
       .transform((value) => value.toUpperCase())
       .default("E001"),
     reassignCodepoints: z.boolean().default(false),
+    codepointOverrides: z.array(z.object({ iconId: objectId, codepoint: codepointSchema }).strict()).max(1000).optional(),
     fontHeight: z.number().int().min(300).max(2048).default(1000),
     descent: z.number().int().min(-1000).max(1000).default(0),
     normalize: z.boolean().default(true),
