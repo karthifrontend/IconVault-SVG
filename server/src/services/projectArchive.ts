@@ -36,6 +36,7 @@ const manifestSchema = z.object({
         folder: folderPath.default([]),
         tags: z.array(z.string()).max(50).default([]),
         codepoint: codepointSchema.nullable().default(null),
+        fontCodepoint: codepointSchema.nullable().default(null),
       }),
     )
     .max(ARCHIVE_LIMITS.maxIcons),
@@ -164,10 +165,10 @@ export async function importProject(actor: SignedInActor, buffer: Buffer): Promi
         if (entry.codepoint) {
           // A taken or invalid codepoint is dropped, not fatal.
           try {
-            outcome.icon.codepoint = entry.codepoint;
+            if (entry.codepoint) outcome.icon.codepoint = entry.codepoint;
             await outcome.icon.save();
           } catch {
-            problems.push({ file: entry.file, message: `The codepoint ${entry.codepoint} could not be kept.` });
+            problems.push({ file: entry.file, message: `The codepoint mapping for ${entry.name} could not be kept.` });
           }
         }
       } catch (err) {

@@ -65,6 +65,12 @@ export const projectSchema = new Schema(
       default: 0,
       min: 0,
     },
+    // Highest codepoint assigned automatically during upload. Manual edits do not affect the next upload value.
+    uploadCodepointHighWatermark: {
+      type: Number,
+      min: 0xe000,
+      max: 0xf8ff,
+    },
     // Like fontBuildCount, for the Sprite Builder's kept ZIPs.
     spriteBuildCount: {
       type: Number,

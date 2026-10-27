@@ -13,7 +13,7 @@ export async function recordSpriteBuild(projectId: Id, userId: string, input: { 
   if (zip.length === 0) throw new BadRequestError("The sprite ZIP is empty.");
   if (zip.length > MAX_STORED_SPRITE_BYTES) throw new BadRequestError("The sprite ZIP is too large to keep (12 MB at most).");
   if (!(zip[0] === 0x50 && zip[1] === 0x4b)) throw new BadRequestError("That file is not a ZIP.");
-  const counted = await Project.findOneAndUpdate({ _id: projectId }, { $inc: { spriteBuildCount: 1 } }, { new: true, projection: { spriteBuildCount: 1 } });
+  const counted = await Project.findOneAndUpdate({ _id: projectId }, { $inc: { spriteBuildCount: 1 } }, { returnDocument: "after", projection: { spriteBuildCount: 1 } });
   if (!counted) throw new NotFoundError("Project not found");
   const row = await SpriteBuild.create({ projectId, version: counted.spriteBuildCount, mode: input.mode, iconCount: input.iconCount, size: zip.length, createdBy: new mongoose.Types.ObjectId(userId), zip });
   const extra = await SpriteBuild.find({ projectId }, { _id: 1 }).sort({ createdAt: -1, _id: -1 }).skip(MAX_STORED_SPRITE_BUILDS).lean();

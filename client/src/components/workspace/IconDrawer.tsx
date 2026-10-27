@@ -13,7 +13,7 @@ import { codepointProblem } from "../../lib/codepoint";
 import { buildFolderTree, flattenFolderTree, folderPath } from "../../lib/folderTree";
 import { formatBytes, formatDate, formatRelative, savingsPercent } from "../../lib/format";
 import { iconWarnings } from "../../lib/iconInfo";
-import { SURFACES, surfaceClass, surfaceStyle, type Surface } from "../../lib/previewSurface";
+import { SURFACES, surfaceClass, surfaceStyle } from "../../lib/previewSurface";
 import { toReactComponent, toVueComponent } from "../../lib/svgSnippets";
 import { parseTags } from "../../lib/upload";
 import { triggerBrowserDownload } from "../../utils/zipBundle";
@@ -25,6 +25,7 @@ import Tabs from "../ui/Tabs";
 
 
 type IconDrawerProps = {
+  projectId?: string;
   // The icon to show, or null when the drawer is closed.
   iconId: string | null;
   canEdit: boolean;
@@ -71,10 +72,10 @@ function DrawerBody({ iconId, onClose, ...rest }: Omit<IconDrawerProps, "iconId"
 
 type PanelProps = Omit<IconDrawerProps, "iconId"> & { icon: IconDetail; tab: Tab; onTab: (tab: Tab) => void; reload: () => void };
 
-function IconPanel({ icon, tab, onTab, reload, canEdit, folders, idPrefix, onClose, onChanged }: PanelProps) {
+function IconPanel({ projectId, icon, tab, onTab, reload, canEdit, folders, idPrefix, onClose, onChanged }: PanelProps) {
   const { showToast } = useToast();
-  const [surface] = usePersistentChoice<Surface>("iconSurface", SURFACES, "theme");
-  const [appearance] = useIconAppearance();
+  const [surface] = usePersistentChoice(projectId ?? "unknown", "iconSurface", SURFACES, "theme");
+  const [appearance] = useIconAppearance(projectId ?? "unknown");
   const size = appearance.size;
   const [busy, setBusy] = useState<string | null>(null);
   const warnings = iconWarnings(icon);
